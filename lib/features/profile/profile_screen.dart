@@ -18,6 +18,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isEditMode = false;
+  bool _hasPopulated = false;
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _nameController;
@@ -122,34 +123,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       body: profileAsync.when(
         data: (data) {
-          if (!_isEditMode) _populateControllers(data);
-          
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  _buildAvatarSection(data),
-                  const SizedBox(height: 24),
-                  _buildPersonalInfoSection(data),
-                  const SizedBox(height: 24),
-                  _buildClinicInfoSection(),
-                  const SizedBox(height: 24),
-                  _buildStatsSection(statsAsync),
-                  const SizedBox(height: 24),
-                  _buildActionsSection(),
-                  if (_isEditMode) ...[
-                    const SizedBox(height: 32),
-                    NeuButton(
-                      onPressed: profileAsync.isLoading ? null : _handleSave,
-                      isLoading: profileAsync.isLoading,
-                      color: AppTheme.primaryTeal,
-                      child: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
+          if (!_hasPopulated) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _populateControllers(data);
+                setState(() => _hasPopulated = true);
+              }
+            });
+          }
+
+          return RefreshIndicator(
+            color: const Color(0xFF1A6B5A),
+            onRefresh: () async {
+              ref.invalidate(profileNotifierProvider);
+              ref.invalidate(profileStatsProvider);
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    _buildAvatarSection(data),
+                    const SizedBox(height: 24),
+                    _buildPersonalInfoSection(data),
+                    const SizedBox(height: 24),
+                    _buildClinicInfoSection(),
+                    const SizedBox(height: 24),
+                    _buildStatsSection(statsAsync),
+                    const SizedBox(height: 24),
+                    _buildActionsSection(),
+                    if (_isEditMode) ...[
+                      const SizedBox(height: 32),
+                      NeuButton(
+                        onPressed: profileAsync.isLoading ? null : _handleSave,
+                        isLoading: profileAsync.isLoading,
+                        color: AppTheme.primaryTeal,
+                        child: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                    const SizedBox(height: 40),
                   ],
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           );
@@ -251,7 +266,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text('Failed to load stats'),
+            error: (e, __) => const Padding(
+              padding: EdgeInsets.all(8),
+              child: Text(
+                'Stats unavailable',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ),
           ),
         ],
       ),

@@ -357,98 +357,105 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                 if (patients.isEmpty) {
                   return _buildEmptyState();
                 }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: patients.length,
-                  itemBuilder: (context, index) {
-                    final patient = patients[index];
-                    final bool isHighPriority = patient['is_high_priority'] ?? false;
-                    final lastUpdated = patient['last_updated_at'] != null
-                        ? DateFormat.yMMMd().format(DateTime.parse(patient['last_updated_at']))
-                        : 'Unknown';
-                    final lastUpdatedBy = patient['last_updated_by'] ?? 'No edits yet';
+                return RefreshIndicator(
+                  color: const Color(0xFF1A6B5A),
+                  onRefresh: () async {
+                    ref.invalidate(patientListProvider);
+                    ref.invalidate(filteredPatientsProvider(filter));
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: patients.length,
+                    itemBuilder: (context, index) {
+                      final patient = patients[index];
+                      final bool isHighPriority = patient['is_high_priority'] ?? false;
+                      final lastUpdated = patient['last_updated_at'] != null
+                          ? DateFormat.yMMMd().format(DateTime.parse(patient['last_updated_at']))
+                          : 'Unknown';
+                      final lastUpdatedBy = patient['last_updated_by'] ?? 'No edits yet';
 
-                    final phone = (patient['phone'] ?? '').toString();
-                    final email = (patient['email'] ?? '').toString();
-                    final symptoms = (patient['symptoms'] ?? '').toString();
-                    final areaAffected = (patient['area_affected'] ?? '').toString();
+                      final phone = (patient['phone'] ?? '').toString();
+                      final email = (patient['email'] ?? '').toString();
+                      final symptoms = (patient['symptoms'] ?? '').toString();
+                      final areaAffected = (patient['area_affected'] ?? '').toString();
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isHighPriority ? Colors.red.withValues(alpha: 0.5) : Colors.transparent,
-                            width: isHighPriority ? 2 : 0,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isHighPriority ? Colors.red.withValues(alpha: 0.5) : Colors.transparent,
+                              width: isHighPriority ? 2 : 0,
+                            ),
                           ),
-                        ),
-                        child: GestureDetector(
-                          onTap: () => context.push('/patients/${patient['id']}/detail'),
-                          child: NeuCard(
-                            borderRadius: 16,
-                            padding: EdgeInsets.zero,
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  leading: CircleAvatar(
-                                    backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                                    child: const Icon(Icons.person, color: AppTheme.primaryTeal),
+                          child: GestureDetector(
+                            onTap: () => context.push('/patients/${patient['id']}/detail'),
+                            child: NeuCard(
+                              borderRadius: 16,
+                              padding: EdgeInsets.zero,
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    leading: CircleAvatar(
+                                      backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
+                                      child: const Icon(Icons.person, color: AppTheme.primaryTeal),
+                                    ),
+                                    title: _buildHighlightedText(
+                                      patient['full_name'] ?? 'Unknown',
+                                      _searchQuery,
+                                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text('ID: ${(patient['id'] ?? '').toString().substring(0, 8)}...'),
+                                        Text('Last Visit: $lastUpdated'),
+                                        if (phone.isNotEmpty)
+                                          _buildHighlightedText('Phone: $phone', _searchQuery, const TextStyle(fontSize: 12)),
+                                        if (email.isNotEmpty)
+                                          _buildHighlightedText('Email: $email', _searchQuery, const TextStyle(fontSize: 12)),
+                                        if (symptoms.isNotEmpty)
+                                          _buildHighlightedText('Symptoms: $symptoms', _searchQuery, const TextStyle(fontSize: 12)),
+                                        if (areaAffected.isNotEmpty)
+                                          _buildHighlightedText('Area: $areaAffected', _searchQuery, const TextStyle(fontSize: 12)),
+                                        const SizedBox(height: 8),
+                                        _buildServiceBadge(patient['service_status'] ?? 'Pending'),
+                                      ],
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.edit, color: AppTheme.primaryTeal),
+                                      onPressed: () => context.push('/patients/edit/${patient['id']}'),
+                                    ),
                                   ),
-                                  title: _buildHighlightedText(
-                                    patient['full_name'] ?? 'Unknown',
-                                    _searchQuery,
-                                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 4),
-                                      Text('ID: ${(patient['id'] ?? '').toString().substring(0, 8)}...'),
-                                      Text('Last Visit: $lastUpdated'),
-                                      if (phone.isNotEmpty)
-                                        _buildHighlightedText('Phone: $phone', _searchQuery, const TextStyle(fontSize: 12)),
-                                      if (email.isNotEmpty)
-                                        _buildHighlightedText('Email: $email', _searchQuery, const TextStyle(fontSize: 12)),
-                                      if (symptoms.isNotEmpty)
-                                        _buildHighlightedText('Symptoms: $symptoms', _searchQuery, const TextStyle(fontSize: 12)),
-                                      if (areaAffected.isNotEmpty)
-                                        _buildHighlightedText('Area: $areaAffected', _searchQuery, const TextStyle(fontSize: 12)),
-                                      const SizedBox(height: 8),
-                                      _buildServiceBadge(patient['service_status'] ?? 'Pending'),
-                                    ],
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.edit, color: AppTheme.primaryTeal),
-                                    onPressed: () => context.push('/patients/edit/${patient['id']}'),
-                                  ),
-                                ),
-                                // REQUIREMENT 4: Audit info footer
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          patient['last_updated_by'] != null
-                                              ? 'Last edited by Dr. $lastUpdatedBy on ${DateFormat('MMM d, HH:mm').format(DateTime.parse(patient['last_updated_at']))}'
-                                              : 'No edits yet',
-                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  // REQUIREMENT 4: Audit info footer
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            patient['last_updated_by'] != null
+                                                ? 'Last edited by Dr. $lastUpdatedBy on ${DateFormat('MMM d, HH:mm').format(DateTime.parse(patient['last_updated_at']))}'
+                                                : 'No edits yet',
+                                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),

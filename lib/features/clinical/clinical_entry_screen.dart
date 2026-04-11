@@ -19,6 +19,7 @@ class ClinicalEntryScreen extends ConsumerStatefulWidget {
 
 class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _searchController = TextEditingController();
   
   // Selection State
   String? _selectedPatientId;
@@ -46,8 +47,20 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     super.initState();
     if (widget.patientId != null) {
       _selectedPatientId = widget.patientId;
-      _loadPatientInfo();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadPatientInfo();
+      });
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _customComplaintController.dispose();
+    _diagnosisController.dispose();
+    _prescriptionsController.dispose();
+    _handoffController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPatientInfo() async {
@@ -129,6 +142,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       _chiefComplaint = null;
       _isOtherComplaint = false;
     });
+    _searchController.clear();
+    ref.read(patientSearchQueryProvider.notifier).state = '';
   }
 
   @override
@@ -180,7 +195,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         child: Row(
           children: [
             const CircleAvatar(
-              backgroundColor: AppTheme.primaryTeal,
+              backgroundColor: Color(0xFF1A6B5A),
               child: Icon(Icons.person, color: Colors.white),
             ),
             const SizedBox(width: 16),
@@ -190,11 +205,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 children: [
                   Text(
                     _selectedPatientName ?? 'Loading...',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
-                    'Age: ${_selectedPatientAge ?? '??'} • ID: ${_selectedPatientId?.substring(0, 8)}...',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    'Age: ${_selectedPatientAge ?? '??'} '
+                    '• ID: ${_selectedPatientId?.substring(0, 8)}...',
+                    style: const TextStyle(
+                      fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -202,7 +220,15 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
             if (widget.patientId == null)
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () => setState(() => _selectedPatientId = null),
+                onPressed: () {
+                  setState(() {
+                    _selectedPatientId = null;
+                    _selectedPatientName = null;
+                    _selectedPatientAge = null;
+                  });
+                  _searchController.clear();
+                  ref.read(patientSearchQueryProvider.notifier).state = '';
+                },
               ),
           ],
         ),
@@ -212,37 +238,134 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     final searchResults = ref.watch(clinicalPatientSearchProvider);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        NeuTextField(
-          label: 'Search Patient',
-          hint: 'Enter name...',
-          onChanged: (val) => ref.read(patientSearchQueryProvider.notifier).state = val,
-        ),
-        if (searchResults.hasValue && searchResults.value!.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.bgColor,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(color: AppTheme.darkShadow, offset: Offset(2, 2), blurRadius: 5),
-              ],
-            ),
-            child: Column(
-              children: searchResults.value!.map((p) => ListTile(
-                title: Text(p['full_name']),
-                subtitle: Text('ID: ${p['id'].toString().substring(0, 8)}'),
-                onTap: () {
-                  setState(() {
-                    _selectedPatientId = p['id'];
-                    _selectedPatientName = p['full_name'];
-                    final dob = p['date_of_birth'] != null ? DateTime.parse(p['date_of_birth']) : null;
-                    _selectedPatientAge = dob != null ? (DateTime.now().year - dob.year).toString() : '??';
-                  });
-                },
-              )).toList(),
+        NeuCard(
+          padding: EdgeInsets.zero,
+          child: TextField(
+            controller: _searchController,
+            onChanged: (val) {
+              ref.read(patientSearchQueryProvider.notifier).state = val;
+            },
+            decoration: const InputDecoration(
+              labelText: 'Search Patient',
+              hintText: 'Type at least 2 characters...',
+              prefixIcon: Icon(Icons.search, color: Color(0xFF1A6B5A)),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.all(16),
             ),
           ),
+        ),
+        const SizedBox(height: 8),
+        searchResults.when(
+          data: (patients) {
+            if (_searchController.text.trim().length < 2) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Type a patient name to search',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              );
+            }
+            if (patients.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'No patients found. Try a different name.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              );
+            }
+            return Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EDF2),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xFFA3B1C6),
+                    offset: Offset(2, 2),
+                    blurRadius: 5,
+                  ),
+                  BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-2, -2),
+                    blurRadius: 5,
+                  ),
+                ],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: patients.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, indent: 16),
+                itemBuilder: (context, index) {
+                  final p = patients[index];
+                  final dob = p['date_of_birth'] != null
+                      ? DateTime.tryParse(p['date_of_birth'])
+                      : null;
+                  final age = dob != null
+                      ? (DateTime.now().year - dob.year).toString()
+                      : '??';
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          const Color(0xFF1A6B5A).withValues(alpha: 0.1),
+                      child: Text(
+                        (p['full_name'] as String? ?? '?')[0]
+                            .toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF1A6B5A),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      p['full_name'] ?? 'Unknown',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text('Age: $age  •  '
+                        'ID: ${p['id'].toString().substring(0, 8)}'),
+                    onTap: () {
+                      setState(() {
+                        _selectedPatientId = p['id'];
+                        _selectedPatientName = p['full_name'];
+                        _selectedPatientAge = age;
+                      });
+                      _searchController.clear();
+                      ref.read(patientSearchQueryProvider.notifier)
+                          .state = '';
+                      FocusScope.of(context).unfocus();
+                    },
+                  );
+                },
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.all(8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Searching...', style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              'Search error. Please try again.',
+              style: TextStyle(color: Colors.red.shade400, fontSize: 13),
+            ),
+          ),
+        ),
       ],
     );
   }

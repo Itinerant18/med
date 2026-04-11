@@ -62,26 +62,29 @@ class SearchFilter {
   int get hashCode => Object.hash(query, healthScheme, priority, dateRange, visitType, sortOption);
 }
 
-final patientListProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
+final patientListProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final supabase = ref.watch(supabaseClientProvider);
-  return supabase
+  final response = await supabase
       .from('patients')
-      .stream(primaryKey: ['id'])
+      .select()
       .order('last_updated_at', ascending: false);
+  return List<Map<String, dynamic>>.from(response);
 });
 
-final filteredPatientsProvider = StreamProvider.autoDispose.family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) {
+final filteredPatientsProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
   final supabase = ref.watch(supabaseClientProvider);
-  final stream = supabase
+  final allPatients = await supabase
       .from('patients')
-      .stream(primaryKey: ['id'])
+      .select()
       .order('last_updated_at', ascending: false);
 
-  return stream.map((patients) {
-    final filtered = patients.where((patient) => _matchesFilter(patient, filter)).toList();
-    _sortPatients(filtered, filter.sortOption);
-    return filtered;
-  });
+  final patients = List<Map<String, dynamic>>.from(allPatients);
+  final filtered =
+      patients.where((p) => _matchesFilter(p, filter)).toList();
+  _sortPatients(filtered, filter.sortOption);
+  return filtered;
 });
 
 bool _matchesFilter(Map<String, dynamic> patient, SearchFilter filter) {
