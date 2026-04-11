@@ -28,6 +28,14 @@ class DashboardScreen extends ConsumerWidget {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () =>
+                ref.read(dashboardProvider.notifier).refresh(),
+          ),
+        ],
       ),
       body: dashboardAsync.when(
         data: (data) => SingleChildScrollView(
@@ -50,6 +58,72 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              if (data.highPriorityPatients.isNotEmpty) ...[
+                _buildSectionHeader('Requires Attention'),
+                SizedBox(
+                  height: 90,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: data.highPriorityPatients.length,
+                    itemBuilder: (context, i) {
+                      final p = data.highPriorityPatients[i];
+                      return Container(
+                        width: 160,
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8EDF2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: const Border(
+                            left: BorderSide(color: Colors.red, width: 4),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFFA3B1C6),
+                              offset: Offset(3, 3),
+                              blurRadius: 6,
+                            ),
+                            BoxShadow(
+                              color: Colors.white,
+                              offset: Offset(-3, -3),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              p['full_name'] ?? '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              p['service_status'] ?? 'Pending',
+                              style: const TextStyle(
+                                fontSize: 11, color: Colors.grey),
+                            ),
+                            Text(
+                              'Dr. ${p['last_updated_by'] ?? '?'}',
+                              style: const TextStyle(
+                                fontSize: 10, color: Colors.grey),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               _buildSectionHeader('Follow-ups Due'),
               _buildVisitList(data.todayVisits.where((v) => v['visit_type'] == 'OPD').toList()),
               const SizedBox(height: 24),
@@ -117,9 +191,13 @@ class DashboardScreen extends ConsumerWidget {
       itemCount: visits.length,
       itemBuilder: (context, index) {
         final visit = visits[index];
-        final patient = visit['patients'];
+        final patientInfo = visit['patients'] as Map<String, dynamic>?;
+        final patientName = patientInfo?['full_name']
+            ?? visit['patient_name']
+            ?? 'Unknown';
+        final isHighPriority =
+            patientInfo?['is_high_priority'] ?? false;
         final doctor = visit['doctors'];
-        final bool isHighPriority = patient?['is_high_priority'] ?? false;
         final String visitTime = DateFormat.jm().format(DateTime.parse(visit['visit_date']));
 
         return Container(
@@ -133,7 +211,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             children: [
               ListTile(
-                title: Text(patient?['full_name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(patientName, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text('$visitTime • ${visit['visit_type']}'),
                 trailing: _buildStatusBadge(visit['test_status'] ?? 'pending'),
               ),

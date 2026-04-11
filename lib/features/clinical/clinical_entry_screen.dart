@@ -81,11 +81,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
 
     final visitData = {
       'patient_id': _selectedPatientId,
+      'patient_name': _selectedPatientName ?? '',
       'doctor_id': user.id,
       'visit_type': _visitType,
       'chief_complaint': _chiefComplaint,
-      'chief_complaint_custom': _isOtherComplaint ? _customComplaintController.text : null,
+      'chief_complaint_custom':
+          _isOtherComplaint ? _customComplaintController.text : null,
       'tests_performed': _testsPerformed,
+      'test_status': _testsPerformed ? 'done' : 'pending',
       'ot_required': _otRequired,
       'patient_flow_status': _flowStatus,
       'final_diagnosis': _diagnosisController.text,
@@ -100,9 +103,10 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
 
     if (!mounted) return;
 
-    final state = ref.read(clinicalNotifierProvider);
-    if (state.hasError) {
-      AppSnackbar.showError(context, AppError.getMessage(state.error));
+    final clinicalState = ref.read(clinicalNotifierProvider);
+    if (clinicalState.hasError) {
+      AppSnackbar.showError(
+        context, AppError.getMessage(clinicalState.error));
     } else {
       AppSnackbar.showSuccess(context, 'Visit saved successfully');
       _resetForm();
@@ -205,7 +209,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       );
     }
 
-    final searchResults = ref.watch(filteredPatientsProvider);
+    final searchResults = ref.watch(clinicalPatientSearchProvider);
 
     return Column(
       children: [

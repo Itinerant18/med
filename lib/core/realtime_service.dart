@@ -1,4 +1,4 @@
-import 'dart:async';
+// lib/core/realtime_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/notification_service.dart';
 
@@ -6,90 +6,74 @@ class RealtimeService {
   RealtimeService._();
   static final RealtimeService instance = RealtimeService._();
 
-  StreamSubscription<List<Map<String, dynamic>>>? _patientsSub;
-  StreamSubscription<List<Map<String, dynamic>>>? _visitsSub;
+  RealtimeChannel? _channel;
 
   void subscribeToPatientChanges(String currentDoctorName) {
-    final supabase = Supabase.instance.client;
-    Map<String, Map<String, dynamic>> previousPatients = {};
+    _channel?.unsubscribe();
 
-    _patientsSub?.cancel();
-    _patientsSub = supabase.from('patients').stream(primaryKey: ['id']).listen((patients) {
-      for (final patient in patients) {
-        final id = patient['id'].toString();
-        final lastUpdatedBy = patient['last_updated_by']?.toString();
-        final patientName = patient['full_name']?.toString() ?? 'Unknown Patient';
-        final newStatus = patient['service_status']?.toString() ?? 'Pending';
-
-        if (lastUpdatedBy != null && lastUpdatedBy != currentDoctorName) {
-          if (!previousPatients.containsKey(id)) {
-            // It's an insert, but we only notify if previousPatients is not empty 
-            // (meaning this is not the initial data load)
-            if (previousPatients.isNotEmpty) {
-              NotificationService.instance.showNewPatientNotification(
-                patientName: patientName,
-                addedBy: lastUpdatedBy,
+    _channel = Supabase.instance.client
+        .channel('mediflow-db-changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'patients',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final updatedBy = row['last_updated_by']?.toString() ?? '';
+            if (updatedBy.isNotEmpty && updatedBy != currentDoctorName) {
+              NotificationService.instance.showPatientUpdateNotification(
+                patientName: row['full_name']?.toString() ?? 'A patient',
+                updatedBy: updatedBy,
+                newStatus: row['service_status']?.toString() ?? 'Updated',
               );
             }
-          } else {
-            // It's an update
-            final previousStatus = previousPatients[id]?['service_status'];
-            final previousUpdatedBy = previousPatients[id]?['last_updated_by'];
-            
-            if (newStatus != previousStatus || lastUpdatedBy != previousUpdatedBy) {
-               NotificationService.instance.showPatientUpdateNotification(
-                 patientName: patientName,
-                 updatedBy: lastUpdatedBy,
-                 newStatus: newStatus,
-               );
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'patients',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final addedBy = row['last_updated_by']?.toString() ?? '';
+            if (addedBy.isNotEmpty && addedBy != currentDoctorName) {
+              NotificationService.instance.showNewPatientNotification(
+                patientName: row['full_name']?.toString() ?? 'A patient',
+                addedBy: addedBy,
+              );
             }
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'visits',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final updatedBy = row['last_updated_by']?.toString() ?? '';
+            if (updatedBy.isNotEmpty && updatedBy != currentDoctorName) {
+              NotificationService.instance.showPatientUpdateNotification(
+                patientName: row['patient_name']?.toString() ?? 'A patient',
+                updatedBy: updatedBy,
+                newStatus:
+                    row['patient_flow_status']?.toString() ?? 'Updated',
+              );
+            }
+          },
+        )
+        .subscribe((status, error) {
+          if (error != null) {
+            // Realtime is optional — app still works without it
           }
-        }
-        previousPatients[id] = patient;
-      }
-    });
+        });
   }
 
   void subscribeToVisitChanges(String currentDoctorName) {
-    final supabase = Supabase.instance.client;
-    Map<String, Map<String, dynamic>> previousVisits = {};
-
-    _visitsSub?.cancel();
-    _visitsSub = supabase.from('visits').stream(primaryKey: ['id']).listen((visits) async {
-      for (final visit in visits) {
-        final id = visit['id'].toString();
-        final lastUpdatedBy = visit['last_updated_by']?.toString();
-        final patientId = visit['patient_id']?.toString();
-        final status = visit['patient_flow_status']?.toString() ?? visit['test_status']?.toString() ?? 'Updated';
-
-        if (lastUpdatedBy != null && lastUpdatedBy != currentDoctorName) {
-          if (previousVisits.containsKey(id)) {
-            final prevUpdatedBy = previousVisits[id]?['last_updated_by'];
-            
-            if (lastUpdatedBy != prevUpdatedBy) {
-              String patientName = 'Unknown Patient';
-              if (patientId != null) {
-                final patientRes = await supabase.from('patients').select('full_name').eq('id', patientId).maybeSingle();
-                if (patientRes != null && patientRes['full_name'] != null) {
-                  patientName = patientRes['full_name'];
-                }
-              }
-
-              NotificationService.instance.showPatientUpdateNotification(
-                patientName: patientName,
-                updatedBy: lastUpdatedBy,
-                newStatus: status,
-              );
-            }
-          }
-        }
-        previousVisits[id] = visit;
-      }
-    });
+    // Now handled inside subscribeToPatientChanges via single channel
   }
 
   void dispose() {
-    _patientsSub?.cancel();
-    _visitsSub?.cancel();
+    _channel?.unsubscribe();
+    _channel = null;
   }
 }

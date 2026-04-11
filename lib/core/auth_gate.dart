@@ -35,8 +35,8 @@ class AuthGate extends ConsumerWidget {
           
           // REQUIREMENT 6: Initialize RealtimeService
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            RealtimeService.instance.subscribeToPatientChanges(doctorName);
-            RealtimeService.instance.subscribeToVisitChanges(doctorName);
+            RealtimeService.instance
+                .subscribeToPatientChanges(doctorName);
           });
 
           return const MainScreen();
