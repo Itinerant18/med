@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:mediflow/core/neu_widgets.dart';
+import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/core/app_snackbar.dart';
+import 'package:mediflow/core/error_handler.dart';
+import 'package:mediflow/features/patients/document_provider.dart';
+
+class DocumentUploadWidget extends ConsumerStatefulWidget {
+  final String patientId;
+
+  const DocumentUploadWidget({super.key, required this.patientId});
+
+  @override
+  ConsumerState<DocumentUploadWidget> createState() => _DocumentUploadWidgetState();
+}
+
+class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      // Handle Permissions
+      if (source == ImageSource.camera) {
+        final status = await Permission.camera.request();
+        if (status.isPermanentlyDenied) {
+          if (mounted) {
+            AppSnackbar.showWarning(context, 'Camera permission required. Please enable in settings.');
+            openAppSettings();
+          }
+          return;
+        }
+        if (!status.isGranted) return;
+      }
+
+      final XFile? image = await _picker.pickImage(source: source, imageQuality: 80);
+      if (image == null) return;
+
+      setState(() => _isUploading = true);
+
+      await ref.read(documentNotifierProvider(widget.patientId).notifier).uploadDocument(image);
+
+      if (mounted) {
+        AppSnackbar.showSuccess(context, 'Document uploaded successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, AppError.getMessage(e));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  void _showSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final docsAsync = ref.watch(documentNotifierProvider(widget.patientId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Patient Documents',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_a_photo, color: AppTheme.primaryTeal),
+              onPressed: _isUploading ? null : _showSourcePicker,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: docsAsync.when(
+            data: (urls) {
+              if (urls.isEmpty && !_isUploading) {
+                return GestureDetector(
+                  onTap: _showSourcePicker,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400, style: BorderStyle.none),
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.grey.shade200.withValues(alpha: 0.5),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined, color: Colors.grey, size: 32),
+                        SizedBox(height: 4),
+                        Text('Tap + to add documents', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: urls.length + (_isUploading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (_isUploading && index == urls.length) {
+                    return _buildLoadingSlot();
+                  }
+
+                  final url = urls[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: GestureDetector(
+                      onLongPress: () => _confirmDelete(url),
+                      onTap: () => _viewImage(url),
+                      child: NeuCard(
+                        padding: EdgeInsets.zero,
+                        borderRadius: 12,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: url,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Text('Error: $err'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingSlot() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(String url) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Document'),
+        content: const Text('Are you sure you want to permanently remove this document?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await ref.read(documentNotifierProvider(widget.patientId).notifier).deleteDocument(url);
+                if (mounted) {
+                  AppSnackbar.showSuccess(context, 'Document deleted');
+                }
+              } catch (e) {
+                if (mounted) {
+                  AppSnackbar.showError(context, AppError.getMessage(e));
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _viewImage(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FullScreenImageViewer(
+          url: url,
+          onDelete: () => _confirmDelete(url),
+        ),
+      ),
+    );
+  }
+}
+
+class FullScreenImageViewer extends StatelessWidget {
+  final String url;
+  final VoidCallback onDelete;
+
+  const FullScreenImageViewer({super.key, required this.url, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () async {
+              // Using SharePlus as per linter suggestion
+              await Share.share(url);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () {
+              Navigator.pop(context);
+              onDelete();
+            },
+          ),
+        ],
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 4.0,
+          child: CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.contain,
+            placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+          ),
+        ),
+      ),
+    );
+  }
+}
