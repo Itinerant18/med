@@ -50,6 +50,13 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _loadPatientInfo();
       });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(patientSearchQueryProvider.notifier).state = '';
+          _searchController.clear();
+        }
+      });
     }
   }
 
