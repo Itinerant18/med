@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // TODO: Manage authentication state and auth-related business logic.
@@ -23,11 +24,13 @@ class AuthUserState {
 		required this.session,
 		required this.doctorName,
 		required this.specialization,
+		required this.role,
 	});
 
 	final Session session;
 	final String? doctorName;
 	final String? specialization;
+	final UserRole role;
 }
 
 class AuthNotifier extends AsyncNotifier<AuthUserState?> {
@@ -62,6 +65,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 		required String specialization,
 		required String email,
 		required String password,
+		UserRole? role,
 	}) async {
 		state = const AsyncLoading();
 		state = await AsyncValue.guard(() async {
@@ -71,6 +75,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 				data: {
 					'full_name': fullName,
 					'specialization': specialization,
+					'role': (role ?? UserRole.doctor).name,
 				},
 			);
 
@@ -81,6 +86,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 					'full_name': fullName,
 					'specialization': specialization,
 					'email': email,
+					'role': (role ?? UserRole.doctor).name,
 				}, onConflict: 'id');
 			}
 
@@ -106,11 +112,17 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 		final metadata = user.userMetadata ?? const {};
 		final doctorName = metadata['full_name'] as String?;
 		final specialization = metadata['specialization'] as String?;
+		final roleString = metadata['role'] as String? ?? 'doctor';
+		final role = UserRole.values.firstWhere(
+			(e) => e.name == roleString,
+			orElse: () => UserRole.doctor,
+		);
 
 		return AuthUserState(
 			session: session,
 			doctorName: doctorName,
 			specialization: specialization,
+			role: role,
 		);
 	}
 }

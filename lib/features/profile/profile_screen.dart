@@ -4,6 +4,8 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/features/auth/login_screen.dart';
@@ -105,6 +107,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileNotifierProvider);
     final statsAsync = ref.watch(profileStatsProvider);
+    final authState = ref.watch(authNotifierProvider).value;
+    final isAdmin = authState?.role == UserRole.doctor;
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
@@ -151,6 +155,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildClinicInfoSection(),
                     const SizedBox(height: 24),
                     _buildStatsSection(statsAsync),
+                    if (isAdmin) ...[
+                      const SizedBox(height: 24),
+                      _buildAdminActionsSection(),
+                    ],
                     const SizedBox(height: 24),
                     _buildActionsSection(),
                     if (_isEditMode) ...[
@@ -176,8 +184,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildAvatarSection(Map<String, dynamic> data) {
-    final name = data['full_name'] ?? 'Doctor';
+    final name = data['full_name'] ?? 'Staff';
     final initials = name.split(' ').take(2).map((e) => e[0]).join().toUpperCase();
+    final role = data['role'] as String? ?? 'doctor';
 
     return NeuCard(
       child: Column(
@@ -189,17 +198,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 16),
           Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textColor)),
-          Text(data['specialization'] ?? 'Medical Specialist', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+          Text(data['specialization'] ?? 'Medical Staff', style: const TextStyle(fontSize: 16, color: Colors.grey)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.green)),
-            child: const Row(
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1), 
+              borderRadius: BorderRadius.circular(20), 
+              border: Border.all(color: Colors.green)
+            ),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.verified, size: 16, color: Colors.green),
-                SizedBox(width: 4),
-                Text('Verified Doctor', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                Icon(
+                  role == 'assistant' ? Icons.check_circle_outline : Icons.verified, 
+                  size: 16, 
+                  color: Colors.green
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  role == 'assistant' ? 'Verified Assistant' : 'Verified Doctor', 
+                  style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)
+                ),
               ],
             ),
           ),
@@ -279,6 +299,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Widget _buildAdminActionsSection() {
+    return NeuCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Administrator Functions', padding: const EdgeInsets.all(16)),
+          ListTile(
+            leading: const Icon(Icons.people_outline, color: Color(0xFFD97706)),
+            title: const Text('User Management'),
+            subtitle: const Text('Add or manage staff accounts'),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () {
+              // TODO: Implement user management
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.settings_suggest_outlined, color: Color(0xFFD97706)),
+            title: const Text('System Configuration'),
+            subtitle: const Text('Manage clinic settings'),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () {
+              // TODO: Implement system configuration
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.analytics_outlined, color: Color(0xFFD97706)),
+            title: const Text('Audit Logs'),
+            subtitle: const Text('View system activity trail'),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () {
+              // TODO: Implement audit logs
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionsSection() {
     return NeuCard(
       padding: EdgeInsets.zero,
@@ -310,9 +371,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {EdgeInsets? padding}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: padding ?? const EdgeInsets.only(bottom: 16),
       child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 12, color: Color(0xFF718096), letterSpacing: 1.2, fontWeight: FontWeight.w600)),
     );
   }

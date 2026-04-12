@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 
 class DashboardState {
   final List<Map<String, dynamic>> todayVisits;
@@ -47,22 +49,36 @@ class DashboardNotifier
             now.year, now.month, now.day, 23, 59, 59)
         .toIso8601String();
 
-    final visitsRaw = await supabase
+    final userState = ref.read(authNotifierProvider).value;
+    final isAssistant = userState?.role == UserRole.assistant;
+
+    var visitsQuery = supabase
         .from('visits')
-        .select('*, patients(full_name, is_high_priority)')
+        .select('*, patients!inner(full_name, is_high_priority, created_by_id)')
         .gte('visit_date', start)
-        .lte('visit_date', end)
-        .order('visit_date', ascending: false);
+        .lte('visit_date', end);
+
+    if (isAssistant) {
+      visitsQuery = visitsQuery.eq('patients.created_by_id', userState!.session.user.id);
+    }
+
+    final visitsRaw = await visitsQuery.order('visit_date', ascending: false);
 
     final visits =
         List<Map<String, dynamic>>.from(visitsRaw);
 
-    final priorityRaw = await supabase
+    var priorityQuery = supabase
         .from('patients')
         .select(
             'id, full_name, service_status, '
-            'last_updated_by, last_updated_at, is_high_priority')
-        .eq('is_high_priority', true)
+            'last_updated_by, last_updated_at, is_high_priority, created_by_id')
+        .eq('is_high_priority', true);
+
+    if (isAssistant) {
+      priorityQuery = priorityQuery.eq('created_by_id', userState!.session.user.id);
+    }
+
+    final priorityRaw = await priorityQuery
         .order('last_updated_at', ascending: false)
         .limit(10);
 

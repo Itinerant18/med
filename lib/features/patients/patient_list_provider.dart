@@ -1,6 +1,9 @@
 // lib/features/patients/patient_list_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/user_role.dart';
+
 
 enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, other }
 
@@ -65,20 +68,32 @@ class SearchFilter {
 final patientListProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final supabase = ref.watch(supabaseClientProvider);
-  final response = await supabase
-      .from('patients')
-      .select()
-      .order('last_updated_at', ascending: false);
+  final userState = ref.watch(authNotifierProvider).value;
+  
+  var query = supabase.from('patients').select();
+  
+  // RBAC: Assistants can only see their own patients
+  if (userState != null && userState.role == UserRole.assistant) {
+    query = query.eq('created_by_id', userState.session.user.id);
+  }
+  
+  final response = await query.order('last_updated_at', ascending: false);
   return List<Map<String, dynamic>>.from(response);
 });
 
 final filteredPatientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
   final supabase = ref.watch(supabaseClientProvider);
-  final allPatients = await supabase
-      .from('patients')
-      .select()
-      .order('last_updated_at', ascending: false);
+  final userState = ref.watch(authNotifierProvider).value;
+  
+  var query = supabase.from('patients').select();
+  
+  // RBAC: Assistants can only see their own patients
+  if (userState != null && userState.role == UserRole.assistant) {
+    query = query.eq('created_by_id', userState.session.user.id);
+  }
+
+  final allPatients = await query.order('last_updated_at', ascending: false);
 
   final patients = List<Map<String, dynamic>>.from(allPatients);
   final filtered =

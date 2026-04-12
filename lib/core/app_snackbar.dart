@@ -18,9 +18,15 @@ class AppSnackbar {
     _showSnackBar(context, message, const Color(0xFFD69E2E), Icons.warning_amber_outlined);
   }
 
-  static void _showSnackBar(BuildContext context, String message, Color bgColor, IconData icon) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
+  static void _showSnackBar(
+    BuildContext context,
+    String message,
+    Color bgColor,
+    IconData icon,
+  ) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -28,7 +34,7 @@ class AppSnackbar {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                message, 
+                message,
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -36,15 +42,15 @@ class AppSnackbar {
         ),
         backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
         margin: const EdgeInsets.all(12),
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
-          label: 'Dismiss', 
-          textColor: Colors.white, 
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () => messenger.hideCurrentSnackBar(),
         ),
       ),
     );

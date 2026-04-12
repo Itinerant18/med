@@ -122,7 +122,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         context, AppError.getMessage(clinicalState.error));
     } else {
       AppSnackbar.showSuccess(context, 'Visit saved successfully');
-      _resetForm();
+      if (widget.patientId != null) {
+        // Opened from PatientDetailScreen — go back after brief delay
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) Navigator.of(context).pop();
+      } else {
+        // Standalone Clinical tab — just reset form
+        _resetForm();
+      }
     }
   }
 
@@ -156,35 +163,52 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         title: const Text('Active Service', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildPatientSelector(),
-              const SizedBox(height: 20),
-              _buildVisitDetailsSection(),
-              const SizedBox(height: 20),
-              _buildOperationalTrackingSection(),
-              const SizedBox(height: 20),
-              _buildClinicalNotesSection(),
-            ],
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _buildPatientSelector(),
+                  const SizedBox(height: 20),
+                  _buildVisitDetailsSection(),
+                  const SizedBox(height: 20),
+                  _buildOperationalTrackingSection(),
+                  const SizedBox(height: 20),
+                  _buildClinicalNotesSection(),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-      bottomSheet: Container(
-        color: AppTheme.bgColor,
-        padding: const EdgeInsets.all(16),
-        child: NeuButton(
-          onPressed: _onCompleteVisit,
-          isLoading: clinicalState.isLoading,
-          color: AppTheme.primaryTeal,
-          child: const Text(
-            'COMPLETE VISIT',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              color: AppTheme.bgColor,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: SafeArea(
+                top: false,
+                child: NeuButton(
+                  onPressed: clinicalState.isLoading ? null : _onCompleteVisit,
+                  isLoading: clinicalState.isLoading,
+                  color: AppTheme.primaryTeal,
+                  child: const Text(
+                    'COMPLETE VISIT',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
