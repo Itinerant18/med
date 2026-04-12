@@ -1,0 +1,11 @@
+Here are both deliverables — first the assistant workflow chart, then the new patient form mockup.The workflow covers three parallel task lanes — add new patient, manage existing patient, and schedule appointment — all funnelling through an activity log and a session continue/logout decision. Now here's the new patient intake form with all required fields:The form is organised into 5 sections:
+
+**Personal information** — first name, last name, date of birth, gender (required); blood group (optional); National ID / Aadhaar (required); patient ID is auto-generated.
+
+**Contact details** — primary phone, residential address, city, state, and PIN code are all required. Alternate phone, email, are optional.
+
+**Emergency contact** — contact name, relationship, and phone are required. Email is optional.
+
+**Medical information** — all fields here (allergies, conditions, medications, insurance) are optional but recommended for clinical accuracy.
+
+**Consent & acknowledgement** — two required checkboxes confirming the patient has consented to data storage and that their ID has been verified.

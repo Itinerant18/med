@@ -5,6 +5,7 @@ import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/app_snackbar.dart';
+import 'package:mediflow/models/user_role.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +21,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  UserRole _selectedRole = UserRole.doctor;
 
   @override
   void dispose() {
@@ -40,6 +42,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             specialization: _specializationController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,
+            role: _selectedRole,
           );
 
       if (!mounted) return;
@@ -82,6 +85,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     NeuTextField(controller: _passwordController, obscureText: true, label: 'Password'),
                     const SizedBox(height: 12),
                     NeuTextField(controller: _confirmPasswordController, obscureText: true, label: 'Confirm Password'),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<UserRole>(
+                      value: _selectedRole,
+                      decoration: InputDecoration(
+                        labelText: 'Role',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      items: UserRole.values.map((role) {
+                        return DropdownMenuItem(
+                          value: role,
+                          child: Text(role.label),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedRole = value;
+                          });
+                        }
+                      },
+                    ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,

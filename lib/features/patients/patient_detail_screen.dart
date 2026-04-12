@@ -7,6 +7,8 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
 import 'package:mediflow/features/patients/visit_history_provider.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
   final String patientId;
@@ -17,6 +19,18 @@ class PatientDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final patientAsync = ref.watch(patientDetailProvider(patientId));
     final visitsAsync = ref.watch(visitHistoryProvider(patientId));
+    final authState = ref.watch(authNotifierProvider).value;
+
+    bool canEdit(Map<String, dynamic>? patient) {
+      if (authState == null) return false;
+      if (authState.role == UserRole.doctor) return true;
+      if (patient == null) return false;
+      return patient['created_by_id'] == authState.session.user.id;
+    }
+
+    bool canDelete(Map<String, dynamic>? patient) {
+      return canEdit(patient); // Same rule for now
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -27,9 +41,25 @@ class PatientDetailScreen extends ConsumerWidget {
           error: (_, __) => const Text('Error'),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit, color: AppTheme.primaryTeal),
-            onPressed: () => context.push('/patients/edit/$patientId'),
+          patientAsync.when(
+            data: (patient) => canEdit(patient) 
+              ? IconButton(
+                  icon: const Icon(Icons.edit, color: AppTheme.primaryTeal),
+                  onPressed: () => context.push('/patients/edit/$patientId'),
+                )
+              : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+          patientAsync.when(
+            data: (patient) => canDelete(patient)
+              ? IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () => _confirmDelete(context, ref, patientId),
+                )
+              : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
           ),
         ],
         backgroundColor: Colors.transparent,
@@ -300,6 +330,35 @@ class PatientDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, String patientId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Patient record'),
+        content: const Text('Are you sure you want to delete this patient record? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(patientProvider).deletePatient(patientId);
+        if (context.mounted) {
+          AppSnackbar.showSuccess(context, 'Patient deleted');
+          context.pop();
+        }
+      } catch (e) {
+        if (context.mounted) AppSnackbar.showError(context, 'Failed to delete: $e');
+      }
+    }
   }
 
   Widget _buildStatusChip(String label, String value, Color color) {
