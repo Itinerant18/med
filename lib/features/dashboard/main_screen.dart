@@ -9,6 +9,7 @@ import 'package:mediflow/features/dashboard/notification_sheet.dart';
 import 'package:mediflow/features/patients/patient_list_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mediflow/core/role_provider.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -198,18 +199,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'MediFlow',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E9E5B),
-                shape: BoxShape.circle,
-              ),
+            const Text('MediFlow', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(width: 6),
+            Consumer(
+              builder: (context, ref, _) {
+                final isAdmin = ref.watch(isAdminProvider);
+                return Container(
+                  width: 8, height: 8,
+                  decoration: BoxDecoration(
+                    color: isAdmin ? const Color(0xFF2E9E5B) : Colors.amber.shade600,
+                    shape: BoxShape.circle,
+                  ),
+                );
+              },
             ),
           ],
         ),

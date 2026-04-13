@@ -7,7 +7,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
-import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:mediflow/models/user_role.dart';
 
 enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, other }
@@ -78,7 +77,7 @@ class SearchFilter {
 }
 
 // Role-aware filtered provider that respects RBAC:
-// Doctors see everyone, assistants see only patients they matching their profile name (as per prompt B3)
+// Doctors see everyone, assistants see only patients they created (UUID match)
 final roleAwarePatientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
   final supabase = ref.watch(supabaseClientProvider);
@@ -87,15 +86,11 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
 
   var query = supabase.from('patients').select();
 
-  // Assistant-only filtering matching the RBAC requirements
+  // Assistants only see patients they created (UUID match, not name string)
   if (role == UserRole.assistant && userState != null) {
-    // We match by doctorName string as per the requested RLS pattern
-    final profileData = ref.watch(profileNotifierProvider).valueOrNull;
-    final doctorName = profileData?['full_name'] ?? '';
-    if (doctorName.isNotEmpty) {
-      query = query.eq('last_updated_by', doctorName);
-    }
+    query = query.eq('created_by_id', userState.session.user.id);
   }
+  // Doctors get all patients (no filter needed — RLS handles it too)
 
   final allPatients = await query.order('last_updated_at', ascending: false);
   final patients = List<Map<String, dynamic>>.from(allPatients);

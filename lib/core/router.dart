@@ -7,8 +7,11 @@ import 'package:mediflow/features/patients/patient_form_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/patients/patient_detail_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
-import 'package:mediflow/features/profile/profile_screen.dart';
+import 'package:mediflow/features/profile/doctor_profile_screen.dart';
+import 'package:mediflow/features/profile/assistant_profile_screen.dart';
+import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/features/profile/about_screen.dart';
+import 'package:flutter/material.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -28,7 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        builder: (context, state) => const _RoleBasedProfileRouter(),
       ),
       GoRoute(
         path: '/about',
@@ -66,3 +69,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+class _RoleBasedProfileRouter extends ConsumerWidget {
+  const _RoleBasedProfileRouter();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(isAdminProvider);
+    return isAdmin
+        ? const DoctorProfileScreen()
+        : const AssistantProfileScreen();
+  }
+}

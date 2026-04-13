@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -274,6 +275,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
     final filter = _buildFilter();
     final patientsAsync = ref.watch(roleAwarePatientsProvider(filter));
     final totalAsync = ref.watch(patientTotalCountProvider);
+    final isAdmin = ref.watch(isAdminProvider);
 
     final totalCount = totalAsync.value ?? 0;
     final shownCount = patientsAsync.value?.length ?? 0;
@@ -425,10 +427,17 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                                     contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 8),
                                     leading: CircleAvatar(
-                                      backgroundColor: AppTheme.primaryTeal
-                                          .withValues(alpha: 0.1),
-                                      child: const Icon(Icons.person,
-                                          color: AppTheme.primaryTeal),
+                                      backgroundColor: isHighPriority
+                                          ? Colors.red.withValues(alpha: 0.1)
+                                          : AppTheme.primaryTeal
+                                              .withValues(alpha: 0.1),
+                                      child: Icon(
+                                          isHighPriority
+                                              ? Icons.priority_high_rounded
+                                              : Icons.person,
+                                          color: isHighPriority
+                                              ? Colors.red
+                                              : AppTheme.primaryTeal),
                                     ),
                                     title: _buildHighlightedText(
                                       patient['full_name'] ?? 'Unknown',
@@ -484,13 +493,19 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                                         16, 0, 16, 12),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.access_time,
-                                            size: 14, color: Colors.grey),
+                                        Icon(
+                                            isAdmin
+                                                ? Icons.person_add_alt_1_rounded
+                                                : Icons.access_time,
+                                            size: 14,
+                                            color: Colors.grey),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             patient['last_updated_by'] != null
-                                                ? 'Last edited by Dr. $lastUpdatedBy on ${DateFormat('MMM d, HH:mm').format(DateTime.parse(patient['last_updated_at']))}'
+                                                ? isAdmin
+                                                    ? 'Added by Dr. $lastUpdatedBy on ${DateFormat('MMM d, HH:mm').format(DateTime.parse(patient['last_updated_at']))}'
+                                                    : 'Last updated on ${DateFormat('MMM d, HH:mm').format(DateTime.parse(patient['last_updated_at']))}'
                                                 : 'No edits yet',
                                             style: const TextStyle(
                                                 fontSize: 11,
@@ -529,6 +544,118 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       ),
     );
   }
+
+  Widget _buildChoiceChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onSelected,
+  }) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      selectedColor: AppTheme.primaryTeal.withValues(alpha: 0.12),
+      labelStyle: TextStyle(
+        color: selected ? AppTheme.primaryTeal : Colors.grey.shade800,
+        fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    );
+  }
+
+  Widget _buildSheetHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Color(0xFF718096),
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHighlightedText(String text, String query, TextStyle style) {
+    if (query.isEmpty) {
+      return Text(text, style: style);
+    }
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+    final spans = <TextSpan>[];
+    var start = 0;
+
+    while (true) {
+      final index = lowerText.indexOf(lowerQuery, start);
+      if (index < 0) {
+        spans.add(TextSpan(text: text.substring(start)));
+        break;
+      }
+      if (index > start) {
+        spans.add(TextSpan(text: text.substring(start, index)));
+      }
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: style.copyWith(
+              color: AppTheme.primaryTeal, fontWeight: FontWeight.bold),
+        ),
+      );
+      start = index + query.length;
+    }
+
+    return RichText(text: TextSpan(style: style, children: spans));
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off_rounded, size: 80, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          const Text('No patients found',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text('Try adjusting your search or filters',
+              style: TextStyle(color: Colors.grey.shade600)),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: 160,
+            height: 44,
+            child: NeuButton(
+              onPressed: _clearAllFilters,
+              child: const Text('Clear filters'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceBadge(String status) {
+    Color color = AppTheme.primaryTeal;
+    if (status.toLowerCase() == 'pending') color = Colors.amber.shade700;
+    if (status.toLowerCase() == 'admitted') color = Colors.red.shade400;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
 
   Widget _buildChoiceChip({
     required String label,

@@ -1,3 +1,6 @@
+Replace the entire content of lib/features/dashboard/dashboard_screen.dart with the following professional redesign. The key improvements are: role-aware header, stat cards with icons, a cleaner "Requires Attention" section that shows who added each patient (for doctors), and a better visit list with status colors:
+
+```dart
 // lib/features/dashboard/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -372,3 +375,4 @@ class DashboardScreen extends ConsumerWidget {
     ],
   );
 }
+```
