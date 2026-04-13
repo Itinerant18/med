@@ -25,7 +25,6 @@ class PatientService {
     final finalData = {
       ...patientData,
       'last_updated_by': doctorName,
-      'last_updated_by_id': userId,
       'created_by_id': userId,
       'last_updated_at': DateTime.now().toIso8601String(),
       'service_status': 'pending',
@@ -35,16 +34,20 @@ class PatientService {
     await supabase.from('patients').insert(finalData);
   }
 
+  Future<void> _updateAuditInfo(Map<String, dynamic> data) async {
+    final userState = _ref.read(authNotifierProvider).value;
+    data['last_updated_by'] = userState?.doctorName ?? "Staff";
+    data['last_updated_at'] = DateTime.now().toIso8601String();
+  }
+
   Future<void> updatePatient(String id, Map<String, dynamic> patientData) async {
     final supabase = _ref.read(supabaseClientProvider);
     final userState = _ref.read(authNotifierProvider).value;
     final doctorName = userState?.doctorName ?? "Staff";
-    final userId = userState?.session.user.id;
 
     final finalData = {
       ...patientData,
       'last_updated_by': doctorName,
-      'last_updated_by_id': userId,
       'last_updated_at': DateTime.now().toIso8601String(),
     };
 

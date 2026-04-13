@@ -71,8 +71,10 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
     );
     if (ok == true) {
       await Supabase.instance.client.auth.signOut();
-      if (mounted) Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      }
     }
   }
 
@@ -90,7 +92,9 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
           IconButton(
             icon: Icon(_isEditMode ? Icons.close : Icons.edit_outlined, color: AppTheme.primaryTeal),
             onPressed: () {
-              if (!_isEditMode) _populate(profileAsync.value ?? {});
+              if (!_isEditMode) {
+                _populate(profileAsync.value ?? {});
+              }
               setState(() => _isEditMode = !_isEditMode);
             },
           ),
