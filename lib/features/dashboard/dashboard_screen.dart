@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 
@@ -16,14 +17,48 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('MediFlow Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('MediFlow Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
             if (dashboardAsync.value?.isLive ?? false)
               Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: Colors.green, shape: BoxShape.circle),
               ),
+            Consumer(
+              builder: (context, ref, _) {
+                final isAdmin = ref.watch(isAdminProvider);
+                return Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isAdmin
+                        ? AppTheme.primaryTeal.withValues(alpha: 0.12)
+                        : Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isAdmin
+                          ? AppTheme.primaryTeal
+                          : Colors.amber.shade700,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    isAdmin ? 'ADMIN' : 'ASSISTANT',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isAdmin
+                          ? AppTheme.primaryTeal
+                          : Colors.amber.shade700,
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
         backgroundColor: Colors.transparent,
@@ -32,8 +67,7 @@ class DashboardScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
-            onPressed: () =>
-                ref.read(dashboardProvider.notifier).refresh(),
+            onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
           ),
         ],
       ),
@@ -49,11 +83,20 @@ class DashboardScreen extends ConsumerWidget {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
-                    _buildSummaryCard('Today\'s Appointments', data.appointmentsCount.toString(), AppTheme.primaryTeal),
+                    _buildSummaryCard(
+                        'Today\'s Appointments',
+                        data.appointmentsCount.toString(),
+                        AppTheme.primaryTeal),
                     const SizedBox(width: 12),
-                    _buildSummaryCard('Pending Lab Results', data.pendingLabsCount.toString(), const Color(0xFFD97706)),
+                    _buildSummaryCard(
+                        'Pending Lab Results',
+                        data.pendingLabsCount.toString(),
+                        const Color(0xFFD97706)),
                     const SizedBox(width: 12),
-                    _buildSummaryCard('Upcoming OT', data.upcomingOTCount.toString(), const Color(0xFFDC2626)),
+                    _buildSummaryCard(
+                        'Upcoming OT',
+                        data.upcomingOTCount.toString(),
+                        const Color(0xFFDC2626)),
                   ],
                 ),
               ),
@@ -107,12 +150,12 @@ class DashboardScreen extends ConsumerWidget {
                             Text(
                               p['service_status'] ?? 'Pending',
                               style: const TextStyle(
-                                fontSize: 11, color: Colors.grey),
+                                  fontSize: 11, color: Colors.grey),
                             ),
                             Text(
                               'Dr. ${p['last_updated_by'] ?? '?'}',
                               style: const TextStyle(
-                                fontSize: 10, color: Colors.grey),
+                                  fontSize: 10, color: Colors.grey),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -125,7 +168,9 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
               ],
               _buildSectionHeader('Follow-ups Due'),
-              _buildVisitList(data.todayVisits.where((v) => v['visit_type'] == 'OPD').toList()),
+              _buildVisitList(data.todayVisits
+                  .where((v) => v['visit_type'] == 'OPD')
+                  .toList()),
               const SizedBox(height: 24),
               _buildSectionHeader('Upcoming Appointments'),
               _buildVisitList(data.todayVisits),
@@ -146,7 +191,10 @@ class DashboardScreen extends ConsumerWidget {
         color: color,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4)),
         ],
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -159,9 +207,17 @@ class DashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(count, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(count,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -183,7 +239,11 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildVisitList(List<Map<String, dynamic>> visits) {
-    if (visits.isEmpty) return const Padding(padding: EdgeInsets.all(16.0), child: Text('No records found for today.'));
+    if (visits.isEmpty) {
+      return const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('No records found for today.'));
+    }
 
     return ListView.builder(
       shrinkWrap: true,
@@ -192,26 +252,34 @@ class DashboardScreen extends ConsumerWidget {
       itemBuilder: (context, index) {
         final visit = visits[index];
         final patientInfo = visit['patients'] as Map<String, dynamic>?;
-        final patientName = patientInfo?['full_name']
-            ?? visit['patient_name']
-            ?? 'Unknown';
-        final isHighPriority =
-            patientInfo?['is_high_priority'] ?? false;
+        final patientName =
+            patientInfo?['full_name'] ?? visit['patient_name'] ?? 'Unknown';
+        final isHighPriority = patientInfo?['is_high_priority'] ?? false;
         final doctor = visit['doctors'];
-        final String visitTime = DateFormat.jm().format(DateTime.parse(visit['visit_date']));
+        final String visitTime =
+            DateFormat.jm().format(DateTime.parse(visit['visit_date']));
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: AppTheme.bgColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border(left: BorderSide(color: isHighPriority ? Colors.red : Colors.transparent, width: 6)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))],
+            border: Border(
+                left: BorderSide(
+                    color: isHighPriority ? Colors.red : Colors.transparent,
+                    width: 6)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2))
+            ],
           ),
           child: Column(
             children: [
               ListTile(
-                title: Text(patientName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(patientName,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text('$visitTime • ${visit['visit_type']}'),
                 trailing: _buildStatusBadge(visit['test_status'] ?? 'pending'),
               ),
@@ -220,8 +288,12 @@ class DashboardScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text('Last changed by: Dr. ${doctor?['full_name'] ?? 'Staff'}', 
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                    Text(
+                        'Last changed by: Dr. ${doctor?['full_name'] ?? 'Staff'}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                            fontStyle: FontStyle.italic)),
                   ],
                 ),
               ),
@@ -233,11 +305,18 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildStatusBadge(String status) {
-    Color color = (status.toLowerCase() == 'completed') ? Colors.green : Colors.amber.shade700;
+    Color color = (status.toLowerCase() == 'completed')
+        ? Colors.green
+        : Colors.amber.shade700;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color)),
-      child: Text(status.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color)),
+      child: Text(status.toUpperCase(),
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 }

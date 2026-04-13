@@ -70,15 +70,18 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'All',
                             selected: _healthScheme == HealthSchemeFilter.all,
                             onSelected: () {
-                              setState(() => _healthScheme = HealthSchemeFilter.all);
+                              setState(
+                                  () => _healthScheme = HealthSchemeFilter.all);
                               refreshSheet();
                             },
                           ),
                           _buildChoiceChip(
                             label: 'Insurance',
-                            selected: _healthScheme == HealthSchemeFilter.insurance,
+                            selected:
+                                _healthScheme == HealthSchemeFilter.insurance,
                             onSelected: () {
-                              setState(() => _healthScheme = HealthSchemeFilter.insurance);
+                              setState(() =>
+                                  _healthScheme = HealthSchemeFilter.insurance);
                               refreshSheet();
                             },
                           ),
@@ -86,15 +89,18 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'Cash',
                             selected: _healthScheme == HealthSchemeFilter.cash,
                             onSelected: () {
-                              setState(() => _healthScheme = HealthSchemeFilter.cash);
+                              setState(() =>
+                                  _healthScheme = HealthSchemeFilter.cash);
                               refreshSheet();
                             },
                           ),
                           _buildChoiceChip(
                             label: 'Sastho Sathi',
-                            selected: _healthScheme == HealthSchemeFilter.sasthoSathi,
+                            selected:
+                                _healthScheme == HealthSchemeFilter.sasthoSathi,
                             onSelected: () {
-                              setState(() => _healthScheme = HealthSchemeFilter.sasthoSathi);
+                              setState(() => _healthScheme =
+                                  HealthSchemeFilter.sasthoSathi);
                               refreshSheet();
                             },
                           ),
@@ -102,7 +108,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'Other',
                             selected: _healthScheme == HealthSchemeFilter.other,
                             onSelected: () {
-                              setState(() => _healthScheme = HealthSchemeFilter.other);
+                              setState(() =>
+                                  _healthScheme = HealthSchemeFilter.other);
                               refreshSheet();
                             },
                           ),
@@ -126,7 +133,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'High Priority only',
                             selected: _priority == PriorityFilter.highOnly,
                             onSelected: () {
-                              setState(() => _priority = PriorityFilter.highOnly);
+                              setState(
+                                  () => _priority = PriorityFilter.highOnly);
                               refreshSheet();
                             },
                           ),
@@ -142,7 +150,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'Last 7 days',
                             selected: _dateRange == DateRangeFilter.last7Days,
                             onSelected: () {
-                              setState(() => _dateRange = DateRangeFilter.last7Days);
+                              setState(
+                                  () => _dateRange = DateRangeFilter.last7Days);
                               refreshSheet();
                             },
                           ),
@@ -150,7 +159,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'Last 30 days',
                             selected: _dateRange == DateRangeFilter.last30Days,
                             onSelected: () {
-                              setState(() => _dateRange = DateRangeFilter.last30Days);
+                              setState(() =>
+                                  _dateRange = DateRangeFilter.last30Days);
                               refreshSheet();
                             },
                           ),
@@ -158,7 +168,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'Last 3 months',
                             selected: _dateRange == DateRangeFilter.last3Months,
                             onSelected: () {
-                              setState(() => _dateRange = DateRangeFilter.last3Months);
+                              setState(() =>
+                                  _dateRange = DateRangeFilter.last3Months);
                               refreshSheet();
                             },
                           ),
@@ -166,7 +177,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'All time',
                             selected: _dateRange == DateRangeFilter.allTime,
                             onSelected: () {
-                              setState(() => _dateRange = DateRangeFilter.allTime);
+                              setState(
+                                  () => _dateRange = DateRangeFilter.allTime);
                               refreshSheet();
                             },
                           ),
@@ -206,7 +218,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                             label: 'Emergency',
                             selected: _visitType == VisitTypeFilter.emergency,
                             onSelected: () {
-                              setState(() => _visitType = VisitTypeFilter.emergency);
+                              setState(
+                                  () => _visitType = VisitTypeFilter.emergency);
                               refreshSheet();
                             },
                           ),
@@ -259,16 +272,17 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
   @override
   Widget build(BuildContext context) {
     final filter = _buildFilter();
-    final patientsAsync = ref.watch(filteredPatientsProvider(filter));
-    final totalAsync = ref.watch(patientListProvider);
+    final patientsAsync = ref.watch(roleAwarePatientsProvider(filter));
+    final totalAsync = ref.watch(patientTotalCountProvider);
 
-    final totalCount = totalAsync.value?.length ?? 0;
+    final totalCount = totalAsync.value ?? 0;
     final shownCount = patientsAsync.value?.length ?? 0;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Client Directory', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Client Directory',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -316,7 +330,9 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                     offset: const Offset(0, 4),
                   ),
                   BoxShadow(
-                    color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                    color: Theme.of(context)
+                        .scaffoldBackgroundColor
+                        .withValues(alpha: 0.8),
                     blurRadius: 10,
                     offset: const Offset(-2, -2),
                   ),
@@ -327,9 +343,11 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: 'Search by name, phone, email...',
-                  prefixIcon: const Icon(Icons.search, color: AppTheme.primaryTeal),
+                  prefixIcon:
+                      const Icon(Icons.search, color: AppTheme.primaryTeal),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.filter_list, color: AppTheme.primaryTeal),
+                    icon: const Icon(Icons.filter_list,
+                        color: AppTheme.primaryTeal),
                     onPressed: _openFilterSheet,
                   ),
                   border: InputBorder.none,
@@ -360,24 +378,28 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                 return RefreshIndicator(
                   color: const Color(0xFF1A6B5A),
                   onRefresh: () async {
-                    ref.invalidate(patientListProvider);
-                    ref.invalidate(filteredPatientsProvider(filter));
+                    ref.invalidate(roleAwarePatientsProvider(filter));
                   },
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: patients.length,
                     itemBuilder: (context, index) {
                       final patient = patients[index];
-                      final bool isHighPriority = patient['is_high_priority'] ?? false;
+                      final bool isHighPriority =
+                          patient['is_high_priority'] ?? false;
                       final lastUpdated = patient['last_updated_at'] != null
-                          ? DateFormat.yMMMd().format(DateTime.parse(patient['last_updated_at']))
+                          ? DateFormat.yMMMd().format(
+                              DateTime.parse(patient['last_updated_at']))
                           : 'Unknown';
-                      final lastUpdatedBy = patient['last_updated_by'] ?? 'No edits yet';
+                      final lastUpdatedBy =
+                          patient['last_updated_by'] ?? 'No edits yet';
 
                       final phone = (patient['phone'] ?? '').toString();
                       final email = (patient['email'] ?? '').toString();
                       final symptoms = (patient['symptoms'] ?? '').toString();
-                      final areaAffected = (patient['area_affected'] ?? '').toString();
+                      final areaAffected =
+                          (patient['area_affected'] ?? '').toString();
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -385,64 +407,94 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isHighPriority ? Colors.red.withValues(alpha: 0.5) : Colors.transparent,
+                              color: isHighPriority
+                                  ? Colors.red.withValues(alpha: 0.5)
+                                  : Colors.transparent,
                               width: isHighPriority ? 2 : 0,
                             ),
                           ),
                           child: GestureDetector(
-                            onTap: () => context.push('/patients/${patient['id']}/detail'),
+                            onTap: () => context
+                                .push('/patients/${patient['id']}/detail'),
                             child: NeuCard(
                               borderRadius: 16,
                               padding: EdgeInsets.zero,
                               child: Column(
                                 children: [
                                   ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
                                     leading: CircleAvatar(
-                                      backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                                      child: const Icon(Icons.person, color: AppTheme.primaryTeal),
+                                      backgroundColor: AppTheme.primaryTeal
+                                          .withValues(alpha: 0.1),
+                                      child: const Icon(Icons.person,
+                                          color: AppTheme.primaryTeal),
                                     ),
                                     title: _buildHighlightedText(
                                       patient['full_name'] ?? 'Unknown',
                                       _searchQuery,
-                                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
                                     ),
                                     subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const SizedBox(height: 4),
-                                        Text('ID: ${(patient['id'] ?? '').toString().substring(0, 8)}...'),
+                                        Text(
+                                            'ID: ${(patient['id'] ?? '').toString().substring(0, 8)}...'),
                                         Text('Last Visit: $lastUpdated'),
                                         if (phone.isNotEmpty)
-                                          _buildHighlightedText('Phone: $phone', _searchQuery, const TextStyle(fontSize: 12)),
+                                          _buildHighlightedText(
+                                              'Phone: $phone',
+                                              _searchQuery,
+                                              const TextStyle(fontSize: 12)),
                                         if (email.isNotEmpty)
-                                          _buildHighlightedText('Email: $email', _searchQuery, const TextStyle(fontSize: 12)),
+                                          _buildHighlightedText(
+                                              'Email: $email',
+                                              _searchQuery,
+                                              const TextStyle(fontSize: 12)),
                                         if (symptoms.isNotEmpty)
-                                          _buildHighlightedText('Symptoms: $symptoms', _searchQuery, const TextStyle(fontSize: 12)),
+                                          _buildHighlightedText(
+                                              'Symptoms: $symptoms',
+                                              _searchQuery,
+                                              const TextStyle(fontSize: 12)),
                                         if (areaAffected.isNotEmpty)
-                                          _buildHighlightedText('Area: $areaAffected', _searchQuery, const TextStyle(fontSize: 12)),
+                                          _buildHighlightedText(
+                                              'Area: $areaAffected',
+                                              _searchQuery,
+                                              const TextStyle(fontSize: 12)),
                                         const SizedBox(height: 8),
-                                        _buildServiceBadge(patient['service_status'] ?? 'Pending'),
+                                        _buildServiceBadge(
+                                            patient['service_status'] ??
+                                                'Pending'),
                                       ],
                                     ),
                                     trailing: IconButton(
-                                      icon: const Icon(Icons.edit, color: AppTheme.primaryTeal),
-                                      onPressed: () => context.push('/patients/edit/${patient['id']}'),
+                                      icon: const Icon(Icons.edit,
+                                          color: AppTheme.primaryTeal),
+                                      onPressed: () => context.push(
+                                          '/patients/edit/${patient['id']}'),
                                     ),
                                   ),
                                   // REQUIREMENT 4: Audit info footer
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 0, 16, 12),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                                        const Icon(Icons.access_time,
+                                            size: 14, color: Colors.grey),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             patient['last_updated_by'] != null
                                                 ? 'Last edited by Dr. $lastUpdatedBy on ${DateFormat('MMM d, HH:mm').format(DateTime.parse(patient['last_updated_at']))}'
                                                 : 'No edits yet',
-                                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                            style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey),
                                           ),
                                         ),
                                       ],
@@ -458,7 +510,9 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+              loading: () => const Center(
+                  child:
+                      CircularProgressIndicator(color: AppTheme.primaryTeal)),
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
           ),
@@ -469,7 +523,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         foregroundColor: Colors.white,
         onPressed: () => context.push('/patients/new'),
         icon: const Icon(Icons.add),
-        label: const Text('New Patient', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('New Patient',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 6,
       ),
     );
@@ -530,7 +585,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       spans.add(
         TextSpan(
           text: text.substring(index, index + query.length),
-          style: style.copyWith(color: AppTheme.primaryTeal, fontWeight: FontWeight.bold),
+          style: style.copyWith(
+              color: AppTheme.primaryTeal, fontWeight: FontWeight.bold),
         ),
       );
       start = index + query.length;
@@ -546,9 +602,11 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         children: [
           Icon(Icons.search_off_rounded, size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 12),
-          const Text('No patients found', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text('No patients found',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 4),
-          Text('Try adjusting your search or filters', style: TextStyle(color: Colors.grey.shade600)),
+          Text('Try adjusting your search or filters',
+              style: TextStyle(color: Colors.grey.shade600)),
           const SizedBox(height: 16),
           SizedBox(
             width: 160,
@@ -577,7 +635,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

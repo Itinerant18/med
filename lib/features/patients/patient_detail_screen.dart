@@ -9,6 +9,8 @@ import 'package:mediflow/features/patients/visit_history_provider.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/user_role.dart';
+import 'package:mediflow/core/app_snackbar.dart';
+
 
 class PatientDetailScreen extends ConsumerWidget {
   final String patientId;
@@ -302,6 +304,8 @@ class PatientDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text('Complaint: ${visit['chief_complaint'] == 'Other' ? visit['chief_complaint_custom'] : visit['chief_complaint'] ?? 'None'}'),
                     const SizedBox(height: 8),
+                    _buildVitalsSummaryRow(visit),
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       children: [
@@ -328,6 +332,40 @@ class PatientDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVitalsSummaryRow(Map<String, dynamic> visit) {
+    final List<String> vitals = [];
+    if (visit['bp_systolic'] != null && visit['bp_diastolic'] != null) {
+      vitals.add('BP: ${visit['bp_systolic']}/${visit['bp_diastolic']}');
+    }
+    if (visit['pulse'] != null) vitals.add('P: ${visit['pulse']}');
+    if (visit['temperature'] != null) vitals.add('T: ${visit['temperature']}°C');
+    if (visit['spo2'] != null) vitals.add('SpO2: ${visit['spo2']}%');
+    if (visit['respiratory_rate'] != null) vitals.add('RR: ${visit['respiratory_rate']}');
+
+    if (vitals.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        children: vitals.map((v) => Text(
+          v,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF135043),
+          ),
+        )).toList(),
       ),
     );
   }

@@ -1,9 +1,14 @@
 // lib/features/patients/patient_list_provider.dart
+// NOTE: Supabase RLS must enforce:
+// - Doctors (admin): can SELECT/INSERT/UPDATE/DELETE all rows in patients
+// - Assistants (user): can only SELECT/INSERT/UPDATE rows where last_updated_by = auth.uid()
+// Apply these policies in the Supabase dashboard under Authentication > Policies.
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:mediflow/models/user_role.dart';
-
 
 enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, other }
 
@@ -13,7 +18,13 @@ enum DateRangeFilter { last7Days, last30Days, last3Months, allTime }
 
 enum VisitTypeFilter { all, opd, ipd, emergency }
 
-enum SortOption { nameAsc, nameDesc, mostRecentVisit, highPriorityFirst, newestRegistered }
+enum SortOption {
+  nameAsc,
+  nameDesc,
+  mostRecentVisit,
+  highPriorityFirst,
+  newestRegistered
+}
 
 class SearchFilter {
   const SearchFilter({
@@ -62,44 +73,50 @@ class SearchFilter {
   }
 
   @override
-  int get hashCode => Object.hash(query, healthScheme, priority, dateRange, visitType, sortOption);
+  int get hashCode => Object.hash(
+      query, healthScheme, priority, dateRange, visitType, sortOption);
 }
 
-final patientListProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final supabase = ref.watch(supabaseClientProvider);
-  final userState = ref.watch(authNotifierProvider).value;
-  
-  var query = supabase.from('patients').select();
-  
-  // RBAC: Assistants can only see their own patients
-  if (userState != null && userState.role == UserRole.assistant) {
-    query = query.eq('created_by_id', userState.session.user.id);
-  }
-  
-  final response = await query.order('last_updated_at', ascending: false);
-  return List<Map<String, dynamic>>.from(response);
-});
-
-final filteredPatientsProvider = FutureProvider.autoDispose
+// Role-aware filtered provider that respects RBAC:
+// Doctors see everyone, assistants see only patients they matching their profile name (as per prompt B3)
+final roleAwarePatientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
   final supabase = ref.watch(supabaseClientProvider);
   final userState = ref.watch(authNotifierProvider).value;
-  
+  final role = ref.watch(currentRoleProvider);
+
   var query = supabase.from('patients').select();
-  
-  // RBAC: Assistants can only see their own patients
-  if (userState != null && userState.role == UserRole.assistant) {
-    query = query.eq('created_by_id', userState.session.user.id);
+
+  // Assistant-only filtering matching the RBAC requirements
+  if (role == UserRole.assistant && userState != null) {
+    // We match by doctorName string as per the requested RLS pattern
+    final profileData = ref.watch(profileNotifierProvider).valueOrNull;
+    final doctorName = profileData?['full_name'] ?? '';
+    if (doctorName.isNotEmpty) {
+      query = query.eq('last_updated_by', doctorName);
+    }
   }
 
   final allPatients = await query.order('last_updated_at', ascending: false);
-
   final patients = List<Map<String, dynamic>>.from(allPatients);
-  final filtered =
-      patients.where((p) => _matchesFilter(p, filter)).toList();
+  final filtered = patients.where((p) => _matchesFilter(p, filter)).toList();
   _sortPatients(filtered, filter.sortOption);
   return filtered;
+});
+
+// Helper provider for total count (respecting RBAC)
+final patientTotalCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final patients = await ref.watch(roleAwarePatientsProvider(
+    const SearchFilter(
+      query: '',
+      healthScheme: HealthSchemeFilter.all,
+      priority: PriorityFilter.all,
+      dateRange: DateRangeFilter.allTime,
+      visitType: VisitTypeFilter.all,
+      sortOption: SortOption.mostRecentVisit,
+    ),
+  ).future);
+  return patients.length;
 });
 
 bool _matchesFilter(Map<String, dynamic> patient, SearchFilter filter) {
@@ -121,10 +138,12 @@ bool _matchesQuery(Map<String, dynamic> patient, String query) {
     patient['symptoms'],
     patient['area_affected'],
   ];
-  return fields.any((field) => (field ?? '').toString().toLowerCase().contains(normalized));
+  return fields.any(
+      (field) => (field ?? '').toString().toLowerCase().contains(normalized));
 }
 
-bool _matchesHealthScheme(Map<String, dynamic> patient, HealthSchemeFilter filter) {
+bool _matchesHealthScheme(
+    Map<String, dynamic> patient, HealthSchemeFilter filter) {
   if (filter == HealthSchemeFilter.all) return true;
   final scheme = (patient['health_scheme'] ?? '').toString().toLowerCase();
   switch (filter) {
@@ -162,7 +181,9 @@ bool _matchesDateRange(Map<String, dynamic> patient, DateRangeFilter filter) {
 
 bool _matchesVisitType(Map<String, dynamic> patient, VisitTypeFilter filter) {
   if (filter == VisitTypeFilter.all) return true;
-  final raw = (patient['visit_type'] ?? patient['last_visit_type'] ?? '').toString().toLowerCase();
+  final raw = (patient['visit_type'] ?? patient['last_visit_type'] ?? '')
+      .toString()
+      .toLowerCase();
   switch (filter) {
     case VisitTypeFilter.opd:
       return raw == 'opd';
@@ -176,7 +197,8 @@ bool _matchesVisitType(Map<String, dynamic> patient, VisitTypeFilter filter) {
 }
 
 void _sortPatients(List<Map<String, dynamic>> patients, SortOption sortOption) {
-  int compareNames(Map<String, dynamic> a, Map<String, dynamic> b, {bool ascending = true}) {
+  int compareNames(Map<String, dynamic> a, Map<String, dynamic> b,
+      {bool ascending = true}) {
     final nameA = (a['full_name'] ?? '').toString().toLowerCase();
     final nameB = (b['full_name'] ?? '').toString().toLowerCase();
     return ascending ? nameA.compareTo(nameB) : nameB.compareTo(nameA);

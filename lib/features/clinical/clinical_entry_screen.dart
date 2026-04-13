@@ -50,17 +50,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _loadPatientInfo();
       });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(patientSearchQueryProvider.notifier).state = '';
+          _searchController.clear();
+        }
+      });
     }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _customComplaintController.dispose();
-    _diagnosisController.dispose();
-    _prescriptionsController.dispose();
-    _handoffController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadPatientInfo() async {
@@ -94,14 +91,11 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
 
     final visitData = {
       'patient_id': _selectedPatientId,
-      'patient_name': _selectedPatientName ?? '',
       'doctor_id': user.id,
       'visit_type': _visitType,
       'chief_complaint': _chiefComplaint,
-      'chief_complaint_custom':
-          _isOtherComplaint ? _customComplaintController.text : null,
+      'chief_complaint_custom': _isOtherComplaint ? _customComplaintController.text : null,
       'tests_performed': _testsPerformed,
-      'test_status': _testsPerformed ? 'done' : 'pending',
       'ot_required': _otRequired,
       'patient_flow_status': _flowStatus,
       'final_diagnosis': _diagnosisController.text,
@@ -116,18 +110,15 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
 
     if (!mounted) return;
 
-    final clinicalState = ref.read(clinicalNotifierProvider);
-    if (clinicalState.hasError) {
-      AppSnackbar.showError(
-        context, AppError.getMessage(clinicalState.error));
+    final state = ref.read(clinicalNotifierProvider);
+    if (state.hasError) {
+      AppSnackbar.showError(context, AppError.getMessage(state.error));
     } else {
       AppSnackbar.showSuccess(context, 'Visit saved successfully');
       if (widget.patientId != null) {
-        // Opened from PatientDetailScreen — go back after brief delay
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) Navigator.of(context).pop();
       } else {
-        // Standalone Clinical tab — just reset form
         _resetForm();
       }
     }
@@ -219,7 +210,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         child: Row(
           children: [
             const CircleAvatar(
-              backgroundColor: Color(0xFF1A6B5A),
+              backgroundColor: AppTheme.primaryTeal,
               child: Icon(Icons.person, color: Colors.white),
             ),
             const SizedBox(width: 16),
@@ -229,14 +220,11 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 children: [
                   Text(
                     _selectedPatientName ?? 'Loading...',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
-                    'Age: ${_selectedPatientAge ?? '??'} '
-                    '• ID: ${_selectedPatientId?.substring(0, 8)}...',
-                    style: const TextStyle(
-                      fontSize: 12, color: Colors.grey),
+                    'Age: ${_selectedPatientAge ?? '??'} • ID: ${_selectedPatientId?.substring(0, 8)}...',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -244,15 +232,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
             if (widget.patientId == null)
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () {
-                  setState(() {
-                    _selectedPatientId = null;
-                    _selectedPatientName = null;
-                    _selectedPatientAge = null;
-                  });
-                  _searchController.clear();
-                  ref.read(patientSearchQueryProvider.notifier).state = '';
-                },
+                onPressed: () => setState(() => _selectedPatientId = null),
               ),
           ],
         ),
@@ -262,134 +242,38 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     final searchResults = ref.watch(clinicalPatientSearchProvider);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        NeuCard(
-          padding: EdgeInsets.zero,
-          child: TextField(
-            controller: _searchController,
-            onChanged: (val) {
-              ref.read(patientSearchQueryProvider.notifier).state = val;
-            },
-            decoration: const InputDecoration(
-              labelText: 'Search Patient',
-              hintText: 'Type at least 2 characters...',
-              prefixIcon: Icon(Icons.search, color: Color(0xFF1A6B5A)),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-          ),
+        NeuTextField(
+          controller: _searchController,
+          label: 'Search Patient',
+          hint: 'Enter name...',
+          onChanged: (val) => ref.read(patientSearchQueryProvider.notifier).state = val,
         ),
-        const SizedBox(height: 8),
-        searchResults.when(
-          data: (patients) {
-            if (_searchController.text.trim().length < 2) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  'Type a patient name to search',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              );
-            }
-            if (patients.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  'No patients found. Try a different name.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              );
-            }
-            return Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8EDF2),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0xFFA3B1C6),
-                    offset: Offset(2, 2),
-                    blurRadius: 5,
-                  ),
-                  BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-2, -2),
-                    blurRadius: 5,
-                  ),
-                ],
-              ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: patients.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 16),
-                itemBuilder: (context, index) {
-                  final p = patients[index];
-                  final dob = p['date_of_birth'] != null
-                      ? DateTime.tryParse(p['date_of_birth'])
-                      : null;
-                  final age = dob != null
-                      ? (DateTime.now().year - dob.year).toString()
-                      : '??';
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          const Color(0xFF1A6B5A).withValues(alpha: 0.1),
-                      child: Text(
-                        (p['full_name'] as String? ?? '?')[0]
-                            .toUpperCase(),
-                        style: const TextStyle(
-                          color: Color(0xFF1A6B5A),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      p['full_name'] ?? 'Unknown',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text('Age: $age  •  '
-                        'ID: ${p['id'].toString().substring(0, 8)}'),
-                    onTap: () {
-                      setState(() {
-                        _selectedPatientId = p['id'];
-                        _selectedPatientName = p['full_name'];
-                        _selectedPatientAge = age;
-                      });
-                      _searchController.clear();
-                      ref.read(patientSearchQueryProvider.notifier)
-                          .state = '';
-                      FocusScope.of(context).unfocus();
-                    },
-                  );
-                },
-              ),
-            );
-          },
-          loading: () => const Padding(
-            padding: EdgeInsets.all(8),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Text('Searching...', style: TextStyle(color: Colors.grey)),
+        if (searchResults.hasValue && searchResults.value!.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.bgColor,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(color: AppTheme.darkShadow, offset: Offset(2, 2), blurRadius: 5),
               ],
             ),
-          ),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(
-              'Search error. Please try again.',
-              style: TextStyle(color: Colors.red.shade400, fontSize: 13),
+            child: Column(
+              children: searchResults.value!.map((p) => ListTile(
+                title: Text(p['full_name']),
+                subtitle: Text('ID: ${p['id'].toString().substring(0, 8)}'),
+                onTap: () {
+                  setState(() {
+                    _selectedPatientId = p['id'];
+                    _selectedPatientName = p['full_name'];
+                    final dob = p['date_of_birth'] != null ? DateTime.parse(p['date_of_birth']) : null;
+                    _selectedPatientAge = dob != null ? (DateTime.now().year - dob.year).toString() : '??';
+                  });
+                },
+              )).toList(),
             ),
           ),
-        ),
       ],
     );
   }

@@ -87,7 +87,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     NeuTextField(controller: _confirmPasswordController, obscureText: true, label: 'Confirm Password'),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<UserRole>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: InputDecoration(
                         labelText: 'Role',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

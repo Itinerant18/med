@@ -19,6 +19,12 @@ final authStateProvider = StreamProvider<Session?>((ref) async* {
 	}
 });
 
+final currentRoleProvider = Provider<UserRole>((ref) {
+  final authState = ref.watch(authNotifierProvider).value;
+  return authState?.role ?? UserRole.doctor;
+});
+
+
 class AuthUserState {
 	const AuthUserState({
 		required this.session,

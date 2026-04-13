@@ -257,7 +257,7 @@ class FullScreenImageViewer extends StatelessWidget {
             icon: const Icon(Icons.share),
             onPressed: () async {
               // Using SharePlus as per linter suggestion
-              await Share.share(url);
+              await SharePlus.instance.share(ShareParams(text: url));
             },
           ),
           IconButton(
