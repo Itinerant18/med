@@ -152,4 +152,3 @@ USING (public.get_my_role() = 'doctor');
 -- (existing rows with NULL created_by_id are grandfathered for doctors)
 -- ============================================================
 -- No schema change needed — doctors can still see all rows regardless.
-$$

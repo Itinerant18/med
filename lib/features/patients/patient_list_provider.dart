@@ -1,7 +1,7 @@
 // lib/features/patients/patient_list_provider.dart
 // NOTE: Supabase RLS must enforce:
 // - Doctors (admin): can SELECT/INSERT/UPDATE/DELETE all rows in patients
-// - Assistants (user): can only SELECT/INSERT/UPDATE rows where last_updated_by = auth.uid()
+// - Assistants (user): can only SELECT/INSERT/UPDATE rows where created_by_id = auth.uid()
 // Apply these policies in the Supabase dashboard under Authentication > Policies.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

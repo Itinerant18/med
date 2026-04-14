@@ -6,6 +6,7 @@ import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
