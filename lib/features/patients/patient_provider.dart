@@ -1,14 +1,18 @@
 // lib/features/patients/patient_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 
 final patientProvider = Provider((ref) => PatientService(ref));
 
-/// Provider to fetch a single patient by ID (Future)
-final patientDetailProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, id) async {
+/// Provider to fetch a single patient by ID
+final patientDetailProvider =
+    FutureProvider.family<Map<String, dynamic>?, String>((ref, id) async {
+  if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
   final supabase = ref.read(supabaseClientProvider);
-  final response = await supabase.from('patients').select().eq('id', id).maybeSingle();
+  final response =
+      await supabase.from('patients').select().eq('id', id).maybeSingle();
   return response;
 });
 
@@ -16,46 +20,60 @@ class PatientService {
   final Ref _ref;
   PatientService(this._ref);
 
-  Future<void> registerPatient(Map<String, dynamic> patientData) async {
-    final supabase = _ref.read(supabaseClientProvider);
-    final userState = _ref.read(authNotifierProvider).value;
-    final doctorName = userState?.doctorName ?? "Staff";
-    final userId = userState?.session.user.id;
+  SupabaseClient get _supabase => _ref.read(supabaseClientProvider);
 
+  AuthUserState? get _userState => _ref.read(authNotifierProvider).value;
+
+  String get _doctorName => _userState?.doctorName ?? 'Staff';
+  String? get _userId => _userState?.session.user.id;
+
+  Future<void> registerPatient(Map<String, dynamic> patientData) async {
     final finalData = {
       ...patientData,
-      'last_updated_by': doctorName,
-      'created_by_id': userId,
+      'last_updated_by': _doctorName,
+      'created_by_id': _userId,
+      'last_updated_by_id': _userId,
       'last_updated_at': DateTime.now().toIso8601String(),
       'service_status': 'pending',
       'created_at': DateTime.now().toIso8601String(),
     };
 
-    await supabase.from('patients').insert(finalData);
+    // Remove null values to avoid unnecessary DB errors
+    finalData.removeWhere((key, value) => value == null || value == '');
+
+    await _supabase.from('patients').insert(finalData);
   }
 
-  Future<void> _updateAuditInfo(Map<String, dynamic> data) async {
-    final userState = _ref.read(authNotifierProvider).value;
-    data['last_updated_by'] = userState?.doctorName ?? "Staff";
-    data['last_updated_at'] = DateTime.now().toIso8601String();
-  }
-
-  Future<void> updatePatient(String id, Map<String, dynamic> patientData) async {
-    final supabase = _ref.read(supabaseClientProvider);
-    final userState = _ref.read(authNotifierProvider).value;
-    final doctorName = userState?.doctorName ?? "Staff";
-
+  Future<void> updatePatient(
+      String id, Map<String, dynamic> patientData) async {
     final finalData = {
       ...patientData,
-      'last_updated_by': doctorName,
+      'last_updated_by': _doctorName,
+      'last_updated_by_id': _userId,
       'last_updated_at': DateTime.now().toIso8601String(),
     };
 
-    await supabase.from('patients').update(finalData).eq('id', id);
+    // Remove null values
+    finalData.removeWhere((key, value) => value == null);
+
+    await _supabase.from('patients').update(finalData).eq('id', id);
   }
 
   Future<void> deletePatient(String id) async {
-    final supabase = _ref.read(supabaseClientProvider);
-    await supabase.from('patients').delete().eq('id', id);
+    if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
+    await _supabase.from('patients').delete().eq('id', id);
+  }
+
+  Future<List<Map<String, dynamic>>> searchPatients(String query,
+      {int limit = 10}) async {
+    if (query.trim().length < 2) return [];
+    
+    final response = await _supabase
+        .from('patients')
+        .select('id, full_name, date_of_birth, phone')
+        .ilike('full_name', '%${query.trim()}%')
+        .limit(limit);
+    
+    return List<Map<String, dynamic>>.from(response);
   }
 }

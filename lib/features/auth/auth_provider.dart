@@ -1,134 +1,179 @@
+// lib/features/auth/auth_provider.dart
 import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// TODO: Manage authentication state and auth-related business logic.
-
 final authNotifierProvider =
-		AsyncNotifierProvider<AuthNotifier, AuthUserState?>(AuthNotifier.new);
+    AsyncNotifierProvider<AuthNotifier, AuthUserState?>(AuthNotifier.new);
 
 final authStateProvider = StreamProvider<Session?>((ref) async* {
-	final supabase = ref.watch(supabaseClientProvider);
-	yield supabase.auth.currentSession;
-
-	await for (final event in supabase.auth.onAuthStateChange) {
-		yield event.session;
-	}
+  final supabase = ref.watch(supabaseClientProvider);
+  yield supabase.auth.currentSession;
+  await for (final event in supabase.auth.onAuthStateChange) {
+    yield event.session;
+  }
 });
 
+// Single source of truth for current role
 final currentRoleProvider = Provider<UserRole>((ref) {
-  final authState = ref.watch(authNotifierProvider).value;
-  return authState?.role ?? UserRole.doctor;
+  return ref.watch(authNotifierProvider).value?.role ?? UserRole.doctor;
 });
-
 
 class AuthUserState {
-	const AuthUserState({
-		required this.session,
-		required this.doctorName,
-		required this.specialization,
-		required this.role,
-	});
+  const AuthUserState({
+    required this.session,
+    required this.doctorName,
+    required this.specialization,
+    required this.role,
+  });
 
-	final Session session;
-	final String? doctorName;
-	final String? specialization;
-	final UserRole role;
+  final Session session;
+  final String? doctorName;
+  final String? specialization;
+  final UserRole role;
+
+  String get displayName => doctorName ?? 'User';
+  String get displayRole => role.label;
 }
 
 class AuthNotifier extends AsyncNotifier<AuthUserState?> {
-	SupabaseClient get _supabase => ref.read(supabaseClientProvider);
+  SupabaseClient get _supabase => ref.read(supabaseClientProvider);
+  bool _disposed = false;
 
-	@override
-	Future<AuthUserState?> build() async {
-		final sub = _supabase.auth.onAuthStateChange.listen((event) async {
-			final nextState =
-					await AsyncValue.guard(() => _resolveAuthUserState(event.session));
-			state = nextState;
-		});
+  @override
+  Future<AuthUserState?> build() async {
+    _disposed = false;
+    // Listen to auth state changes
+    final sub = _supabase.auth.onAuthStateChange.listen((event) async {
+      if (event.event == AuthChangeEvent.signedOut) {
+        if (!_disposed) state = const AsyncData(null);
+        return;
+      }
+      final nextState =
+          await AsyncValue.guard(() => _resolveAuthUserState(event.session));
+      if (!_disposed) state = nextState;
+    });
 
-		ref.onDispose(sub.cancel);
-		return _resolveAuthUserState(_supabase.auth.currentSession);
-	}
+    ref.onDispose(() {
+      _disposed = true;
+      sub.cancel();
+    });
+    return _resolveAuthUserState(_supabase.auth.currentSession);
+  }
 
-	Future<void> signIn({required String email, required String password}) async {
-		state = const AsyncLoading();
-		state = await AsyncValue.guard(() async {
-			final response = await _supabase.auth.signInWithPassword(
-				email: email,
-				password: password,
-			);
-			final session = response.session ?? _supabase.auth.currentSession;
-			return _resolveAuthUserState(session);
-		});
-	}
+  Future<void> signIn({
+    required String email,
+    required String password,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final response = await _supabase.auth.signInWithPassword(
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+      final session = response.session ?? _supabase.auth.currentSession;
+      if (session == null) throw Exception('Sign-in succeeded but no session was created.');
+      return _resolveAuthUserState(session);
+    });
+  }
 
-	Future<void> signUp({
-		required String fullName,
-		required String specialization,
-		required String email,
-		required String password,
-		UserRole? role,
-	}) async {
-		state = const AsyncLoading();
-		state = await AsyncValue.guard(() async {
-			final response = await _supabase.auth.signUp(
-				email: email,
-				password: password,
-				data: {
-					'full_name': fullName,
-					'specialization': specialization,
-					'role': (role ?? UserRole.doctor).name,
-				},
-			);
+  Future<void> signUp({
+    required String fullName,
+    required String specialization,
+    required String email,
+    required String password,
+    UserRole? role,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final selectedRole = role ?? UserRole.doctor;
 
-			final userId = response.user?.id;
-			if (userId != null) {
-				await _supabase.from('doctors').upsert({
-					'id': userId,
-					'full_name': fullName,
-					'specialization': specialization,
-					'email': email,
-					'role': (role ?? UserRole.doctor).name,
-				}, onConflict: 'id');
-			}
+      final response = await _supabase.auth.signUp(
+        email: email.trim().toLowerCase(),
+        password: password,
+        data: {
+          'full_name': fullName.trim(),
+          'specialization': specialization.trim(),
+          'role': selectedRole.name,
+        },
+      );
 
-			final session = response.session ?? _supabase.auth.currentSession;
-			return _resolveAuthUserState(session);
-		});
-	}
+      final userId = response.user?.id;
+      if (userId == null) {
+        throw Exception('Registration failed. Please try again.');
+      }
 
-	Future<void> signOut() async {
-		state = const AsyncLoading();
-		state = await AsyncValue.guard(() async {
-			await _supabase.auth.signOut();
-			return null;
-		});
-	}
+      // Upsert doctor record
+      await _supabase.from('doctors').upsert({
+        'id': userId,
+        'full_name': fullName.trim(),
+        'specialization': specialization.trim(),
+        'email': email.trim(),
+        'role': selectedRole.name,
+        'created_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'id');
 
-	Future<AuthUserState?> _resolveAuthUserState(Session? session) async {
-		if (session == null) {
-			return null;
-		}
+      // If email confirmation is required, session will be null
+      final session = response.session ?? _supabase.auth.currentSession;
+      return _resolveAuthUserState(session);
+    });
+  }
 
-		final user = session.user;
-		final metadata = user.userMetadata ?? const {};
-		final doctorName = metadata['full_name'] as String?;
-		final specialization = metadata['specialization'] as String?;
-		final roleString = metadata['role'] as String? ?? 'doctor';
-		final role = UserRole.values.firstWhere(
-			(e) => e.name == roleString,
-			orElse: () => UserRole.doctor,
-		);
+  Future<void> signOut() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await _supabase.auth.signOut();
+      return null;
+    });
+  }
 
-		return AuthUserState(
-			session: session,
-			doctorName: doctorName,
-			specialization: specialization,
-			role: role,
-		);
-	}
+  Future<AuthUserState?> _resolveAuthUserState(Session? session) async {
+    if (session == null) return null;
+
+    final user = session.user;
+    final metadata = user.userMetadata ?? const {};
+
+    // Try to get profile from doctors table for most up-to-date info
+    try {
+      final profile = await _supabase
+          .from('doctors')
+          .select('full_name, specialization, role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (profile != null) {
+        final roleString = profile['role'] as String? ??
+            metadata['role'] as String? ?? 'doctor';
+        return AuthUserState(
+          session: session,
+          doctorName: profile['full_name'] as String?,
+          specialization: profile['specialization'] as String?,
+          role: UserRole.values.firstWhere(
+            (e) => e.name == roleString,
+            orElse: () => UserRole.doctor,
+          ),
+        );
+      }
+    } catch (_) {
+      // Fall back to metadata if DB query fails
+    }
+
+    // Fallback to auth metadata
+    final doctorName = metadata['full_name'] as String?;
+    final specialization = metadata['specialization'] as String?;
+    final roleString = metadata['role'] as String? ?? 'doctor';
+    final role = UserRole.values.firstWhere(
+      (e) => e.name == roleString,
+      orElse: () => UserRole.doctor,
+    );
+
+    return AuthUserState(
+      session: session,
+      doctorName: doctorName,
+      specialization: specialization,
+      role: role,
+    );
+  }
 }

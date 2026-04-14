@@ -1,6 +1,8 @@
+// lib/features/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
+import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/error_handler.dart';
@@ -13,101 +15,309 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  bool _obscurePassword = true;
+  bool _isSubmitting = false;
+
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   Future<void> _onLoginTap() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    final email = _emailController.text.trim().toLowerCase();
+    debugPrint('[Auth] Attempting sign-in with email: $email');
 
     try {
       await ref.read(authNotifierProvider.notifier).signIn(
-            email: _emailController.text.trim(),
+            email: email,
             password: _passwordController.text,
           );
     } catch (e) {
-      if (!mounted) return;
-      AppSnackbar.showError(context, AppError.getMessage(e));
+      if (mounted) {
+        AppSnackbar.showError(context, AppError.getMessage(e));
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authAsync = ref.watch(authNotifierProvider);
-    final isLoading = authAsync.isLoading;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppTheme.bgColor,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.local_hospital_rounded, size: 64, color: Color(0xFF1A6B5A)),
-                const SizedBox(height: 10),
-                const Text('MediFlow', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: Color(0xFF1A6B5A))),
-                const SizedBox(height: 24),
-                NeuCard(
-                  borderRadius: 22,
-                  padding: EdgeInsets.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          NeuTextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            label: 'Email Address',
-                            hint: 'doctor@mediflow.com',
-                            validator: (value) => (value == null || !value.contains('@')) ? 'Enter a valid email' : null,
-                          ),
-                          const SizedBox(height: 16),
-                          NeuTextField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            label: 'Password',
-                            hint: '********',
-                            validator: (value) => (value == null || value.isEmpty) ? 'Password is required' : null,
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: NeuButton(
-                              onPressed: isLoading ? null : _onLoginTap,
-                              isLoading: isLoading,
-                              child: const Text('Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── Logo Section ──
+                    _buildLogo(),
+                    const SizedBox(height: 40),
+
+                    // ── Login Card ──
+                    NeuCard(
+                      borderRadius: 24,
+                      padding: const EdgeInsets.all(28),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Welcome back',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textColor,
+                                letterSpacing: -0.5,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () => context.push('/register'),
-                            child: const Text('New Doctor? Register Here'),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Sign in to your MediFlow account',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+
+                            // Email field
+                            NeuTextField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              textCapitalization: TextCapitalization.none,
+                              autocorrect: false,
+                              enableSuggestions: false,
+                              label: 'Email Address',
+                              hint: 'doctor@mediflow.com',
+                              focusNode: _emailFocus,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) =>
+                                  FocusScope.of(context).requestFocus(_passwordFocus),
+                              prefixIcon: const Icon(
+                                Icons.email_outlined,
+                                color: AppTheme.primaryTeal,
+                                size: 18,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Email is required';
+                                }
+                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$')
+                                    .hasMatch(value.trim())) {
+                                  return 'Enter a valid email address';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Password field
+                            NeuTextField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              label: 'Password',
+                              hint: '••••••••',
+                              focusNode: _passwordFocus,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _onLoginTap(),
+                              prefixIcon: const Icon(
+                                Icons.lock_outlined,
+                                color: AppTheme.primaryTeal,
+                                size: 18,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: AppTheme.textMuted,
+                                  size: 18,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Password is required';
+                                }
+                                if (value.length < 8) {
+                                  return 'Password must be at least 8 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 28),
+
+                            // Login Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: NeuButton(
+                                onPressed: _isSubmitting ? null : _onLoginTap,
+                                isLoading: _isSubmitting,
+                                child: const Text(
+                                  'Sign In',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 20),
+
+                    // ── Register Link ──
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Don't have an account? ",
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 14,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => context.push('/register'),
+                          child: const Text(
+                            'Register',
+                            style: TextStyle(
+                              color: AppTheme.primaryTeal,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // ── Footer ──
+                    Text(
+                      'Secure clinical management platform',
+                      style: TextStyle(
+                        color: AppTheme.textMuted.withValues(alpha: 0.6),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return Column(
+      children: [
+        // Logo container with neumorphic style
+        NeuCard(
+          padding: const EdgeInsets.all(20),
+          borderRadius: 24,
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryTeal,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.local_hospital_rounded,
+              color: Colors.white,
+              size: 36,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'MediFlow',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.primaryTeal,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Smart Clinic Management',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
     );
   }
 }

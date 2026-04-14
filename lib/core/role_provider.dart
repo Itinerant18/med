@@ -1,11 +1,12 @@
+// lib/core/role_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/user_role.dart';
 
-final currentRoleProvider = Provider<UserRole>((ref) {
-  return ref.watch(authNotifierProvider).value?.role ?? UserRole.doctor;
-});
+// NOTE: currentRoleProvider is also defined in auth_provider.dart
+// Use isAdminProvider directly to avoid confusion
 
 final isAdminProvider = Provider<bool>((ref) {
-  return ref.watch(currentRoleProvider).isAdmin;
+  final role = ref.watch(authNotifierProvider).value?.role ?? UserRole.doctor;
+  return role.isAdmin;
 });

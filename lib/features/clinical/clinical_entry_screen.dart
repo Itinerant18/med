@@ -14,33 +14,42 @@ class ClinicalEntryScreen extends ConsumerStatefulWidget {
   const ClinicalEntryScreen({super.key, this.patientId});
 
   @override
-  ConsumerState<ClinicalEntryScreen> createState() => _ClinicalEntryScreenState();
+  ConsumerState<ClinicalEntryScreen> createState() =>
+      _ClinicalEntryScreenState();
 }
 
 class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _searchController = TextEditingController();
-  
-  // Selection State
+
+  // Patient selection
   String? _selectedPatientId;
   String? _selectedPatientName;
   String? _selectedPatientAge;
 
-  // Visit Details
+  // Visit details
   String _visitType = 'OPD';
   String? _chiefComplaint;
   bool _isOtherComplaint = false;
   final _customComplaintController = TextEditingController();
 
-  // Operational Tracking
+  // Operational tracking
   bool _testsPerformed = false;
   bool _otRequired = false;
   String _flowStatus = 'Admitted';
 
-  // Notes
+  // Clinical notes
   final _diagnosisController = TextEditingController();
   final _prescriptionsController = TextEditingController();
   final _handoffController = TextEditingController();
+
+  // Vitals
+  final _bpSystolicController = TextEditingController();
+  final _bpDiastolicController = TextEditingController();
+  final _pulseController = TextEditingController();
+  final _tempController = TextEditingController();
+  final _spo2Controller = TextEditingController();
+  final _rrController = TextEditingController();
 
   @override
   void initState() {
@@ -60,51 +69,104 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _customComplaintController.dispose();
+    _diagnosisController.dispose();
+    _prescriptionsController.dispose();
+    _handoffController.dispose();
+    _bpSystolicController.dispose();
+    _bpDiastolicController.dispose();
+    _pulseController.dispose();
+    _tempController.dispose();
+    _spo2Controller.dispose();
+    _rrController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadPatientInfo() async {
     if (_selectedPatientId == null) return;
     try {
-      final patient = await ref.read(patientDetailProvider(_selectedPatientId!).future);
+      final patient =
+          await ref.read(patientDetailProvider(_selectedPatientId!).future);
       if (patient != null && mounted) {
         setState(() {
           _selectedPatientName = patient['full_name'];
           if (patient['date_of_birth'] != null) {
             final dob = DateTime.parse(patient['date_of_birth']);
-            _selectedPatientAge = (DateTime.now().year - dob.year).toString();
+            _selectedPatientAge =
+                (DateTime.now().year - dob.year).toString();
           }
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load patient info: $e');
+    }
   }
 
   Future<void> _onCompleteVisit() async {
+    // Validate patient selected
     if (_selectedPatientId == null) {
       AppSnackbar.showError(context, 'Please select a patient first.');
       return;
     }
+
+    // Validate complaint selected
+    if (_chiefComplaint == null) {
+      AppSnackbar.showError(context, 'Please select a chief complaint.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      AppSnackbar.showError(context, 'Session expired. Please log in again.');
+      return;
+    }
 
     final doctorName = user.userMetadata?['full_name'] ?? 'Unknown';
     final now = DateTime.now().toIso8601String();
 
-    final visitData = {
+    final visitData = <String, dynamic>{
       'patient_id': _selectedPatientId,
       'doctor_id': user.id,
       'visit_type': _visitType,
       'chief_complaint': _chiefComplaint,
-      'chief_complaint_custom': _isOtherComplaint ? _customComplaintController.text : null,
       'tests_performed': _testsPerformed,
       'ot_required': _otRequired,
       'patient_flow_status': _flowStatus,
-      'final_diagnosis': _diagnosisController.text,
-      'prescriptions': _prescriptionsController.text,
-      'staff_comments': _handoffController.text,
+      'final_diagnosis': _diagnosisController.text.trim(),
+      'prescriptions': _prescriptionsController.text.trim(),
+      'staff_comments': _handoffController.text.trim(),
       'last_updated_by': doctorName,
       'last_updated_at': now,
       'visit_date': now,
     };
+
+    // Add optional fields
+    if (_isOtherComplaint && _customComplaintController.text.isNotEmpty) {
+      visitData['chief_complaint_custom'] = _customComplaintController.text.trim();
+    }
+    if (_bpSystolicController.text.isNotEmpty) {
+      visitData['bp_systolic'] = int.tryParse(_bpSystolicController.text);
+    }
+    if (_bpDiastolicController.text.isNotEmpty) {
+      visitData['bp_diastolic'] = int.tryParse(_bpDiastolicController.text);
+    }
+    if (_pulseController.text.isNotEmpty) {
+      visitData['pulse'] = int.tryParse(_pulseController.text);
+    }
+    if (_tempController.text.isNotEmpty) {
+      visitData['temperature'] = double.tryParse(_tempController.text);
+    }
+    if (_spo2Controller.text.isNotEmpty) {
+      visitData['spo2'] = int.tryParse(_spo2Controller.text);
+    }
+    if (_rrController.text.isNotEmpty) {
+      visitData['respiratory_rate'] = int.tryParse(_rrController.text);
+    }
 
     await ref.read(clinicalNotifierProvider.notifier).saveVisit(visitData);
 
@@ -116,7 +178,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     } else {
       AppSnackbar.showSuccess(context, 'Visit saved successfully');
       if (widget.patientId != null) {
-        await Future.delayed(const Duration(milliseconds: 800));
+        await Future.delayed(const Duration(milliseconds: 600));
         if (mounted) Navigator.of(context).pop();
       } else {
         _resetForm();
@@ -131,15 +193,23 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         _selectedPatientName = null;
         _selectedPatientAge = null;
       }
-      _customComplaintController.clear();
-      _diagnosisController.clear();
-      _prescriptionsController.clear();
-      _handoffController.clear();
-      _testsPerformed = false;
-      _otRequired = false;
       _chiefComplaint = null;
       _isOtherComplaint = false;
+      _testsPerformed = false;
+      _otRequired = false;
+      _flowStatus = 'Admitted';
+      _visitType = 'OPD';
     });
+    _customComplaintController.clear();
+    _diagnosisController.clear();
+    _prescriptionsController.clear();
+    _handoffController.clear();
+    _bpSystolicController.clear();
+    _bpDiastolicController.clear();
+    _pulseController.clear();
+    _tempController.clear();
+    _spo2Controller.clear();
+    _rrController.clear();
     _searchController.clear();
     ref.read(patientSearchQueryProvider.notifier).state = '';
   }
@@ -151,29 +221,31 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('Active Service', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Active Service', style: TextStyle(fontWeight: FontWeight.w800)),
         backgroundColor: Colors.transparent,
       ),
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
             child: Form(
               key: _formKey,
               child: Column(
                 children: [
                   _buildPatientSelector(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _buildVisitDetailsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  _buildVitalsSection(),
+                  const SizedBox(height: 16),
                   _buildOperationalTrackingSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _buildClinicalNotesSection(),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
+          // Fixed bottom CTA
           Positioned(
             left: 0,
             right: 0,
@@ -191,8 +263,9 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                     'COMPLETE VISIT',
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
@@ -209,30 +282,39 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       return NeuCard(
         child: Row(
           children: [
-            const CircleAvatar(
-              backgroundColor: AppTheme.primaryTeal,
-              child: Icon(Icons.person, color: Colors.white),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryTeal.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_rounded, color: AppTheme.primaryTeal, size: 22),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     _selectedPatientName ?? 'Loading...',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   Text(
-                    'Age: ${_selectedPatientAge ?? '??'} • ID: ${_selectedPatientId?.substring(0, 8)}...',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    'Age: ${_selectedPatientAge ?? '—'} • ID: ${_selectedPatientId?.substring(0, 8)}...',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                   ),
                 ],
               ),
             ),
             if (widget.patientId == null)
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () => setState(() => _selectedPatientId = null),
+                icon: const Icon(Icons.close_rounded, color: Colors.red, size: 20),
+                onPressed: () => setState(() {
+                  _selectedPatientId = null;
+                  _selectedPatientName = null;
+                  _selectedPatientAge = null;
+                }),
               ),
           ],
         ),
@@ -242,38 +324,70 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     final searchResults = ref.watch(clinicalPatientSearchProvider);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         NeuTextField(
           controller: _searchController,
           label: 'Search Patient',
-          hint: 'Enter name...',
-          onChanged: (val) => ref.read(patientSearchQueryProvider.notifier).state = val,
+          hint: 'Type at least 2 characters...',
+          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryTeal, size: 18),
+          onChanged: (val) =>
+              ref.read(patientSearchQueryProvider.notifier).state = val,
         ),
-        if (searchResults.hasValue && searchResults.value!.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.bgColor,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(color: AppTheme.darkShadow, offset: Offset(2, 2), blurRadius: 5),
-              ],
-            ),
-            child: Column(
-              children: searchResults.value!.map((p) => ListTile(
-                title: Text(p['full_name']),
-                subtitle: Text('ID: ${p['id'].toString().substring(0, 8)}'),
-                onTap: () {
-                  setState(() {
-                    _selectedPatientId = p['id'];
-                    _selectedPatientName = p['full_name'];
-                    final dob = p['date_of_birth'] != null ? DateTime.parse(p['date_of_birth']) : null;
-                    _selectedPatientAge = dob != null ? (DateTime.now().year - dob.year).toString() : '??';
-                  });
-                },
-              )).toList(),
-            ),
+        // Search results dropdown
+        searchResults.when(
+          data: (results) {
+            if (results.isEmpty) return const SizedBox.shrink();
+            return Container(
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.bgColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 6),
+                  BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(2, 2), blurRadius: 6),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  children: results.map((p) {
+                    final dob = p['date_of_birth'] != null
+                        ? DateTime.tryParse(p['date_of_birth'])
+                        : null;
+                    final age = dob != null
+                        ? (DateTime.now().year - dob.year).toString()
+                        : '—';
+                    return ListTile(
+                      dense: true,
+                      leading: const CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppTheme.primaryTeal,
+                        child: Icon(Icons.person_rounded, size: 16, color: Colors.white),
+                      ),
+                      title: Text(p['full_name'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      subtitle: Text('Age: $age years', style: const TextStyle(fontSize: 11)),
+                      onTap: () {
+                        setState(() {
+                          _selectedPatientId = p['id'];
+                          _selectedPatientName = p['full_name'];
+                          _selectedPatientAge = age;
+                        });
+                        _searchController.clear();
+                        ref.read(patientSearchQueryProvider.notifier).state = '';
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: LinearProgressIndicator(color: AppTheme.primaryTeal, backgroundColor: AppTheme.bgColor),
           ),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -283,36 +397,119 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Visit Details'),
+          const SectionTitle(title: 'Visit Details', icon: Icons.calendar_today_rounded),
           DropdownButtonFormField<String>(
-            initialValue: _visitType,
+            value: _visitType,
             decoration: const InputDecoration(labelText: 'Visit Type'),
-            items: ['OPD', 'IPD', 'Emergency'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+            items: ['OPD', 'IPD', 'Emergency']
+                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                .toList(),
             onChanged: (val) => setState(() => _visitType = val!),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            initialValue: _chiefComplaint,
-            decoration: const InputDecoration(labelText: 'Chief Complaint'),
+            value: _chiefComplaint,
+            decoration: const InputDecoration(labelText: 'Chief Complaint *'),
+            hint: const Text('Select complaint'),
             items: ['Fever', 'Pain', 'Injury', 'Respiratory', 'Post-Op', 'Follow-up', 'Other']
-                .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                .toList(),
             onChanged: (val) => setState(() {
               _chiefComplaint = val;
               _isOtherComplaint = val == 'Other';
             }),
+            validator: (val) => val == null ? 'Please select a chief complaint' : null,
           ),
           AnimatedSize(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 250),
             child: _isOtherComplaint
                 ? Padding(
-                    padding: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.only(top: 14),
                     child: NeuTextField(
                       controller: _customComplaintController,
-                      label: 'Describe complaint',
+                      label: 'Describe Complaint',
                       hint: 'Specific details...',
+                      maxLines: 2,
+                      validator: (v) => v == null || v.trim().isEmpty ? 'Please describe the complaint' : null,
                     ),
                   )
                 : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVitalsSection() {
+    return NeuCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionTitle(title: 'Vitals', icon: Icons.monitor_heart_rounded),
+          Row(
+            children: [
+              Expanded(
+                child: NeuTextField(
+                  controller: _bpSystolicController,
+                  label: 'BP Systolic',
+                  hint: '120',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: NeuTextField(
+                  controller: _bpDiastolicController,
+                  label: 'BP Diastolic',
+                  hint: '80',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: NeuTextField(
+                  controller: _pulseController,
+                  label: 'Pulse (bpm)',
+                  hint: '72',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: NeuTextField(
+                  controller: _tempController,
+                  label: 'Temp (°C)',
+                  hint: '37.0',
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: NeuTextField(
+                  controller: _spo2Controller,
+                  label: 'SpO2 (%)',
+                  hint: '98',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: NeuTextField(
+                  controller: _rrController,
+                  label: 'Resp. Rate',
+                  hint: '16',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -324,28 +521,29 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Operational Tracking'),
+          const SectionTitle(title: 'Operational Tracking', icon: Icons.track_changes_rounded),
           _buildSwitchRow(
-            label: 'Tests Performed?',
+            label: 'Tests Performed',
             value: _testsPerformed,
-            activeThumbColor: const Color(0xFF38A169),
-            statusText: _testsPerformed ? 'Done' : 'Pending',
+            activeColor: const Color(0xFF38A169),
+            statusText: _testsPerformed ? 'Done' : 'Not performed',
             onChanged: (val) => setState(() => _testsPerformed = val),
           ),
-          const Divider(height: 32),
+          const Divider(height: 24),
           _buildSwitchRow(
-            label: 'OT Required?',
+            label: 'OT Required',
             value: _otRequired,
-            activeThumbColor: const Color(0xFFE53E3E),
-            statusText: _otRequired ? 'Scheduled' : 'Not Required',
+            activeColor: const Color(0xFFE53E3E),
+            statusText: _otRequired ? 'Scheduled' : 'Not required',
             onChanged: (val) => setState(() => _otRequired = val),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            initialValue: _flowStatus,
+            value: _flowStatus,
             decoration: const InputDecoration(labelText: 'Patient Flow Status'),
             items: ['Admitted', 'Under Observation', 'Discharged', 'Referred']
-                .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
             onChanged: (val) => setState(() => _flowStatus = val!),
           ),
         ],
@@ -358,22 +556,25 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Clinical Notes'),
+          const SectionTitle(title: 'Clinical Notes', icon: Icons.note_alt_rounded),
           NeuTextField(
             controller: _diagnosisController,
             label: 'Final Diagnosis',
+            hint: 'Enter diagnosis...',
             maxLines: 3,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           NeuTextField(
             controller: _prescriptionsController,
             label: 'Prescriptions',
+            hint: 'Medication, dosage, duration...',
             maxLines: 4,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           NeuTextField(
             controller: _handoffController,
             label: 'Staff Handoff Notes',
+            hint: 'Notes for next shift...',
             maxLines: 2,
           ),
         ],
@@ -381,25 +582,10 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 12,
-          color: Color(0xFF718096),
-          letterSpacing: 1.2,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
   Widget _buildSwitchRow({
     required String label,
     required bool value,
-    required Color activeThumbColor,
+    required Color activeColor,
     required String statusText,
     required ValueChanged<bool> onChanged,
   }) {
@@ -409,16 +595,22 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(height: 2),
             Text(
               statusText,
-              style: TextStyle(color: activeThumbColor, fontWeight: FontWeight.bold, fontSize: 12),
+              style: TextStyle(
+                color: value ? activeColor : AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
         Switch(
           value: value,
-          activeThumbColor: activeThumbColor,
+          activeTrackColor: activeColor.withValues(alpha: 0.3),
+          activeColor: activeColor,
           onChanged: onChanged,
         ),
       ],

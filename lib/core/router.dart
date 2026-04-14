@@ -1,21 +1,43 @@
 // lib/core/router.dart
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/auth_gate.dart';
-import 'package:mediflow/features/dashboard/main_screen.dart';
-import 'package:mediflow/features/patients/patient_form_screen.dart';
-import 'package:mediflow/features/auth/register_screen.dart';
-import 'package:mediflow/features/patients/patient_detail_screen.dart';
-import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
-import 'package:mediflow/features/profile/doctor_profile_screen.dart';
-import 'package:mediflow/features/profile/assistant_profile_screen.dart';
 import 'package:mediflow/core/role_provider.dart';
+import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/features/auth/register_screen.dart';
+import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
+import 'package:mediflow/features/dashboard/main_screen.dart';
+import 'package:mediflow/features/patients/patient_detail_screen.dart';
+import 'package:mediflow/features/patients/patient_form_screen.dart';
 import 'package:mediflow/features/profile/about_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:mediflow/features/profile/assistant_profile_screen.dart';
+import 'package:mediflow/features/profile/doctor_profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
+    debugLogDiagnostics: false,
+    errorBuilder: (context, state) => Scaffold(
+      backgroundColor: AppTheme.bgColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppTheme.textMuted),
+            const SizedBox(height: 16),
+            const Text('Page not found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(state.uri.toString(), style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: () => context.go('/'),
+              child: const Text('Go Home'),
+            ),
+          ],
+        ),
+      ),
+    ),
     routes: [
       GoRoute(
         path: '/',
@@ -45,6 +67,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/patients/edit/:patientId',
         builder: (context, state) {
           final patientId = state.pathParameters['patientId'];
+          if (patientId == null || patientId.isEmpty) {
+            return const PatientFormScreen();
+          }
           return PatientFormScreen(patientId: patientId);
         },
       ),
@@ -58,11 +83,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/clinical/new',
         builder: (context, state) {
-          // Can receive String (id) or Map (id + name)
           final extra = state.extra;
           String? id;
           if (extra is String) id = extra;
-          if (extra is Map) id = extra['patientId'];
+          if (extra is Map) id = extra['patientId'] as String?;
           return ClinicalEntryScreen(patientId: id);
         },
       ),
@@ -72,6 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 class _RoleBasedProfileRouter extends ConsumerWidget {
   const _RoleBasedProfileRouter();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = ref.watch(isAdminProvider);
