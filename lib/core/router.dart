@@ -13,6 +13,8 @@ import 'package:mediflow/features/patients/patient_form_screen.dart';
 import 'package:mediflow/features/profile/about_screen.dart';
 import 'package:mediflow/features/profile/assistant_profile_screen.dart';
 import 'package:mediflow/features/profile/doctor_profile_screen.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -88,6 +90,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (extra is String) id = extra;
           if (extra is Map) id = extra['patientId'] as String?;
           return ClinicalEntryScreen(patientId: id);
+        },
+      ),
+      GoRoute(
+        path: '/dr-visits/new',
+        builder: (context, state) => const DrVisitForm(),
+      ),
+      GoRoute(
+        path: '/dr-visits/:visitId',
+        builder: (context, state) {
+          final visitId = state.pathParameters['visitId']!;
+          return DrVisitDetailScreen(visitId: visitId);
         },
       ),
     ],

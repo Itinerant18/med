@@ -95,8 +95,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           _selectedPatientName = patient['full_name'];
           if (patient['date_of_birth'] != null) {
             final dob = DateTime.parse(patient['date_of_birth']);
-            _selectedPatientAge =
-                (DateTime.now().year - dob.year).toString();
+            _selectedPatientAge = (DateTime.now().year - dob.year).toString();
           }
         });
       }
@@ -147,7 +146,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
 
     // Add optional fields
     if (_isOtherComplaint && _customComplaintController.text.isNotEmpty) {
-      visitData['chief_complaint_custom'] = _customComplaintController.text.trim();
+      visitData['chief_complaint_custom'] =
+          _customComplaintController.text.trim();
     }
     if (_bpSystolicController.text.isNotEmpty) {
       visitData['bp_systolic'] = int.tryParse(_bpSystolicController.text);
@@ -221,7 +221,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('Active Service', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('Active Service',
+            style: TextStyle(fontWeight: FontWeight.w800)),
         backgroundColor: Colors.transparent,
       ),
       body: Stack(
@@ -289,7 +290,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 color: AppTheme.primaryTeal.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person_rounded, color: AppTheme.primaryTeal, size: 22),
+              child: const Icon(Icons.person_rounded,
+                  color: AppTheme.primaryTeal, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -298,18 +300,21 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 children: [
                   Text(
                     _selectedPatientName ?? 'Loading...',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   Text(
                     'Age: ${_selectedPatientAge ?? '—'} • ID: ${_selectedPatientId?.substring(0, 8)}...',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textMuted),
                   ),
                 ],
               ),
             ),
             if (widget.patientId == null)
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.red, size: 20),
+                icon: const Icon(Icons.close_rounded,
+                    color: Colors.red, size: 20),
                 onPressed: () => setState(() {
                   _selectedPatientId = null;
                   _selectedPatientName = null;
@@ -330,7 +335,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           controller: _searchController,
           label: 'Search Patient',
           hint: 'Type at least 2 characters...',
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryTeal, size: 18),
+          prefixIcon: const Icon(Icons.search_rounded,
+              color: AppTheme.primaryTeal, size: 18),
           onChanged: (val) =>
               ref.read(patientSearchQueryProvider.notifier).state = val,
         ),
@@ -344,8 +350,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 color: AppTheme.bgColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 6),
-                  BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(2, 2), blurRadius: 6),
+                  BoxShadow(
+                      color: Colors.white,
+                      offset: Offset(-2, -2),
+                      blurRadius: 6),
+                  BoxShadow(
+                      color: Color(0xFFA3B1C6),
+                      offset: Offset(2, 2),
+                      blurRadius: 6),
                 ],
               ),
               child: ClipRRect(
@@ -363,10 +375,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                       leading: const CircleAvatar(
                         radius: 16,
                         backgroundColor: AppTheme.primaryTeal,
-                        child: Icon(Icons.person_rounded, size: 16, color: Colors.white),
+                        child: Icon(Icons.person_rounded,
+                            size: 16, color: Colors.white),
                       ),
-                      title: Text(p['full_name'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      subtitle: Text('Age: $age years', style: const TextStyle(fontSize: 11)),
+                      title: Text(p['full_name'],
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      subtitle: Text('Age: $age years',
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         setState(() {
                           _selectedPatientId = p['id'];
@@ -374,7 +390,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                           _selectedPatientAge = age;
                         });
                         _searchController.clear();
-                        ref.read(patientSearchQueryProvider.notifier).state = '';
+                        ref.read(patientSearchQueryProvider.notifier).state =
+                            '';
                       },
                     );
                   }).toList(),
@@ -384,7 +401,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           },
           loading: () => const Padding(
             padding: EdgeInsets.only(top: 8),
-            child: LinearProgressIndicator(color: AppTheme.primaryTeal, backgroundColor: AppTheme.bgColor),
+            child: LinearProgressIndicator(
+                color: AppTheme.primaryTeal, backgroundColor: AppTheme.bgColor),
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),
@@ -397,9 +415,10 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(title: 'Visit Details', icon: Icons.calendar_today_rounded),
+          const SectionTitle(
+              title: 'Visit Details', icon: Icons.calendar_today_rounded),
           DropdownButtonFormField<String>(
-            value: _visitType,
+            initialValue: _visitType,
             decoration: const InputDecoration(labelText: 'Visit Type'),
             items: ['OPD', 'IPD', 'Emergency']
                 .map((t) => DropdownMenuItem(value: t, child: Text(t)))
@@ -408,17 +427,24 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            value: _chiefComplaint,
+            initialValue: _chiefComplaint,
             decoration: const InputDecoration(labelText: 'Chief Complaint *'),
             hint: const Text('Select complaint'),
-            items: ['Fever', 'Pain', 'Injury', 'Respiratory', 'Post-Op', 'Follow-up', 'Other']
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
+            items: [
+              'Fever',
+              'Pain',
+              'Injury',
+              'Respiratory',
+              'Post-Op',
+              'Follow-up',
+              'Other'
+            ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
             onChanged: (val) => setState(() {
               _chiefComplaint = val;
               _isOtherComplaint = val == 'Other';
             }),
-            validator: (val) => val == null ? 'Please select a chief complaint' : null,
+            validator: (val) =>
+                val == null ? 'Please select a chief complaint' : null,
           ),
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
@@ -430,7 +456,9 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                       label: 'Describe Complaint',
                       hint: 'Specific details...',
                       maxLines: 2,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Please describe the complaint' : null,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Please describe the complaint'
+                          : null,
                     ),
                   )
                 : const SizedBox.shrink(),
@@ -445,7 +473,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(title: 'Vitals', icon: Icons.monitor_heart_rounded),
+          const SectionTitle(
+              title: 'Vitals', icon: Icons.monitor_heart_rounded),
           Row(
             children: [
               Expanded(
@@ -484,7 +513,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                   controller: _tempController,
                   label: 'Temp (°C)',
                   hint: '37.0',
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                 ),
               ),
             ],
@@ -521,7 +551,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(title: 'Operational Tracking', icon: Icons.track_changes_rounded),
+          const SectionTitle(
+              title: 'Operational Tracking', icon: Icons.track_changes_rounded),
           _buildSwitchRow(
             label: 'Tests Performed',
             value: _testsPerformed,
@@ -539,7 +570,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _flowStatus,
+            initialValue: _flowStatus,
             decoration: const InputDecoration(labelText: 'Patient Flow Status'),
             items: ['Admitted', 'Under Observation', 'Discharged', 'Referred']
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -556,7 +587,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(title: 'Clinical Notes', icon: Icons.note_alt_rounded),
+          const SectionTitle(
+              title: 'Clinical Notes', icon: Icons.note_alt_rounded),
           NeuTextField(
             controller: _diagnosisController,
             label: 'Final Diagnosis',
@@ -595,7 +627,9 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(label,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 2),
             Text(
               statusText,
@@ -610,7 +644,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         Switch(
           value: value,
           activeTrackColor: activeColor.withValues(alpha: 0.3),
-          activeColor: activeColor,
+          activeThumbColor: activeColor,
           onChanged: onChanged,
         ),
       ],

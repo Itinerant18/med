@@ -28,18 +28,19 @@ class PatientService {
   String? get _userId => _userState?.session.user.id;
 
   Future<void> registerPatient(Map<String, dynamic> patientData) async {
-    final finalData = {
-      ...patientData,
-      'last_updated_by': _doctorName,
-      'created_by_id': _userId,
-      'last_updated_by_id': _userId,
-      'last_updated_at': DateTime.now().toIso8601String(),
-      'service_status': 'pending',
-      'created_at': DateTime.now().toIso8601String(),
-    };
+    final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated. Please sign in again.');
 
+    final finalData = {...patientData};
     // Remove null values to avoid unnecessary DB errors
     finalData.removeWhere((key, value) => value == null || value == '');
+
+    finalData['created_by_id'] = userId;
+    finalData['last_updated_by_id'] = userId;
+    finalData['last_updated_by'] = _doctorName;
+    finalData['last_updated_at'] = DateTime.now().toIso8601String();
+    finalData['service_status'] = 'pending';
+    finalData['created_at'] = DateTime.now().toIso8601String();
 
     await _supabase.from('patients').insert(finalData);
   }

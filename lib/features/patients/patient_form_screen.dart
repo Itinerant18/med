@@ -206,14 +206,19 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
       };
 
       if (_isEdit) {
-        await ref.read(patientProvider).updatePatient(widget.patientId!, patientData);
+        await ref
+            .read(patientProvider)
+            .updatePatient(widget.patientId!, patientData);
       } else {
         await ref.read(patientProvider).registerPatient(patientData);
       }
 
       if (!mounted) return;
       AppSnackbar.showSuccess(
-          context, _isEdit ? 'Patient updated successfully' : 'Patient registered successfully');
+          context,
+          _isEdit
+              ? 'Patient updated successfully'
+              : 'Patient registered successfully');
       Navigator.pop(context);
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
@@ -235,14 +240,16 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         elevation: 0,
       ),
       body: _isLoading && _isEdit
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primaryTeal))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    _buildSection('Personal Details', Icons.person_outline_rounded, [
+                    _buildSection(
+                        'Personal Details', Icons.person_outline_rounded, [
                       _textField(_nameController, 'Full Name *',
                           required: true, capitalize: TextCapitalization.words),
                       _datePicker(),
@@ -252,9 +259,9 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                       _textField(_phoneController, 'Phone Number',
                           keyboard: TextInputType.phone),
                       _textField(_emailController, 'Email Address',
-                          keyboard: TextInputType.emailAddress,
-                          validator: (v) {
-                        if (v != null && v.isNotEmpty &&
+                          keyboard: TextInputType.emailAddress, validator: (v) {
+                        if (v != null &&
+                            v.isNotEmpty &&
                             !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(v)) {
                           return 'Enter a valid email address';
                         }
@@ -263,7 +270,8 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                       _textField(_occupationController, 'Occupation',
                           capitalize: TextCapitalization.words),
                       _bloodGroupDropdown(),
-                      _textField(_nationalIdController, 'National ID / Aadhaar *',
+                      _textField(
+                          _nationalIdController, 'National ID / Aadhaar *',
                           required: true),
                     ]),
                     const SizedBox(height: 16),
@@ -271,13 +279,13 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     _buildSection('Address', Icons.location_on_outlined, [
                       _textField(_addressController, 'Residential Address *',
                           required: true, multiLine: true),
-                      _textField(_cityController, 'City *', required: true,
-                          capitalize: TextCapitalization.words),
-                      _textField(_stateController, 'State *', required: true,
-                          capitalize: TextCapitalization.words),
+                      _textField(_cityController, 'City *',
+                          required: true, capitalize: TextCapitalization.words),
+                      _textField(_stateController, 'State *',
+                          required: true, capitalize: TextCapitalization.words),
                       _textField(_pinController, 'PIN Code *',
-                          keyboard: TextInputType.number, required: true,
-                          validator: (v) {
+                          keyboard: TextInputType.number,
+                          required: true, validator: (v) {
                         if (v == null || v.isEmpty) return 'Required';
                         if (v.length != 6 || int.tryParse(v) == null) {
                           return 'Enter a valid 6-digit PIN code';
@@ -287,12 +295,20 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     ]),
                     const SizedBox(height: 16),
 
-                    _buildSection('Emergency Contact', Icons.emergency_outlined, [
+                    _buildSection(
+                        'Emergency Contact', Icons.emergency_outlined, [
                       _textField(_emergencyNameController, 'Contact Name *',
                           required: true, capitalize: TextCapitalization.words),
                       _dropdown(
                           'Relationship *',
-                          ['Spouse', 'Parent', 'Child', 'Sibling', 'Guardian', 'Other'],
+                          [
+                            'Spouse',
+                            'Parent',
+                            'Child',
+                            'Sibling',
+                            'Guardian',
+                            'Other'
+                          ],
                           (v) => setState(() => _emergencyRelationship = v),
                           _emergencyRelationship,
                           required: true),
@@ -303,41 +319,56 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     ]),
                     const SizedBox(height: 16),
 
-                    _buildSection('Health & Insurance', Icons.health_and_safety_outlined, [
+                    _buildSection('Health & Insurance',
+                        Icons.health_and_safety_outlined, [
                       _dropdown(
                           'Health Scheme',
                           ['insurance', 'cash', 'sastho_sathi', 'other'],
                           (v) => setState(() => _healthScheme = v),
                           _healthScheme),
                       if (_healthScheme == 'other')
-                        _textField(_schemeOtherController, 'Please specify scheme *',
+                        _textField(
+                            _schemeOtherController, 'Please specify scheme *',
                             required: true),
                       if (_healthScheme == 'insurance')
                         _textField(_policyNumberController, 'Policy Number'),
                     ]),
                     const SizedBox(height: 16),
 
-                    _buildSection('Medical Information', Icons.medical_information_outlined, [
+                    _buildSection('Medical Information',
+                        Icons.medical_information_outlined, [
                       _dropdown(
                           'Chief Complaint',
-                          ['Fever', 'Pain', 'Injury', 'Respiratory', 'Post-Op', 'Follow-up', 'Other'],
+                          [
+                            'Fever',
+                            'Pain',
+                            'Injury',
+                            'Respiratory',
+                            'Post-Op',
+                            'Follow-up',
+                            'Other'
+                          ],
                           (v) => setState(() {
-                            _chiefComplaint = v;
-                          }),
+                                _chiefComplaint = v;
+                              }),
                           _chiefComplaint),
                       if (_chiefComplaint == 'Other')
-                        _textField(_complaintCustomController, 'Describe Complaint',
+                        _textField(
+                            _complaintCustomController, 'Describe Complaint',
                             multiLine: true),
                       _textField(_symptomsController, 'Symptoms',
-                          multiLine: true, hint: 'e.g. headache, fever, nausea'),
+                          multiLine: true,
+                          hint: 'e.g. headache, fever, nausea'),
                       _textField(_areaController, 'Area Affected',
                           hint: 'e.g. chest, abdomen, head'),
                       _textField(_addictionsController, 'Addictions',
                           hint: 'e.g. smoking, alcohol, none'),
                       _textField(_allergiesController, 'Known Allergies',
-                          multiLine: true, hint: 'Drug, food, or other allergies'),
+                          multiLine: true,
+                          hint: 'Drug, food, or other allergies'),
                       _textField(_conditionsController, 'Existing Conditions',
-                          multiLine: true, hint: 'Diabetes, hypertension, etc.'),
+                          multiLine: true,
+                          hint: 'Diabetes, hypertension, etc.'),
                       _textField(_medicationsController, 'Current Medications',
                           multiLine: true, hint: 'Name, dose, frequency'),
                     ]),
@@ -356,17 +387,23 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SectionTitle(title: 'Patient Consent', icon: Icons.verified_user_outlined),
+                            const SectionTitle(
+                                title: 'Patient Consent',
+                                icon: Icons.verified_user_outlined),
                             _consentCheckbox(
                               value: _consentDataStorage,
-                              label: 'Patient has given consent for data storage and processing',
-                              onChanged: (v) => setState(() => _consentDataStorage = v ?? false),
+                              label:
+                                  'Patient has given consent for data storage and processing',
+                              onChanged: (v) => setState(
+                                  () => _consentDataStorage = v ?? false),
                             ),
                             const SizedBox(height: 8),
                             _consentCheckbox(
                               value: _consentIdVerified,
-                              label: 'Patient identity verified against a valid government ID',
-                              onChanged: (v) => setState(() => _consentIdVerified = v ?? false),
+                              label:
+                                  'Patient identity verified against a valid government ID',
+                              onChanged: (v) => setState(
+                                  () => _consentIdVerified = v ?? false),
                             ),
                           ],
                         ),
@@ -437,8 +474,9 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
       textCapitalization: capitalize,
       validator: validator ??
           (required
-              ? (val) =>
-                  val == null || val.trim().isEmpty ? 'This field is required' : null
+              ? (val) => val == null || val.trim().isEmpty
+                  ? 'This field is required'
+                  : null
               : null),
     );
   }
@@ -451,22 +489,22 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     bool required = false,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(labelText: label),
       hint: Text('Select ${label.replaceAll(' *', '')}'),
       items: items
           .map((i) => DropdownMenuItem(
-              value: i,
-              child: Text(i.replaceAll('_', ' ').toUpperCase())))
+              value: i, child: Text(i.replaceAll('_', ' ').toUpperCase())))
           .toList(),
       onChanged: onChanged,
-      validator: required ? (v) => v == null ? 'Please select an option' : null : null,
+      validator:
+          required ? (v) => v == null ? 'Please select an option' : null : null,
     );
   }
 
   Widget _bloodGroupDropdown() {
     return DropdownButtonFormField<String>(
-      value: _bloodGroup,
+      initialValue: _bloodGroup,
       decoration: const InputDecoration(labelText: 'Blood Group'),
       hint: const Text('Select blood group'),
       items: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
@@ -481,12 +519,14 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
       onTap: () async {
         final date = await showDatePicker(
           context: context,
-          initialDate: _dob ?? DateTime.now().subtract(const Duration(days: 365 * 30)),
+          initialDate:
+              _dob ?? DateTime.now().subtract(const Duration(days: 365 * 30)),
           firstDate: DateTime(1900),
           lastDate: DateTime.now(),
           builder: (context, child) => Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(primary: AppTheme.primaryTeal),
+              colorScheme:
+                  const ColorScheme.light(primary: AppTheme.primaryTeal),
             ),
             child: child!,
           ),
@@ -498,20 +538,25 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           color: AppTheme.bgColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
-            BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
-            BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+            BoxShadow(
+                color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
+            BoxShadow(
+                color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
           ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_rounded, color: AppTheme.primaryTeal, size: 18),
+            const Icon(Icons.calendar_today_rounded,
+                color: AppTheme.primaryTeal, size: 18),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Date of Birth', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                  const Text('Date of Birth',
+                      style:
+                          TextStyle(fontSize: 12, color: AppTheme.textMuted)),
                   const SizedBox(height: 2),
                   Text(
                     _dob == null
@@ -520,13 +565,16 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: _dob == null ? AppTheme.textMuted : AppTheme.textColor,
+                      color: _dob == null
+                          ? AppTheme.textMuted
+                          : AppTheme.textColor,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textMuted),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: AppTheme.textMuted),
           ],
         ),
       ),
@@ -543,7 +591,8 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
             : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _isHighPriority ? Colors.red.shade300 : const Color(0xFFD1D9E6),
+          color:
+              _isHighPriority ? Colors.red.shade300 : const Color(0xFFD1D9E6),
         ),
       ),
       child: Row(
@@ -569,14 +618,15 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                   _isHighPriority
                       ? 'This patient needs immediate attention'
                       : 'Mark if patient requires urgent care',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                 ),
               ],
             ),
           ),
           Switch(
             value: _isHighPriority,
-            activeColor: Colors.red,
+            activeThumbColor: Colors.red,
             activeTrackColor: Colors.red.withValues(alpha: 0.3),
             onChanged: (val) => setState(() => _isHighPriority = val),
           ),
@@ -602,7 +652,8 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
               value: value,
               onChanged: onChanged,
               activeColor: AppTheme.primaryTeal,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4)),
             ),
           ),
           const SizedBox(width: 12),

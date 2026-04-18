@@ -27,15 +27,22 @@ class AuthUserState {
     required this.doctorName,
     required this.specialization,
     required this.role,
+    this.approvalStatus = 'pending',
+    this.rejectionReason,
   });
 
   final Session session;
   final String? doctorName;
   final String? specialization;
   final UserRole role;
+  final String approvalStatus;
+  final String? rejectionReason;
 
   String get displayName => doctorName ?? 'User';
   String get displayRole => role.label;
+  bool get isApproved => approvalStatus == 'approved';
+  bool get isPending => approvalStatus == 'pending';
+  bool get isRejected => approvalStatus == 'rejected';
 }
 
 class AuthNotifier extends AsyncNotifier<AuthUserState?> {
@@ -112,6 +119,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         'specialization': specialization.trim(),
         'email': email.trim(),
         'role': selectedRole.name,
+        'approval_status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
 
@@ -139,7 +147,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     try {
       final profile = await _supabase
           .from('doctors')
-          .select('full_name, specialization, role')
+          .select('full_name, specialization, role, approval_status, rejection_reason')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -150,6 +158,8 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
           session: session,
           doctorName: profile['full_name'] as String?,
           specialization: profile['specialization'] as String?,
+          approvalStatus: profile['approval_status'] as String? ?? 'pending',
+          rejectionReason: profile['rejection_reason'] as String?,
           role: UserRole.values.firstWhere(
             (e) => e.name == roleString,
             orElse: () => UserRole.doctor,
@@ -174,6 +184,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
       doctorName: doctorName,
       specialization: specialization,
       role: role,
+      approvalStatus: 'pending',
     );
   }
 }

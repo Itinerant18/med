@@ -47,6 +47,16 @@ class DashboardScreen extends ConsumerWidget {
                 data: (data) => SliverList(
                   delegate: SliverChildListDelegate([
                     _buildStatCards(data, isAdmin),
+import 'package:mediflow/features/followups/followup_task_widget.dart';
+...
+                    if (!isAdmin && data.assignedVisits.isNotEmpty) ...[
+                      _buildSectionHeader('🤝  Assigned to me today'),
+                      _buildAssignedVisitsList(data.assignedVisits, context),
+                    ],
+                    if (!isAdmin && data.followupTasks.isNotEmpty) ...[
+                      _buildSectionHeader('🔔  Today\'s followups'),
+                      _buildFollowupTasksList(data.followupTasks),
+                    ],
                     if (data.highPriorityPatients.isNotEmpty) ...[
                       _buildSectionHeader('🔴  Requires Immediate Attention'),
                       _buildHighPriorityList(data.highPriorityPatients, isAdmin),
@@ -241,6 +251,26 @@ class DashboardScreen extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: visits.length,
       itemBuilder: (_, i) => _VisitCard(visit: visits[i], isAdmin: isAdmin, context: context),
+    );
+  }
+
+  Widget _buildAssignedVisitsList(List<Map<String, dynamic>> visits, BuildContext context) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: visits.length,
+      itemBuilder: (_, i) => _AssignedVisitCard(visit: visits[i], context: context),
+    );
+  }
+
+  Widget _buildFollowupTasksList(List<FollowupTask> tasks) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: tasks.length,
+      itemBuilder: (_, i) => FollowupTaskWidget(task: tasks[i]),
     );
   }
 
@@ -484,6 +514,66 @@ class _PriorityCard extends StatelessWidget {
 }
 
 // ── Visit Card ────────────────────────────────────────────────────────────────
+
+class _AssignedVisitCard extends StatelessWidget {
+  final Map<String, dynamic> visit;
+  final BuildContext context;
+
+  const _AssignedVisitCard({required this.visit, required this.context});
+
+  @override
+  Widget build(BuildContext _) {
+    final patientInfo = visit['patients'] as Map<String, dynamic>?;
+    final patientName = patientInfo?['full_name'] ?? 'Unknown';
+    final visitTime = visit['visit_date'] != null
+        ? DateFormat.jm().format(DateTime.parse(visit['visit_date']))
+        : '--:--';
+    final followupStatus = visit['followup_status'] ?? 'pending';
+
+    return GestureDetector(
+      onTap: () => context.push('/dr-visits/${visit['id']}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: const Border(left: BorderSide(color: AppTheme.primaryTeal, width: 4)),
+          boxShadow: const [
+            BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 6),
+            BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(2, 2), blurRadius: 6),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      patientName,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Visit at $visitTime',
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              _StatusChip(
+                status: followupStatus,
+                color: followupStatus == 'completed' ? Colors.green : Colors.orange,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _VisitCard extends StatelessWidget {
   final Map<String, dynamic> visit;

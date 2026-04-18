@@ -9,11 +9,14 @@ import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:mediflow/features/auth/login_screen.dart';
+import 'package:mediflow/features/approval/pending_approvals_screen.dart';
+import 'package:mediflow/core/role_provider.dart';
 
 class DoctorProfileScreen extends ConsumerStatefulWidget {
   const DoctorProfileScreen({super.key});
   @override
-  ConsumerState<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
+  ConsumerState<DoctorProfileScreen> createState() =>
+      _DoctorProfileScreenState();
 }
 
 class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
@@ -28,8 +31,11 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _specCtrl.dispose(); _phoneCtrl.dispose();
-    _clinicNameCtrl.dispose(); _clinicAddrCtrl.dispose();
+    _nameCtrl.dispose();
+    _specCtrl.dispose();
+    _phoneCtrl.dispose();
+    _clinicNameCtrl.dispose();
+    _clinicAddrCtrl.dispose();
     super.dispose();
   }
 
@@ -63,16 +69,22 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
         title: const Text('Logout'),
         content: const Text('Are you sure?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(color: Colors.red))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Logout', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
     if (ok == true) {
       await Supabase.instance.client.auth.signOut();
-      if (mounted) Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (_) => false);
+      }
     }
   }
 
@@ -85,10 +97,12 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text('Doctor Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Doctor Profile',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: Icon(_isEditMode ? Icons.close : Icons.edit_outlined, color: AppTheme.primaryTeal),
+            icon: Icon(_isEditMode ? Icons.close : Icons.edit_outlined,
+                color: AppTheme.primaryTeal),
             onPressed: () {
               if (!_isEditMode) _populate(profileAsync.value ?? {});
               setState(() => _isEditMode = !_isEditMode);
@@ -102,11 +116,20 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
         data: (data) {
           if (!_hasPopulated) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) { _populate(data); setState(() => _hasPopulated = true); }
+              if (mounted) {
+                _populate(data);
+                setState(() => _hasPopulated = true);
+              }
             });
           }
           final name = data['full_name'] ?? 'Doctor';
-          final initials = name.trim().split(' ').take(2).map((e) => e[0]).join().toUpperCase();
+          final initials = name
+              .trim()
+              .split(' ')
+              .take(2)
+              .map((e) => e[0])
+              .join()
+              .toUpperCase();
           return RefreshIndicator(
             color: AppTheme.primaryTeal,
             onRefresh: () async {
@@ -131,7 +154,10 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                 radius: 52,
                                 backgroundColor: AppTheme.primaryTeal,
                                 child: Text(initials,
-                                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    style: const TextStyle(
+                                        fontSize: 34,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white)),
                               ),
                               Container(
                                 padding: const EdgeInsets.all(4),
@@ -139,27 +165,38 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                   color: Color(0xFF1A6B5A),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.verified, size: 18, color: Colors.white),
+                                child: const Icon(Icons.verified,
+                                    size: 18, color: Colors.white),
                               ),
                             ],
                           ),
                           const SizedBox(height: 14),
-                          Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                          Text(data['specialization'] ?? 'Specialist', style: const TextStyle(color: Colors.grey)),
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.bold)),
+                          Text(data['specialization'] ?? 'Specialist',
+                              style: const TextStyle(color: Colors.grey)),
                           const SizedBox(height: 10),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 5),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryTeal.withValues(alpha: 0.1),
+                              color:
+                                  AppTheme.primaryTeal.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: AppTheme.primaryTeal),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.admin_panel_settings, size: 15, color: AppTheme.primaryTeal),
+                                Icon(Icons.admin_panel_settings,
+                                    size: 15, color: AppTheme.primaryTeal),
                                 SizedBox(width: 5),
-                                Text('Doctor · Admin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
+                                Text('Doctor · Admin',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryTeal)),
                               ],
                             ),
                           ),
@@ -182,7 +219,8 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                           ],
                         ),
                       ),
-                      loading: () => const NeuCard(child: LinearProgressIndicator()),
+                      loading: () =>
+                          const NeuCard(child: LinearProgressIndicator()),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 20),
@@ -194,18 +232,30 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                         children: [
                           _sectionHeader('Personal Information'),
                           if (_isEditMode) ...[
-                            NeuTextField(controller: _nameCtrl, label: 'Full Name',
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null),
+                            NeuTextField(
+                                controller: _nameCtrl,
+                                label: 'Full Name',
+                                validator: (v) =>
+                                    v == null || v.isEmpty ? 'Required' : null),
                             const SizedBox(height: 12),
-                            NeuTextField(controller: _specCtrl, label: 'Specialization'),
+                            NeuTextField(
+                                controller: _specCtrl, label: 'Specialization'),
                             const SizedBox(height: 12),
-                            NeuTextField(controller: _phoneCtrl, label: 'Phone', keyboardType: TextInputType.phone),
+                            NeuTextField(
+                                controller: _phoneCtrl,
+                                label: 'Phone',
+                                keyboardType: TextInputType.phone),
                           ] else ...[
-                            _infoRow(Icons.person_outline, 'Full Name', _nameCtrl.text),
-                            _infoRow(Icons.medical_services_outlined, 'Specialization', _specCtrl.text),
-                            _infoRow(Icons.phone_outlined, 'Phone', _phoneCtrl.text),
+                            _infoRow(Icons.person_outline, 'Full Name',
+                                _nameCtrl.text),
+                            _infoRow(Icons.medical_services_outlined,
+                                'Specialization', _specCtrl.text),
+                            _infoRow(
+                                Icons.phone_outlined, 'Phone', _phoneCtrl.text),
                           ],
-                          _infoRow(Icons.email_outlined, 'Email', data['email'] ?? '', locked: true),
+                          _infoRow(Icons.email_outlined, 'Email',
+                              data['email'] ?? '',
+                              locked: true),
                         ],
                       ),
                     ),
@@ -218,12 +268,19 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                         children: [
                           _sectionHeader('Clinic Details'),
                           if (_isEditMode) ...[
-                            NeuTextField(controller: _clinicNameCtrl, label: 'Clinic Name'),
+                            NeuTextField(
+                                controller: _clinicNameCtrl,
+                                label: 'Clinic Name'),
                             const SizedBox(height: 12),
-                            NeuTextField(controller: _clinicAddrCtrl, label: 'Clinic Address', maxLines: 2),
+                            NeuTextField(
+                                controller: _clinicAddrCtrl,
+                                label: 'Clinic Address',
+                                maxLines: 2),
                           ] else ...[
-                            _infoRow(Icons.local_hospital_outlined, 'Clinic', _clinicNameCtrl.text),
-                            _infoRow(Icons.location_on_outlined, 'Address', _clinicAddrCtrl.text),
+                            _infoRow(Icons.local_hospital_outlined, 'Clinic',
+                                _clinicNameCtrl.text),
+                            _infoRow(Icons.location_on_outlined, 'Address',
+                                _clinicAddrCtrl.text),
                           ],
                         ],
                       ),
@@ -235,19 +292,34 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
-                          _tile(Icons.bar_chart_rounded, 'Analytics Dashboard', Colors.deepPurple,
-                            () {}),
+                          if (ref.watch(isAdminProvider)) ...[
+                            _tile(Icons.how_to_reg_rounded, 'Pending Approvals',
+                                AppTheme.primaryTeal, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const PendingApprovalsScreen()),
+                              );
+                            }),
+                            const Divider(height: 1),
+                          ],
+                          _tile(Icons.bar_chart_rounded, 'Analytics Dashboard',
+                              Colors.deepPurple, () {}),
                           const Divider(height: 1),
-                          _tile(Icons.people_alt_outlined, 'Manage Staff Accounts', Colors.orange,
-                            () {}),
+                          _tile(Icons.people_alt_outlined,
+                              'Manage Staff Accounts', Colors.orange, () {}),
                           const Divider(height: 1),
-                          _tile(Icons.history_rounded, 'Audit Logs', Colors.blueGrey,
-                            () {}),
+                          _tile(Icons.history_rounded, 'Audit Logs',
+                              Colors.blueGrey, () {}),
                           const Divider(height: 1),
-                          _tile(Icons.info_outline, 'About MediFlow', AppTheme.primaryTeal,
-                            () => context.push('/about')),
+                          _tile(
+                              Icons.info_outline,
+                              'About MediFlow',
+                              AppTheme.primaryTeal,
+                              () => context.push('/about')),
                           const Divider(height: 1),
-                          _tile(Icons.lock_outline, 'Change Password', AppTheme.primaryTeal, () {}),
+                          _tile(Icons.lock_outline, 'Change Password',
+                              AppTheme.primaryTeal, () {}),
                           const Divider(height: 1),
                           _tile(Icons.logout, 'Logout', Colors.red, _logout),
                         ],
@@ -261,7 +333,10 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                         isLoading: profileAsync.isLoading,
                         color: AppTheme.primaryTeal,
                         child: const Text('SAVE CHANGES',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1)),
                       ),
                     ],
                     const SizedBox(height: 40),
@@ -276,49 +351,65 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
   }
 
   Widget _stat(String val, String label) => Column(
-    children: [
-      Text(val, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
-      Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-    ],
-  );
+        children: [
+          Text(val,
+              style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryTeal)),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+      );
 
-  Widget _divider() => Container(height: 36, width: 1, color: Colors.grey.shade300);
+  Widget _divider() =>
+      Container(height: 36, width: 1, color: Colors.grey.shade300);
 
   Widget _sectionHeader(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
-    child: Text(t.toUpperCase(),
-      style: const TextStyle(fontSize: 11, color: Color(0xFF718096), letterSpacing: 1.2, fontWeight: FontWeight.w600)),
-  );
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Text(t.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF718096),
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w600)),
+      );
 
-  Widget _infoRow(IconData icon, String label, String value, {bool locked = false}) =>
-    Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppTheme.primaryTeal.withValues(alpha: 0.7)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-              Text(value.isEmpty ? 'Not set' : value,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            ],
-          )),
-          if (locked) const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
-        ],
-      ),
-    );
+  Widget _infoRow(IconData icon, String label, String value,
+          {bool locked = false}) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Icon(icon,
+                size: 18, color: AppTheme.primaryTeal.withValues(alpha: 0.7)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(value.isEmpty ? 'Not set' : value,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500)),
+              ],
+            )),
+            if (locked)
+              const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+          ],
+        ),
+      );
 
   Widget _tile(IconData icon, String label, Color color, VoidCallback onTap) =>
-    ListTile(
-      leading: Icon(icon, color: color, size: 20),
-      title: Text(label, style: TextStyle(
-        color: color == Colors.red ? Colors.red : null,
-        fontWeight: color == Colors.red ? FontWeight.bold : null,
-      )),
-      trailing: Icon(Icons.chevron_right, size: 18,
-        color: color == Colors.red ? Colors.red : Colors.grey),
-      onTap: onTap,
-    );
+      ListTile(
+        leading: Icon(icon, color: color, size: 20),
+        title: Text(label,
+            style: TextStyle(
+              color: color == Colors.red ? Colors.red : null,
+              fontWeight: color == Colors.red ? FontWeight.bold : null,
+            )),
+        trailing: Icon(Icons.chevron_right,
+            size: 18, color: color == Colors.red ? Colors.red : Colors.grey),
+        onTap: onTap,
+      );
 }

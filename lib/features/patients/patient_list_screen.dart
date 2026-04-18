@@ -113,7 +113,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('Patients', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+        title: const Text('Patients',
+            style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -121,14 +122,20 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           PopupMenuButton<SortOption>(
             icon: const Icon(Icons.sort_rounded, color: AppTheme.primaryTeal),
             tooltip: 'Sort',
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onSelected: (value) => setState(() => _sortOption = value),
             itemBuilder: (context) => [
-              _sortItem(SortOption.mostRecentVisit, 'Most Recent', Icons.access_time_rounded),
-              _sortItem(SortOption.nameAsc, 'Name A→Z', Icons.sort_by_alpha_rounded),
-              _sortItem(SortOption.nameDesc, 'Name Z→A', Icons.sort_by_alpha_rounded),
-              _sortItem(SortOption.highPriorityFirst, 'High Priority First', Icons.priority_high_rounded),
-              _sortItem(SortOption.newestRegistered, 'Newest Registered', Icons.person_add_rounded),
+              _sortItem(SortOption.mostRecentVisit, 'Most Recent',
+                  Icons.access_time_rounded),
+              _sortItem(
+                  SortOption.nameAsc, 'Name A→Z', Icons.sort_by_alpha_rounded),
+              _sortItem(
+                  SortOption.nameDesc, 'Name Z→A', Icons.sort_by_alpha_rounded),
+              _sortItem(SortOption.highPriorityFirst, 'High Priority First',
+                  Icons.priority_high_rounded),
+              _sortItem(SortOption.newestRegistered, 'Newest Registered',
+                  Icons.person_add_rounded),
             ],
           ),
         ],
@@ -146,21 +153,31 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                       color: AppTheme.bgColor,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: const [
-                        BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
-                        BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+                        BoxShadow(
+                            color: Colors.white,
+                            offset: Offset(-3, -3),
+                            blurRadius: 8),
+                        BoxShadow(
+                            color: Color(0xFFA3B1C6),
+                            offset: Offset(3, 3),
+                            blurRadius: 8),
                       ],
                     ),
                     child: TextField(
                       controller: _searchController,
                       onChanged: _onSearchChanged,
-                      style: const TextStyle(fontSize: 14, color: AppTheme.textColor),
+                      style: const TextStyle(
+                          fontSize: 14, color: AppTheme.textColor),
                       decoration: InputDecoration(
                         hintText: 'Search by name, phone, symptoms...',
-                        hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryTeal, size: 20),
+                        hintStyle: const TextStyle(
+                            fontSize: 13, color: AppTheme.textMuted),
+                        prefixIcon: const Icon(Icons.search_rounded,
+                            color: AppTheme.primaryTeal, size: 20),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, size: 18, color: AppTheme.textMuted),
+                                icon: const Icon(Icons.clear_rounded,
+                                    size: 18, color: AppTheme.textMuted),
                                 onPressed: () {
                                   _searchController.clear();
                                   setState(() => _searchQuery = '');
@@ -171,7 +188,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
                         fillColor: Colors.transparent,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
@@ -189,13 +207,21 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                           : AppTheme.bgColor,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: const [
-                        BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
-                        BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+                        BoxShadow(
+                            color: Colors.white,
+                            offset: Offset(-3, -3),
+                            blurRadius: 8),
+                        BoxShadow(
+                            color: Color(0xFFA3B1C6),
+                            offset: Offset(3, 3),
+                            blurRadius: 8),
                       ],
                     ),
                     child: Icon(
                       Icons.tune_rounded,
-                      color: _hasActiveFilters ? Colors.white : AppTheme.primaryTeal,
+                      color: _hasActiveFilters
+                          ? Colors.white
+                          : AppTheme.primaryTeal,
                       size: 20,
                     ),
                   ),
@@ -211,14 +237,18 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
               children: [
                 Text(
                   '$shownCount of $totalCount patients',
-                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
                 ),
                 if (_hasActiveFilters || _searchQuery.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _clearAllFilters,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryTeal.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -256,12 +286,11 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                     itemCount: patients.length,
-                    itemBuilder: (context, index) =>
-                        _PatientCard(
-                          patient: patients[index],
-                          searchQuery: _searchQuery,
-                          isAdmin: isAdmin,
-                        ),
+                    itemBuilder: (context, index) => _PatientCard(
+                      patient: patients[index],
+                      searchQuery: _searchQuery,
+                      isAdmin: isAdmin,
+                    ),
                   ),
                 );
               },
@@ -274,19 +303,23 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         foregroundColor: Colors.white,
         onPressed: () => context.push('/patients/new'),
         icon: const Icon(Icons.person_add_rounded, size: 20),
-        label: const Text('New Patient', style: TextStyle(fontWeight: FontWeight.w700)),
+        label: const Text('New Patient',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         elevation: 4,
       ),
     );
   }
 
-  PopupMenuItem<SortOption> _sortItem(SortOption value, String label, IconData icon) {
+  PopupMenuItem<SortOption> _sortItem(
+      SortOption value, String label, IconData icon) {
     final isSelected = _sortOption == value;
     return PopupMenuItem(
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 16, color: isSelected ? AppTheme.primaryTeal : AppTheme.textMuted),
+          Icon(icon,
+              size: 16,
+              color: isSelected ? AppTheme.primaryTeal : AppTheme.textMuted),
           const SizedBox(width: 10),
           Text(
             label,
@@ -298,7 +331,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           ),
           if (isSelected) ...[
             const Spacer(),
-            const Icon(Icons.check_rounded, size: 16, color: AppTheme.primaryTeal),
+            const Icon(Icons.check_rounded,
+                size: 16, color: AppTheme.primaryTeal),
           ],
         ],
       ),
@@ -309,9 +343,10 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
       itemCount: 5,
-      itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: NeuShimmer(width: double.infinity, height: 100, borderRadius: 16),
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child:
+            NeuShimmer(width: double.infinity, height: 100, borderRadius: 16),
       ),
     );
   }
@@ -324,12 +359,16 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: AppTheme.textMuted),
+              const Icon(Icons.error_outline_rounded,
+                  size: 48, color: AppTheme.textMuted),
               const SizedBox(height: 12),
-              const Text('Failed to load patients', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text('Failed to load patients',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
               const SizedBox(height: 4),
               Text(
-                error.toString().length > 80 ? '${error.toString().substring(0, 80)}...' : error.toString(),
+                error.toString().length > 80
+                    ? '${error.toString().substring(0, 80)}...'
+                    : error.toString(),
                 style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
@@ -345,13 +384,17 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.person_search_rounded, size: 72, color: Colors.grey.shade300),
+          Icon(Icons.person_search_rounded,
+              size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
             _searchQuery.isNotEmpty || _hasActiveFilters
                 ? 'No matching patients'
                 : 'No patients yet',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.textColor),
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: AppTheme.textColor),
           ),
           const SizedBox(height: 6),
           Text(
@@ -366,7 +409,9 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
             NeuButton(
               onPressed: _clearAllFilters,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              child: const Text('Clear Filters', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              child: const Text('Clear Filters',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
             ),
           ],
         ],
@@ -415,11 +460,16 @@ class _PatientCard extends StatelessWidget {
             color: AppTheme.bgColor,
             borderRadius: BorderRadius.circular(16),
             border: isHighPriority
-                ? Border.all(color: Colors.red.withValues(alpha: 0.4), width: 1.5)
+                ? Border.all(
+                    color: Colors.red.withValues(alpha: 0.4), width: 1.5)
                 : null,
             boxShadow: const [
-              BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
-              BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+              BoxShadow(
+                  color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
+              BoxShadow(
+                  color: Color(0xFFA3B1C6),
+                  offset: Offset(3, 3),
+                  blurRadius: 8),
             ],
           ),
           child: Column(
@@ -440,8 +490,11 @@ class _PatientCard extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isHighPriority ? Icons.priority_high_rounded : Icons.person_rounded,
-                        color: isHighPriority ? Colors.red : AppTheme.primaryTeal,
+                        isHighPriority
+                            ? Icons.priority_high_rounded
+                            : Icons.person_rounded,
+                        color:
+                            isHighPriority ? Colors.red : AppTheme.primaryTeal,
                         size: 22,
                       ),
                     ),
@@ -465,7 +518,8 @@ class _PatientCard extends StatelessWidget {
                             children: [
                               Text(
                                 'ID: ${patient['id'].toString().substring(0, 8)}...',
-                                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                                style: const TextStyle(
+                                    fontSize: 11, color: AppTheme.textMuted),
                               ),
                               if (scheme.isNotEmpty) ...[
                                 const SizedBox(width: 8),
@@ -478,7 +532,8 @@ class _PatientCard extends StatelessWidget {
                             _HighlightedText(
                               text: phone,
                               query: searchQuery,
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.textMuted),
                             ),
                           ],
                           if (symptoms.isNotEmpty) ...[
@@ -486,7 +541,8 @@ class _PatientCard extends StatelessWidget {
                             _HighlightedText(
                               text: 'Symptoms: $symptoms',
                               query: searchQuery,
-                              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.textMuted),
                               maxLines: 1,
                             ),
                           ],
@@ -495,10 +551,13 @@ class _PatientCard extends StatelessWidget {
                     ),
                     // Edit button
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryTeal),
-                      onPressed: () => context.push('/patients/edit/${patient['id']}'),
+                      icon: const Icon(Icons.edit_outlined,
+                          size: 18, color: AppTheme.primaryTeal),
+                      onPressed: () =>
+                          context.push('/patients/edit/${patient['id']}'),
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
                       tooltip: 'Edit',
                     ),
                   ],
@@ -508,11 +567,13 @@ class _PatientCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                 decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0xFFD1D9E6), width: 0.8)),
+                  border: Border(
+                      top: BorderSide(color: Color(0xFFD1D9E6), width: 0.8)),
                 ),
                 child: Row(
                   children: [
-                    _ServiceBadge(status: patient['service_status'] ?? 'Pending'),
+                    _ServiceBadge(
+                        status: patient['service_status'] ?? 'Pending'),
                     const Spacer(),
                     Row(
                       children: [
@@ -528,7 +589,8 @@ class _PatientCard extends StatelessWidget {
                           isAdmin && lastUpdatedBy.isNotEmpty
                               ? 'by $lastUpdatedBy · $lastUpdated'
                               : lastUpdated,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade500),
                         ),
                       ],
                     ),
@@ -557,7 +619,10 @@ class _SchemeBadge extends StatelessWidget {
       ),
       child: Text(
         scheme.toUpperCase(),
-        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.primaryTeal),
+        style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.primaryTeal),
       ),
     );
   }
@@ -583,7 +648,8 @@ class _ServiceBadge extends StatelessWidget {
       ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -607,7 +673,10 @@ class _HighlightedText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (query.isEmpty) {
-      return Text(text, style: style, maxLines: maxLines, overflow: maxLines != null ? TextOverflow.ellipsis : null);
+      return Text(text,
+          style: style,
+          maxLines: maxLines,
+          overflow: maxLines != null ? TextOverflow.ellipsis : null);
     }
 
     final lowerText = text.toLowerCase();
@@ -710,7 +779,9 @@ class _FilterSheetState extends State<_FilterSheet> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Row(
                 children: [
-                  const Text('Filter Patients', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const Text('Filter Patients',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                   const Spacer(),
                   TextButton(
                     onPressed: () {
@@ -737,30 +808,87 @@ class _FilterSheetState extends State<_FilterSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFilterSection('Health Scheme', [
-                      _chip('All', _healthScheme == HealthSchemeFilter.all, () => setState(() => _healthScheme = HealthSchemeFilter.all)),
-                      _chip('Insurance', _healthScheme == HealthSchemeFilter.insurance, () => setState(() => _healthScheme = HealthSchemeFilter.insurance)),
-                      _chip('Cash', _healthScheme == HealthSchemeFilter.cash, () => setState(() => _healthScheme = HealthSchemeFilter.cash)),
-                      _chip('Sastho Sathi', _healthScheme == HealthSchemeFilter.sasthoSathi, () => setState(() => _healthScheme = HealthSchemeFilter.sasthoSathi)),
-                      _chip('Other', _healthScheme == HealthSchemeFilter.other, () => setState(() => _healthScheme = HealthSchemeFilter.other)),
+                      _chip(
+                          'All',
+                          _healthScheme == HealthSchemeFilter.all,
+                          () => setState(
+                              () => _healthScheme = HealthSchemeFilter.all)),
+                      _chip(
+                          'Insurance',
+                          _healthScheme == HealthSchemeFilter.insurance,
+                          () => setState(() =>
+                              _healthScheme = HealthSchemeFilter.insurance)),
+                      _chip(
+                          'Cash',
+                          _healthScheme == HealthSchemeFilter.cash,
+                          () => setState(
+                              () => _healthScheme = HealthSchemeFilter.cash)),
+                      _chip(
+                          'Sastho Sathi',
+                          _healthScheme == HealthSchemeFilter.sasthoSathi,
+                          () => setState(() =>
+                              _healthScheme = HealthSchemeFilter.sasthoSathi)),
+                      _chip(
+                          'Other',
+                          _healthScheme == HealthSchemeFilter.other,
+                          () => setState(
+                              () => _healthScheme = HealthSchemeFilter.other)),
                     ]),
                     const SizedBox(height: 20),
                     _buildFilterSection('Priority', [
-                      _chip('All', _priority == PriorityFilter.all, () => setState(() => _priority = PriorityFilter.all)),
-                      _chip('High Priority', _priority == PriorityFilter.highOnly, () => setState(() => _priority = PriorityFilter.highOnly)),
+                      _chip('All', _priority == PriorityFilter.all,
+                          () => setState(() => _priority = PriorityFilter.all)),
+                      _chip(
+                          'High Priority',
+                          _priority == PriorityFilter.highOnly,
+                          () => setState(
+                              () => _priority = PriorityFilter.highOnly)),
                     ]),
                     const SizedBox(height: 20),
                     _buildFilterSection('Date Range', [
-                      _chip('Last 7 days', _dateRange == DateRangeFilter.last7Days, () => setState(() => _dateRange = DateRangeFilter.last7Days)),
-                      _chip('Last 30 days', _dateRange == DateRangeFilter.last30Days, () => setState(() => _dateRange = DateRangeFilter.last30Days)),
-                      _chip('Last 3 months', _dateRange == DateRangeFilter.last3Months, () => setState(() => _dateRange = DateRangeFilter.last3Months)),
-                      _chip('All time', _dateRange == DateRangeFilter.allTime, () => setState(() => _dateRange = DateRangeFilter.allTime)),
+                      _chip(
+                          'Last 7 days',
+                          _dateRange == DateRangeFilter.last7Days,
+                          () => setState(
+                              () => _dateRange = DateRangeFilter.last7Days)),
+                      _chip(
+                          'Last 30 days',
+                          _dateRange == DateRangeFilter.last30Days,
+                          () => setState(
+                              () => _dateRange = DateRangeFilter.last30Days)),
+                      _chip(
+                          'Last 3 months',
+                          _dateRange == DateRangeFilter.last3Months,
+                          () => setState(
+                              () => _dateRange = DateRangeFilter.last3Months)),
+                      _chip(
+                          'All time',
+                          _dateRange == DateRangeFilter.allTime,
+                          () => setState(
+                              () => _dateRange = DateRangeFilter.allTime)),
                     ]),
                     const SizedBox(height: 20),
                     _buildFilterSection('Visit Type', [
-                      _chip('All', _visitType == VisitTypeFilter.all, () => setState(() => _visitType = VisitTypeFilter.all)),
-                      _chip('OPD', _visitType == VisitTypeFilter.opd, () => setState(() => _visitType = VisitTypeFilter.opd)),
-                      _chip('IPD', _visitType == VisitTypeFilter.ipd, () => setState(() => _visitType = VisitTypeFilter.ipd)),
-                      _chip('Emergency', _visitType == VisitTypeFilter.emergency, () => setState(() => _visitType = VisitTypeFilter.emergency)),
+                      _chip(
+                          'All',
+                          _visitType == VisitTypeFilter.all,
+                          () =>
+                              setState(() => _visitType = VisitTypeFilter.all)),
+                      _chip(
+                          'OPD',
+                          _visitType == VisitTypeFilter.opd,
+                          () =>
+                              setState(() => _visitType = VisitTypeFilter.opd)),
+                      _chip(
+                          'IPD',
+                          _visitType == VisitTypeFilter.ipd,
+                          () =>
+                              setState(() => _visitType = VisitTypeFilter.ipd)),
+                      _chip(
+                          'Emergency',
+                          _visitType == VisitTypeFilter.emergency,
+                          () => setState(
+                              () => _visitType = VisitTypeFilter.emergency)),
                     ]),
                     const SizedBox(height: 28),
                     SizedBox(
@@ -776,7 +904,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                           );
                           Navigator.of(context).pop();
                         },
-                        child: const Text('Apply Filters', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                        child: const Text('Apply Filters',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15)),
                       ),
                     ),
                   ],
@@ -795,7 +927,11 @@ class _FilterSheetState extends State<_FilterSheet> {
       children: [
         Text(
           title.toUpperCase(),
-          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+          style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textMuted,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: chips),
@@ -810,7 +946,9 @@ class _FilterSheetState extends State<_FilterSheet> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primaryTeal.withValues(alpha: 0.1) : AppTheme.bgColor,
+          color: selected
+              ? AppTheme.primaryTeal.withValues(alpha: 0.1)
+              : AppTheme.bgColor,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected ? AppTheme.primaryTeal : const Color(0xFFD1D9E6),

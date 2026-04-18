@@ -77,4 +77,44 @@ class NotificationService {
 
     await _notifications.show(id, title, body, details);
   }
+
+  Future<void> showVisitAssignedNotification({
+    required String patientName,
+    required String doctorName,
+  }) async {
+    final int id = patientName.hashCode ^ 'assigned'.hashCode;
+    const String title = 'New Visit Assigned';
+    final String body = 'Dr. $doctorName assigned you to $patientName';
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'mediflow_alerts',
+        'MediFlow Alerts',
+        importance: Importance.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+
+    await _notifications.show(id, title, body, details);
+  }
+
+  Future<void> showFollowupNotification({
+    required String patientName,
+    required String dueDate,
+  }) async {
+    final int id = patientName.hashCode ^ 'followup'.hashCode;
+    const String title = 'New Follow-up Task';
+    final String body = 'Follow-up for $patientName due on $dueDate';
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'mediflow_alerts',
+        'MediFlow Alerts',
+        importance: Importance.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+
+    await _notifications.show(id, title, body, details);
+  }
 }

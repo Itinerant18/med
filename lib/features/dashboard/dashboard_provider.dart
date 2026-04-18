@@ -19,9 +19,13 @@ class DashboardStats {
   });
 }
 
+import 'package:mediflow/features/followups/followup_provider.dart';
+...
 class DashboardState {
   final List<Map<String, dynamic>> todayVisits;
   final List<Map<String, dynamic>> highPriorityPatients;
+  final List<Map<String, dynamic>> assignedVisits;
+  final List<FollowupTask> followupTasks;
   final DashboardStats stats;
   final bool isLive;
   final DateTime? lastRefreshed;
@@ -29,6 +33,8 @@ class DashboardState {
   const DashboardState({
     required this.todayVisits,
     required this.highPriorityPatients,
+    this.assignedVisits = const [],
+    this.followupTasks = const [],
     this.stats = const DashboardStats(),
     this.isLive = false,
     this.lastRefreshed,
@@ -37,6 +43,8 @@ class DashboardState {
   DashboardState copyWith({
     List<Map<String, dynamic>>? todayVisits,
     List<Map<String, dynamic>>? highPriorityPatients,
+    List<Map<String, dynamic>>? assignedVisits,
+    List<FollowupTask>? followupTasks,
     DashboardStats? stats,
     bool? isLive,
     DateTime? lastRefreshed,
@@ -44,6 +52,8 @@ class DashboardState {
     return DashboardState(
       todayVisits: todayVisits ?? this.todayVisits,
       highPriorityPatients: highPriorityPatients ?? this.highPriorityPatients,
+      assignedVisits: assignedVisits ?? this.assignedVisits,
+      followupTasks: followupTasks ?? this.followupTasks,
       stats: stats ?? this.stats,
       isLive: isLive ?? this.isLive,
       lastRefreshed: lastRefreshed ?? this.lastRefreshed,
@@ -131,6 +141,41 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
           .limit(10);
       final priority = List<Map<String, dynamic>>.from(priorityRaw);
 
+      // Fetch assigned dr_visits for assistants
+      List<Map<String, dynamic>> assignedVisits = [];
+      if (isAssistant && userState != null) {
+        final assignedRaw = await supabase
+            .from('dr_visits')
+            .select('*, patients(full_name)')
+            .eq('assigned_agent_id', userState.session.user.id)
+            .gte('visit_date', startOfDay)
+            .lte('visit_date', endOfDay)
+            .order('visit_date', ascending: false);
+        assignedVisits = List<Map<String, dynamic>>.from(assignedRaw);
+      }
+
+      // Fetch today's followups for assistants
+      List<FollowupTask> followupTasks = [];
+      if (isAssistant && userState != null) {
+        final todayStr = DateTime(now.year, now.month, now.day).toIso8601String().split('T')[0];
+        
+        // Mark overdue
+        await supabase
+            .from('followup_tasks')
+            .update({'status': 'overdue'})
+            .eq('assigned_to', userState.session.user.id)
+            .eq('status', 'pending')
+            .lt('due_date', todayStr);
+
+        final followupRaw = await supabase
+            .from('followup_tasks')
+            .select('*, patients(full_name)')
+            .eq('assigned_to', userState.session.user.id)
+            .eq('due_date', todayStr)
+            .order('created_at', ascending: false);
+        followupTasks = (followupRaw as List).map((json) => FollowupTask.fromJson(json)).toList();
+      }
+
       // Calculate stats
       final pendingLabs = visits.where((v) => v['tests_performed'] == false).length;
       final upcomingOT = visits.where((v) => v['ot_required'] == true).length;
@@ -138,6 +183,8 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
       return DashboardState(
         todayVisits: visits,
         highPriorityPatients: priority,
+        assignedVisits: assignedVisits,
+        followupTasks: followupTasks,
         stats: DashboardStats(
           todayVisitsCount: visits.length,
           pendingLabsCount: pendingLabs,

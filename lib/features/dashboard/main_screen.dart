@@ -8,9 +8,8 @@ import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/dashboard_screen.dart';
 import 'package:mediflow/features/dashboard/notification_sheet.dart';
 import 'package:mediflow/features/patients/patient_list_screen.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
-import 'package:mediflow/core/role_provider.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -27,6 +26,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     DashboardScreen(),
     PatientListScreen(),
     ClinicalEntryScreen(),
+    DrVisitScreen(),
   ];
 
   Future<void> _confirmLogout() async {
@@ -51,8 +51,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text(
               'Sign Out',
-              style: TextStyle(
-                  color: Colors.red, fontWeight: FontWeight.w700),
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -141,7 +140,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   clipBehavior: Clip.none,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.notifications_none_rounded, size: 24),
+                      icon: const Icon(Icons.notifications_none_rounded,
+                          size: 24),
                       onPressed: () {
                         showModalBottomSheet<void>(
                           context: context,
@@ -231,6 +231,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               selectedIcon: Icon(Icons.medical_services_rounded),
               label: 'Clinical',
             ),
+            NavigationDestination(
+              icon: Icon(Icons.home_health_rounded),
+              selectedIcon: Icon(Icons.home_health_rounded),
+              label: 'Dr Visit',
+            ),
           ],
         ),
       ),
@@ -253,9 +258,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.bgColor,
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
                     color: Color(0xFFA3B1C6),
                     offset: Offset(0, 2),
@@ -270,7 +275,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isAdmin ? AppTheme.primaryTeal : Colors.amber.shade700,
+                      color: isAdmin
+                          ? AppTheme.primaryTeal
+                          : Colors.amber.shade700,
                       boxShadow: [
                         BoxShadow(
                           color: (isAdmin
@@ -434,11 +441,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 
   String _buildInitials(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((p) => p.isNotEmpty)
-        .toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return 'DR';
     if (parts.length == 1) {
       final v = parts.first;
