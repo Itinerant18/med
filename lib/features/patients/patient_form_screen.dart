@@ -219,7 +219,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           _isEdit
               ? 'Patient updated successfully'
               : 'Patient registered successfully');
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
     } finally {

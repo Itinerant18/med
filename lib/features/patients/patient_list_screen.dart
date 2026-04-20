@@ -100,6 +100,15 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         sortOption: _sortOption,
       );
 
+  Future<void> _openPatientForm(String route) async {
+    final filter = _buildFilter();
+    final changed = await context.push<bool>(route);
+    if (changed == true && mounted) {
+      ref.invalidate(roleAwarePatientsProvider(filter));
+      ref.invalidate(patientTotalCountProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filter = _buildFilter();
@@ -301,7 +310,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.primaryTeal,
         foregroundColor: Colors.white,
-        onPressed: () => context.push('/patients/new'),
+        onPressed: () => _openPatientForm('/patients/new'),
         icon: const Icon(Icons.person_add_rounded, size: 20),
         label: const Text('New Patient',
             style: TextStyle(fontWeight: FontWeight.w700)),
@@ -553,8 +562,9 @@ class _PatientCard extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.edit_outlined,
                           size: 18, color: AppTheme.primaryTeal),
-                      onPressed: () =>
-                          context.push('/patients/edit/${patient['id']}'),
+                      onPressed: () => context
+                          .findAncestorStateOfType<_PatientListScreenState>()
+                          ?._openPatientForm('/patients/edit/${patient['id']}'),
                       padding: EdgeInsets.zero,
                       constraints:
                           const BoxConstraints(minWidth: 36, minHeight: 36),

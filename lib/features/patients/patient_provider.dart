@@ -36,7 +36,6 @@ class PatientService {
     finalData.removeWhere((key, value) => value == null || value == '');
 
     finalData['created_by_id'] = userId;
-    finalData['last_updated_by_id'] = userId;
     finalData['last_updated_by'] = _doctorName;
     finalData['last_updated_at'] = DateTime.now().toIso8601String();
     finalData['service_status'] = 'pending';
@@ -50,7 +49,6 @@ class PatientService {
     final finalData = {
       ...patientData,
       'last_updated_by': _doctorName,
-      'last_updated_by_id': _userId,
       'last_updated_at': DateTime.now().toIso8601String(),
     };
 
