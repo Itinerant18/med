@@ -18,7 +18,7 @@ final authStateProvider = StreamProvider<Session?>((ref) async* {
 
 // Single source of truth for current role
 final currentRoleProvider = Provider<UserRole>((ref) {
-  return ref.watch(authNotifierProvider).value?.role ?? UserRole.doctor;
+  return ref.watch(authNotifierProvider).value?.role ?? UserRole.assistant;
 });
 
 class AuthUserState {
