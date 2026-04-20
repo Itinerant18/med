@@ -186,13 +186,16 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: AppTheme.primaryTeal),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.admin_panel_settings,
+                                const Icon(Icons.admin_panel_settings,
                                     size: 15, color: AppTheme.primaryTeal),
-                                SizedBox(width: 5),
-                                Text('Doctor · Admin',
+                                const SizedBox(width: 5),
+                                Text(
+                                    ref.watch(isHeadDoctorProvider)
+                                        ? 'Head Doctor · Super Admin'
+                                        : 'Doctor',
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
@@ -292,13 +295,14 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
-                          if (ref.watch(isAdminProvider)) ...[
+                          if (ref.watch(isHeadDoctorProvider)) ...[
                             _tile(Icons.how_to_reg_rounded, 'Pending Approvals',
                                 AppTheme.primaryTeal, () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const PendingApprovalsScreen()),
+                                    builder: (_) =>
+                                        const PendingApprovalsScreen()),
                               );
                             }),
                             const Divider(height: 1),

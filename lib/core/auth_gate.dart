@@ -6,6 +6,7 @@ import 'package:mediflow/core/theme.dart';
 import '../features/auth/login_screen.dart';
 import '../features/dashboard/main_screen.dart';
 import '../features/auth/auth_provider.dart';
+import '../features/approval/approval_provider.dart';
 import '../features/approval/awaiting_approval_screen.dart';
 import '../features/approval/rejected_screen.dart';
 import 'realtime_service.dart';
@@ -50,7 +51,13 @@ class AuthGate extends ConsumerWidget {
           // Initialize real-time subscriptions after frame
           WidgetsBinding.instance.addPostFrameCallback((_) {
             try {
-              RealtimeService.instance.subscribeToPatientChanges(doctorName, ref);
+              RealtimeService.instance
+                  .subscribeToPatientChanges(doctorName, ref);
+              if (userState.isHeadDoctor) {
+                ref
+                    .read(pendingApprovalsProvider.notifier)
+                    .listenForNewRegistrations();
+              }
             } catch (e) {
               debugPrint('RealtimeService error: $e');
             }

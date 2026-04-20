@@ -8,10 +8,12 @@ class PendingApprovalsScreen extends ConsumerStatefulWidget {
   const PendingApprovalsScreen({super.key});
 
   @override
-  ConsumerState<PendingApprovalsScreen> createState() => _PendingApprovalsScreenState();
+  ConsumerState<PendingApprovalsScreen> createState() =>
+      _PendingApprovalsScreenState();
 }
 
-class _PendingApprovalsScreenState extends ConsumerState<PendingApprovalsScreen> {
+class _PendingApprovalsScreenState
+    extends ConsumerState<PendingApprovalsScreen> {
   @override
   void initState() {
     super.initState();
@@ -52,8 +54,10 @@ class _PendingApprovalsScreenState extends ConsumerState<PendingApprovalsScreen>
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                            child: const Icon(Icons.person, color: AppTheme.primaryTeal),
+                            backgroundColor:
+                                AppTheme.primaryTeal.withValues(alpha: 0.1),
+                            child: const Icon(Icons.person,
+                                color: AppTheme.primaryTeal),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -82,26 +86,40 @@ class _PendingApprovalsScreenState extends ConsumerState<PendingApprovalsScreen>
                       const SizedBox(height: 12),
                       Text(
                         'Email: ${doctor.email}',
-                        style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                            fontSize: 13, color: AppTheme.textMuted),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Role: ${doctor.role.replaceAll('_', ' ').toUpperCase()}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
                             child: NeuButton(
-                              onPressed: () => _showRejectDialog(context, doctor.id),
+                              onPressed: () =>
+                                  _showRejectDialog(context, doctor.id),
                               color: AppTheme.errorColor,
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: const Text('Reject', style: TextStyle(color: Colors.white)),
+                              child: const Text('Reject',
+                                  style: TextStyle(color: Colors.white)),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: NeuButton(
-                              onPressed: () => ref.read(pendingApprovalsProvider.notifier).approve(doctor.id),
+                              onPressed: () => ref
+                                  .read(pendingApprovalsProvider.notifier)
+                                  .approve(doctor.id),
                               color: AppTheme.successColor,
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                              child: const Text('Approve',
+                                  style: TextStyle(color: Colors.white)),
                             ),
                           ),
                         ],
@@ -140,10 +158,13 @@ class _PendingApprovalsScreenState extends ConsumerState<PendingApprovalsScreen>
           ),
           TextButton(
             onPressed: () {
-              ref.read(pendingApprovalsProvider.notifier).reject(doctorId, controller.text);
+              ref
+                  .read(pendingApprovalsProvider.notifier)
+                  .reject(doctorId, controller.text);
               Navigator.pop(context);
             },
-            child: const Text('Reject', style: TextStyle(color: AppTheme.errorColor)),
+            child: const Text('Reject',
+                style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),

@@ -13,9 +13,9 @@ class RealtimeService {
   RealtimeChannel? _channel;
   String? _currentDoctorName;
   bool _isSubscribed = false;
-  Ref? _ref;
+  WidgetRef? _ref;
 
-  void subscribeToPatientChanges(String currentDoctorName, Ref ref) {
+  void subscribeToPatientChanges(String currentDoctorName, WidgetRef ref) {
     // Avoid re-subscribing if same doctor is already subscribed
     if (_isSubscribed && _currentDoctorName == currentDoctorName) {
       _ref = ref;
@@ -71,13 +71,13 @@ class RealtimeService {
             },
           )
           .subscribe((status, error) {
-            if (error != null) {
-              debugPrint('RealtimeService error: $error');
-              _isSubscribed = false;
-            } else {
-              _isSubscribed = status == RealtimeSubscribeStatus.subscribed;
-            }
-          });
+        if (error != null) {
+          debugPrint('RealtimeService error: $error');
+          _isSubscribed = false;
+        } else {
+          _isSubscribed = status == RealtimeSubscribeStatus.subscribed;
+        }
+      });
     } catch (e) {
       debugPrint('RealtimeService subscribe failed: $e');
     }
@@ -90,19 +90,18 @@ class RealtimeService {
       final currentUserId = Supabase.instance.client.auth.currentUser?.id;
 
       if (assignedAgentId != null && assignedAgentId == currentUserId) {
-        // Fetch doctor name for notification (or use a placeholder)
-        final doctorId = row['doctor_id']?.toString() ?? 'Doctor';
-        
         // In-app notification
         if (_ref != null) {
           final notification = AppNotification(
             id: 'visit-${row['id']}',
             title: 'New Visit Assigned',
-            message: 'You have been assigned a new patient visit.',
+            body: 'You have been assigned a new patient visit.',
             timestamp: DateTime.now(),
-            type: NotificationType.update, // Or add a new type
+            type: 'visit_assignment',
           );
-          _ref!.read(notificationProvider.notifier).addNotification(notification);
+          _ref!
+              .read(notificationProvider.notifier)
+              .addNotification(notification);
         }
 
         // Push notification
@@ -128,11 +127,13 @@ class RealtimeService {
           final notification = AppNotification(
             id: 'followup-${row['id']}',
             title: 'New Follow-up Task',
-            message: 'A new follow-up task has been assigned to you.',
+            body: 'A new follow-up task has been assigned to you.',
             timestamp: DateTime.now(),
-            type: NotificationType.update,
+            type: 'followup_task',
           );
-          _ref!.read(notificationProvider.notifier).addNotification(notification);
+          _ref!
+              .read(notificationProvider.notifier)
+              .addNotification(notification);
         }
 
         // Push notification

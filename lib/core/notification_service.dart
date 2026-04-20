@@ -4,7 +4,8 @@ class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -13,7 +14,8 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    await _notifications.initialize(const InitializationSettings(android: android, iOS: ios));
+    await _notifications
+        .initialize(const InitializationSettings(android: android, iOS: ios));
   }
 
   Future<void> showPatientUpdateNotification({
@@ -105,6 +107,26 @@ class NotificationService {
     final int id = patientName.hashCode ^ 'followup'.hashCode;
     const String title = 'New Follow-up Task';
     final String body = 'Follow-up for $patientName due on $dueDate';
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'mediflow_alerts',
+        'MediFlow Alerts',
+        importance: Importance.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+
+    await _notifications.show(id, title, body, details);
+  }
+
+  Future<void> showNewRegistrationNotification({
+    required String name,
+    required String role,
+  }) async {
+    final int id = name.hashCode ^ 'registration'.hashCode;
+    const String title = 'New Registration Request';
+    final String body = '$name wants to join as ${role.replaceAll('_', ' ')}';
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(

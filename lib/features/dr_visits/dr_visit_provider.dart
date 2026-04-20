@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
-import 'package:mediflow/models/doctor_model.dart';
 import 'package:mediflow/models/visit_model.dart';
 import 'package:mediflow/models/user_role.dart';
 
@@ -45,16 +44,20 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final visitResponse = await supabase.from('dr_visits').insert({
-      'patient_id': patientId,
-      'doctor_id': user.id,
-      'assigned_agent_id': assignedAgentId,
-      'visit_notes': visitNotes,
-      'diagnosis': diagnosis,
-      'followup_date': followupDate?.toIso8601String().split('T')[0],
-      'followup_notes': followupNotes,
-      'created_by_id': user.id,
-    }).select().single();
+    final visitResponse = await supabase
+        .from('dr_visits')
+        .insert({
+          'patient_id': patientId,
+          'doctor_id': user.id,
+          'assigned_agent_id': assignedAgentId,
+          'visit_notes': visitNotes,
+          'diagnosis': diagnosis,
+          'followup_date': followupDate?.toIso8601String().split('T')[0],
+          'followup_notes': followupNotes,
+          'created_by_id': user.id,
+        })
+        .select()
+        .single();
 
     if (followupDate != null && assignedAgentId != null) {
       await supabase.from('followup_tasks').insert({
@@ -80,7 +83,8 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     ref.invalidateSelf();
   }
 
-  Future<void> updateFollowupStatus(String visitId, String followupStatus) async {
+  Future<void> updateFollowupStatus(
+      String visitId, String followupStatus) async {
     final supabase = ref.read(supabaseClientProvider);
     await supabase.from('dr_visits').update({
       'followup_status': followupStatus,

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PendingDoctor {
@@ -7,6 +10,7 @@ class PendingDoctor {
   final String fullName;
   final String specialization;
   final String email;
+  final String role;
   final DateTime createdAt;
 
   PendingDoctor({
@@ -14,6 +18,7 @@ class PendingDoctor {
     required this.fullName,
     required this.specialization,
     required this.email,
+    required this.role,
     required this.createdAt,
   });
 
@@ -23,6 +28,7 @@ class PendingDoctor {
       fullName: json['full_name'],
       specialization: json['specialization'],
       email: json['email'],
+      role: json['role'] ?? 'doctor',
       createdAt: DateTime.parse(json['created_at']),
     );
   }
@@ -34,9 +40,13 @@ final pendingApprovalsProvider =
 
 class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
   SupabaseClient get _supabase => ref.read(supabaseClientProvider);
+  RealtimeChannel? _registrationsChannel;
 
   @override
   Future<List<PendingDoctor>> build() async {
+    ref.onDispose(() {
+      _registrationsChannel?.unsubscribe();
+    });
     return _fetchPending();
   }
 
@@ -47,10 +57,17 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
         .eq('approval_status', 'pending')
         .order('created_at');
 
-    return (response as List).map((json) => PendingDoctor.fromJson(json)).toList();
+    return (response as List)
+        .map((json) => PendingDoctor.fromJson(json))
+        .toList();
   }
 
   Future<void> approve(String doctorId) async {
+    final myRole = ref.read(authNotifierProvider).value?.role;
+    if (myRole != UserRole.headDoctor) {
+      throw Exception('Only the head doctor can approve registrations.');
+    }
+
     final adminId = _supabase.auth.currentUser?.id;
     await _supabase.from('doctors').update({
       'approval_status': 'approved',
@@ -58,10 +75,16 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
       'approved_at': DateTime.now().toIso8601String(),
     }).eq('id', doctorId);
 
-    state = AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
+    state =
+        AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
   }
 
   Future<void> reject(String doctorId, String reason) async {
+    final myRole = ref.read(authNotifierProvider).value?.role;
+    if (myRole != UserRole.headDoctor) {
+      throw Exception('Only the head doctor can reject registrations.');
+    }
+
     final adminId = _supabase.auth.currentUser?.id;
     await _supabase.from('doctors').update({
       'approval_status': 'rejected',
@@ -70,7 +93,8 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
       'rejection_reason': reason,
     }).eq('id', doctorId);
 
-    state = AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
+    state =
+        AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
   }
 
   void listenForChanges() {
@@ -83,6 +107,33 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
             callback: (payload) {
               ref.invalidateSelf();
             })
+        .subscribe();
+  }
+
+  void listenForNewRegistrations() {
+    _registrationsChannel?.unsubscribe();
+    _registrationsChannel = _supabase
+        .channel('public:doctors:pending')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'doctors',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'approval_status',
+            value: 'pending',
+          ),
+          callback: (payload) {
+            final name =
+                payload.newRecord['full_name']?.toString() ?? 'Someone';
+            final role = payload.newRecord['role']?.toString() ?? 'doctor';
+            NotificationService.instance.showNewRegistrationNotification(
+              name: name,
+              role: role,
+            );
+            ref.invalidateSelf();
+          },
+        )
         .subscribe();
   }
 }

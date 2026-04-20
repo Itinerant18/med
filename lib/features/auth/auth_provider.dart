@@ -40,6 +40,7 @@ class AuthUserState {
 
   String get displayName => doctorName ?? 'User';
   String get displayRole => role.label;
+  bool get isHeadDoctor => role == UserRole.headDoctor;
   bool get isApproved => approvalStatus == 'approved';
   bool get isPending => approvalStatus == 'pending';
   bool get isRejected => approvalStatus == 'rejected';
@@ -81,7 +82,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         password: password,
       );
       final session = response.session ?? _supabase.auth.currentSession;
-      if (session == null) throw Exception('Sign-in succeeded but no session was created.');
+      if (session == null) {
+        throw Exception('Sign-in succeeded but no session was created.');
+      }
       return _resolveAuthUserState(session);
     });
   }
@@ -103,7 +106,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         data: {
           'full_name': fullName.trim(),
           'specialization': specialization.trim(),
-          'role': selectedRole.name,
+          'role': selectedRole == UserRole.headDoctor
+              ? 'doctor'
+              : selectedRole.name,
         },
       );
 
@@ -118,7 +123,8 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         'full_name': fullName.trim(),
         'specialization': specialization.trim(),
         'email': email.trim(),
-        'role': selectedRole.name,
+        'role':
+            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.name,
         'approval_status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
@@ -147,23 +153,19 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     try {
       final profile = await _supabase
           .from('doctors')
-          .select('full_name, specialization, role, approval_status, rejection_reason')
+          .select(
+              'full_name, specialization, role, approval_status, rejection_reason')
           .eq('id', user.id)
           .maybeSingle();
 
       if (profile != null) {
-        final roleString = profile['role'] as String? ??
-            metadata['role'] as String? ?? 'doctor';
         return AuthUserState(
           session: session,
           doctorName: profile['full_name'] as String?,
           specialization: profile['specialization'] as String?,
           approvalStatus: profile['approval_status'] as String? ?? 'pending',
           rejectionReason: profile['rejection_reason'] as String?,
-          role: UserRole.values.firstWhere(
-            (e) => e.name == roleString,
-            orElse: () => UserRole.doctor,
-          ),
+          role: UserRole.fromString(profile['role'] as String?),
         );
       }
     } catch (_) {
@@ -174,10 +176,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     final doctorName = metadata['full_name'] as String?;
     final specialization = metadata['specialization'] as String?;
     final roleString = metadata['role'] as String? ?? 'doctor';
-    final role = UserRole.values.firstWhere(
-      (e) => e.name == roleString,
-      orElse: () => UserRole.doctor,
-    );
+    final role = UserRole.fromString(roleString);
 
     return AuthUserState(
       session: session,

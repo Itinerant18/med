@@ -19,7 +19,7 @@ final clinicalPatientSearchProvider =
       .select('id, full_name, date_of_birth')
       .ilike('full_name', '%${query.trim()}%');
 
-  // Assistants only see their own patients
+  // Agents only see their own patients. Doctors and head doctors see all.
   if (userState != null && userState.role == UserRole.assistant) {
     dbQuery = dbQuery.eq('created_by_id', userState.session.user.id);
   }

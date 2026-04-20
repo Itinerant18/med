@@ -81,7 +81,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         // Email confirmation required
         _showConfirmationDialog();
       } else {
-        AppSnackbar.showSuccess(context, 'Account created! Welcome to MediFlow.');
+        AppSnackbar.showSuccess(
+            context, 'Account created! Welcome to MediFlow.');
       }
     } catch (e) {
       if (mounted) {
@@ -178,13 +179,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(title: 'Personal Details', icon: Icons.person_outline),
+                        const SectionTitle(
+                            title: 'Personal Details',
+                            icon: Icons.person_outline),
                         NeuTextField(
                           controller: _fullNameController,
                           label: 'Full Name',
                           hint: 'Dr. John Smith',
                           textCapitalization: TextCapitalization.words,
-                          prefixIcon: const Icon(Icons.person_outline, color: AppTheme.primaryTeal, size: 18),
+                          prefixIcon: const Icon(Icons.person_outline,
+                              color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.next,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -202,7 +206,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           label: 'Specialization',
                           hint: 'e.g. Cardiology, General Medicine',
                           textCapitalization: TextCapitalization.words,
-                          prefixIcon: const Icon(Icons.medical_services_outlined, color: AppTheme.primaryTeal, size: 18),
+                          prefixIcon: const Icon(
+                              Icons.medical_services_outlined,
+                              color: AppTheme.primaryTeal,
+                              size: 18),
                           textInputAction: TextInputAction.next,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -222,7 +229,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(title: 'Account Details', icon: Icons.lock_outline),
+                        const SectionTitle(
+                            title: 'Account Details', icon: Icons.lock_outline),
                         NeuTextField(
                           controller: _emailController,
                           label: 'Email Address',
@@ -231,7 +239,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           textCapitalization: TextCapitalization.none,
                           autocorrect: false,
                           enableSuggestions: false,
-                          prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryTeal, size: 18),
+                          prefixIcon: const Icon(Icons.email_outlined,
+                              color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.next,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -250,7 +259,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           obscureText: _obscurePassword,
                           label: 'Password',
                           hint: 'At least 8 characters',
-                          prefixIcon: const Icon(Icons.lock_outlined, color: AppTheme.primaryTeal, size: 18),
+                          prefixIcon: const Icon(Icons.lock_outlined,
+                              color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.next,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -283,7 +293,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           obscureText: _obscureConfirm,
                           label: 'Confirm Password',
                           hint: 'Re-enter your password',
-                          prefixIcon: const Icon(Icons.lock_outlined, color: AppTheme.primaryTeal, size: 18),
+                          prefixIcon: const Icon(Icons.lock_outlined,
+                              color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.done,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -318,7 +329,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(title: 'Account Role', icon: Icons.admin_panel_settings_outlined),
+                        const SectionTitle(
+                            title: 'Account Role',
+                            icon: Icons.admin_panel_settings_outlined),
                         const SizedBox(height: 4),
                         _buildRoleSelector(),
                       ],
@@ -352,7 +365,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     children: [
                       const Text(
                         'Already have an account? ',
-                        style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                        style:
+                            TextStyle(color: AppTheme.textMuted, fontSize: 14),
                       ),
                       GestureDetector(
                         onTap: () => context.pop(),
@@ -378,17 +392,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Widget _buildRoleSelector() {
+    final registrableRoles = [UserRole.doctor, UserRole.assistant];
     return Row(
-      children: UserRole.values.map((role) {
+      children: registrableRoles.map((role) {
         final isSelected = _selectedRole == role;
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: role == UserRole.values.last ? 0 : 12),
+            padding: EdgeInsets.only(
+              right: role == registrableRoles.last ? 0 : 12,
+            ),
             child: GestureDetector(
               onTap: () => setState(() => _selectedRole = role),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppTheme.primaryTeal.withValues(alpha: 0.1)
@@ -434,7 +452,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      role == UserRole.doctor ? 'Full access' : 'Limited access',
+                      role == UserRole.doctor
+                          ? 'Full access'
+                          : 'Limited access',
                       style: TextStyle(
                         fontSize: 10,
                         color: isSelected

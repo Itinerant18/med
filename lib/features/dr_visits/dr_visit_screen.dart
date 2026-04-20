@@ -36,7 +36,8 @@ class DrVisitScreen extends ConsumerWidget {
             groupedVisits.putIfAbsent(dateStr, () => []).add(visit);
           }
 
-          final sortedDates = groupedVisits.keys.toList()..sort((a, b) => b.compareTo(a));
+          final sortedDates = groupedVisits.keys.toList()
+            ..sort((a, b) => b.compareTo(a));
 
           return RefreshIndicator(
             onRefresh: () => ref.refresh(drVisitsProvider.future),
@@ -53,7 +54,8 @@ class DrVisitScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 12, top: 8),
+                      padding:
+                          const EdgeInsets.only(left: 8, bottom: 12, top: 8),
                       child: Text(
                         formattedDate.toUpperCase(),
                         style: const TextStyle(
@@ -80,7 +82,9 @@ class DrVisitScreen extends ConsumerWidget {
               backgroundColor: AppTheme.primaryTeal,
               onPressed: () => context.push('/dr-visits/new'),
               icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('New Visit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: const Text('New Visit',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             )
           : null,
     );
@@ -102,11 +106,15 @@ class DrVisitScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.home_health_rounded, size: 72, color: Colors.grey.shade300),
+          Icon(Icons.health_and_safety_rounded,
+              size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           const Text(
             'No visits recorded',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.textColor),
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: AppTheme.textColor),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -141,8 +149,10 @@ class _VisitCard extends StatelessWidget {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                    child: const Icon(Icons.person_rounded, color: AppTheme.primaryTeal, size: 20),
+                    backgroundColor:
+                        AppTheme.primaryTeal.withValues(alpha: 0.1),
+                    child: const Icon(Icons.person_rounded,
+                        color: AppTheme.primaryTeal, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -151,12 +161,15 @@ class _VisitCard extends StatelessWidget {
                       children: [
                         Text(
                           visit.patientName ?? 'Unknown Patient',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        if (visit.diagnosis != null && visit.diagnosis!.isNotEmpty)
+                        if (visit.diagnosis != null &&
+                            visit.diagnosis!.isNotEmpty)
                           Text(
                             visit.diagnosis!,
-                            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                            style: const TextStyle(
+                                color: AppTheme.textMuted, fontSize: 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -170,11 +183,13 @@ class _VisitCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.assignment_ind_outlined, size: 14, color: AppTheme.textMuted),
+                    const Icon(Icons.assignment_ind_outlined,
+                        size: 14, color: AppTheme.textMuted),
                     const SizedBox(width: 4),
                     Text(
                       'Assigned to: ${visit.agentName}',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textMuted),
                     ),
                   ],
                 ),
@@ -216,7 +231,8 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

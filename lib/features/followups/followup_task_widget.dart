@@ -16,56 +16,68 @@ class FollowupTaskWidget extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: NeuCard(
-        border: isOverdue ? Border.all(color: AppTheme.errorColor, width: 2) : null,
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        task.patientName ?? 'Unknown Patient',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+      child: Container(
+        decoration: BoxDecoration(
+          border: isOverdue
+              ? Border.all(color: AppTheme.errorColor, width: 2)
+              : null,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: NeuCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          task.patientName ?? 'Unknown Patient',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
-                      ),
-                      if (isOverdue) ...[
-                        const SizedBox(width: 8),
-                        const _Badge(label: 'OVERDUE', color: AppTheme.errorColor),
+                        if (isOverdue) ...[
+                          const SizedBox(width: 8),
+                          const _Badge(
+                              label: 'OVERDUE', color: AppTheme.errorColor),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    task.notes ?? 'No notes provided',
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      task.notes ?? 'No notes provided',
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textMuted),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Transform.scale(
-              scale: 1.2,
-              child: Checkbox(
-                value: isCompleted,
-                activeColor: AppTheme.successColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                onChanged: isCompleted
-                    ? null
-                    : (val) {
-                        if (val == true) {
-                          ref.read(followupTasksProvider.notifier).completeTask(task.id);
-                        }
-                      },
+              Transform.scale(
+                scale: 1.2,
+                child: Checkbox(
+                  value: isCompleted,
+                  activeColor: AppTheme.successColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)),
+                  onChanged: isCompleted
+                      ? null
+                      : (val) {
+                          if (val == true) {
+                            ref
+                                .read(followupTasksProvider.notifier)
+                                .completeTask(task.id);
+                          }
+                        },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -88,7 +100,8 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.bold),
       ),
     );
   }

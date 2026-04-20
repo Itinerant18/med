@@ -1,7 +1,7 @@
 // lib/features/patients/patient_list_provider.dart
 // NOTE: Supabase RLS must enforce:
-// - Doctors (admin): can SELECT/INSERT/UPDATE/DELETE all rows in patients
-// - Assistants (user): can only SELECT/INSERT/UPDATE rows where created_by_id = auth.uid()
+// - Head doctors and doctors: can SELECT/INSERT/UPDATE/DELETE all rows in patients
+// - Agents: can only SELECT/INSERT/UPDATE rows where created_by_id = auth.uid()
 // Apply these policies in the Supabase dashboard under Authentication > Policies.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,7 +77,7 @@ class SearchFilter {
 }
 
 // Role-aware filtered provider that respects RBAC:
-// Doctors see everyone, assistants see only patients they created (UUID match)
+// Head doctors/doctors see everyone, agents see only patients they created.
 final roleAwarePatientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
   final supabase = ref.watch(supabaseClientProvider);
@@ -86,11 +86,11 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
 
   var query = supabase.from('patients').select();
 
-  // Assistants only see patients they created (UUID match, not name string)
+  // Agents only see patients they created (UUID match, not name string).
   if (role == UserRole.assistant && userState != null) {
     query = query.eq('created_by_id', userState.session.user.id);
   }
-  // Doctors get all patients (no filter needed — RLS handles it too)
+  // Head doctors and doctors get all patients (RLS handles it too).
 
   final allPatients = await query.order('last_updated_at', ascending: false);
   final patients = List<Map<String, dynamic>>.from(allPatients);

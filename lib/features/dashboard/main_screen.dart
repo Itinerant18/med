@@ -1,14 +1,16 @@
 // lib/features/dashboard/main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/dashboard_screen.dart';
 import 'package:mediflow/features/dashboard/notification_sheet.dart';
-import 'package:mediflow/features/patients/patient_list_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_screen.dart';
+import 'package:mediflow/features/patients/patient_list_screen.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
@@ -76,7 +78,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final doctorName = authAsync.valueOrNull?.doctorName ?? 'Doctor';
     final specialization =
         authAsync.valueOrNull?.specialization ?? 'Specialist';
-    final isAdmin = ref.watch(isAdminProvider);
+    final role = authAsync.valueOrNull?.role ?? UserRole.assistant;
     final initials = _buildInitials(doctorName);
 
     return Scaffold(
@@ -87,7 +89,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         doctorName: doctorName,
         specialization: specialization,
         initials: initials,
-        isAdmin: isAdmin,
+        role: role,
       ),
 
       // ── AppBar ──
@@ -114,14 +116,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             const SizedBox(width: 6),
             Consumer(
               builder: (context, ref, _) {
-                final isAdminLocal = ref.watch(isAdminProvider);
+                final dotColor =
+                    switch (authAsync.valueOrNull?.role ?? UserRole.assistant) {
+                  UserRole.headDoctor => AppTheme.primaryTeal,
+                  UserRole.doctor => const Color(0xFF3182CE),
+                  UserRole.assistant => Colors.amber.shade600,
+                };
                 return Container(
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: isAdminLocal
-                        ? AppTheme.primaryTeal
-                        : Colors.amber.shade600,
+                    color: dotColor,
                     shape: BoxShape.circle,
                   ),
                 );
@@ -232,8 +237,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               label: 'Clinical',
             ),
             NavigationDestination(
-              icon: Icon(Icons.home_health_rounded),
-              selectedIcon: Icon(Icons.home_health_rounded),
+              icon: Icon(Icons.health_and_safety_rounded),
+              selectedIcon: Icon(Icons.health_and_safety_rounded),
               label: 'Dr Visit',
             ),
           ],
@@ -246,8 +251,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     required String doctorName,
     required String specialization,
     required String initials,
-    required bool isAdmin,
+    required UserRole role,
   }) {
+    final avatarColor = switch (role) {
+      UserRole.headDoctor => AppTheme.primaryTeal,
+      UserRole.doctor => const Color(0xFF3182CE),
+      UserRole.assistant => Colors.amber.shade700,
+    };
+    final rolePillText = switch (role) {
+      UserRole.headDoctor => '● Head Doctor · Super Admin',
+      UserRole.doctor => '● Doctor',
+      UserRole.assistant => '● Agent',
+    };
+
     return Drawer(
       backgroundColor: AppTheme.bgColor,
       width: 280,
@@ -275,15 +291,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isAdmin
-                          ? AppTheme.primaryTeal
-                          : Colors.amber.shade700,
+                      color: avatarColor,
                       boxShadow: [
                         BoxShadow(
-                          color: (isAdmin
-                                  ? AppTheme.primaryTeal
-                                  : Colors.amber.shade700)
-                              .withValues(alpha: 0.3),
+                          color: avatarColor.withValues(alpha: 0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -326,26 +337,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: (isAdmin
-                              ? AppTheme.primaryTeal
-                              : Colors.amber.shade700)
-                          .withValues(alpha: 0.1),
+                      color: avatarColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isAdmin
-                            ? AppTheme.primaryTeal
-                            : Colors.amber.shade700,
+                        color: avatarColor,
                         width: 0.8,
                       ),
                     ),
                     child: Text(
-                      isAdmin ? '● Doctor · Admin' : '● Assistant',
+                      rolePillText,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isAdmin
-                            ? AppTheme.primaryTeal
-                            : Colors.amber.shade700,
+                        color: avatarColor,
                       ),
                     ),
                   ),

@@ -1,26 +1,28 @@
-enum UserRole { headDoctor, doctor, assistant } 
- 
-extension UserRoleX on UserRole { 
-  String get name => switch (this) { 
-    UserRole.headDoctor => 'head_doctor', 
-    UserRole.doctor => 'doctor', 
-    UserRole.assistant => 'assistant', 
-  }; 
- 
-  String get label => switch (this) { 
-    UserRole.headDoctor => 'Head Doctor', 
-    UserRole.doctor => 'Doctor', 
-    UserRole.assistant => 'Agent', 
-  }; 
- 
-  bool get isSuperAdmin => this == UserRole.headDoctor; 
-  bool get isAdmin => this == UserRole.headDoctor || this == UserRole.doctor; 
-  bool get isAgent => this == UserRole.assistant; 
- 
-  static UserRole fromString(String? value) => switch (value) { 
-    'head_doctor' => UserRole.headDoctor, 
-    'doctor' => UserRole.doctor, 
-    'assistant' => UserRole.assistant, 
-    _ => UserRole.assistant, 
-  }; 
+enum UserRole {
+  headDoctor,
+  doctor,
+  assistant;
+
+  String get name => switch (this) {
+        UserRole.headDoctor => 'head_doctor',
+        UserRole.doctor => 'doctor',
+        UserRole.assistant => 'assistant',
+      };
+
+  String get label => switch (this) {
+        UserRole.headDoctor => 'Head Doctor',
+        UserRole.doctor => 'Doctor',
+        UserRole.assistant => 'Agent',
+      };
+
+  bool get isSuperAdmin => this == UserRole.headDoctor;
+  bool get isAdmin => this == UserRole.headDoctor || this == UserRole.doctor;
+  bool get isAgent => this == UserRole.assistant;
+
+  static UserRole fromString(String? value) => switch (value) {
+        'head_doctor' => UserRole.headDoctor,
+        'doctor' => UserRole.doctor,
+        'assistant' => UserRole.assistant,
+        _ => UserRole.assistant,
+      };
 }

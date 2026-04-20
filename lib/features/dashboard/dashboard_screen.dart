@@ -1,13 +1,15 @@
 // lib/features/dashboard/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mediflow/core/role_provider.dart';
-import 'package:mediflow/core/theme.dart';
+import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
+import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
+import 'package:mediflow/features/followups/followup_provider.dart';
+import 'package:mediflow/features/followups/followup_task_widget.dart';
+import 'package:mediflow/models/user_role.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -16,7 +18,8 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardProvider);
     final authState = ref.watch(authNotifierProvider).value;
-    final isAdmin = ref.watch(isAdminProvider);
+    final role = authState?.role ?? UserRole.assistant;
+    final isAdmin = role.isAdmin;
     final name = authState?.doctorName ?? (isAdmin ? 'Doctor' : 'Staff');
     final greeting = _getGreeting();
 
@@ -30,13 +33,16 @@ class DashboardScreen extends ConsumerWidget {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              // ── HEADER ──
               SliverToBoxAdapter(
-                child: _buildHeader(context, greeting, name, isAdmin,
-                    dashboardAsync.value?.isLive ?? false, ref),
+                child: _buildHeader(
+                  context,
+                  greeting,
+                  name,
+                  role,
+                  dashboardAsync.value?.isLive ?? false,
+                  ref,
+                ),
               ),
-
-              // ── CONTENT ──
               dashboardAsync.when(
                 loading: () => const SliverToBoxAdapter(
                   child: _DashboardSkeleton(),
@@ -47,21 +53,20 @@ class DashboardScreen extends ConsumerWidget {
                 data: (data) => SliverList(
                   delegate: SliverChildListDelegate([
                     _buildStatCards(data, isAdmin),
-import 'package:mediflow/features/followups/followup_task_widget.dart';
-...
                     if (!isAdmin && data.assignedVisits.isNotEmpty) ...[
-                      _buildSectionHeader('🤝  Assigned to me today'),
+                      _buildSectionHeader('Assigned to me today'),
                       _buildAssignedVisitsList(data.assignedVisits, context),
                     ],
                     if (!isAdmin && data.followupTasks.isNotEmpty) ...[
-                      _buildSectionHeader('🔔  Today\'s followups'),
+                      _buildSectionHeader('Today\'s followups'),
                       _buildFollowupTasksList(data.followupTasks),
                     ],
                     if (data.highPriorityPatients.isNotEmpty) ...[
-                      _buildSectionHeader('🔴  Requires Immediate Attention'),
-                      _buildHighPriorityList(data.highPriorityPatients, isAdmin),
+                      _buildSectionHeader('Requires Immediate Attention'),
+                      _buildHighPriorityList(
+                          data.highPriorityPatients, isAdmin),
                     ],
-                    _buildSectionHeader('📋  Today\'s Visits'),
+                    _buildSectionHeader('Today\'s Visits'),
                     data.todayVisits.isEmpty
                         ? _buildEmptyVisits()
                         : _buildVisitsList(data.todayVisits, isAdmin, context),
@@ -80,7 +85,7 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
     BuildContext context,
     String greeting,
     String name,
-    bool isAdmin,
+    UserRole role,
     bool isLive,
     WidgetRef ref,
   ) {
@@ -117,13 +122,17 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
             ),
           ),
           const SizedBox(width: 8),
-          _buildRoleBadge(isAdmin),
+          _buildRoleBadge(role),
           if (isLive) ...[
             const SizedBox(width: 8),
             _buildLiveBadge(),
           ],
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryTeal, size: 22),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppTheme.primaryTeal,
+              size: 22,
+            ),
             onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
             tooltip: 'Refresh',
           ),
@@ -132,30 +141,37 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
     );
   }
 
-  Widget _buildRoleBadge(bool isAdmin) {
+  Widget _buildRoleBadge(UserRole role) {
+    final badgeColor = switch (role) {
+      UserRole.headDoctor => AppTheme.primaryTeal,
+      UserRole.doctor => const Color(0xFF3182CE),
+      UserRole.assistant => Colors.amber.shade700,
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isAdmin
-            ? AppTheme.primaryTeal.withValues(alpha: 0.1)
-            : Colors.amber.withValues(alpha: 0.12),
+        color: badgeColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isAdmin ? AppTheme.primaryTeal : Colors.amber.shade700,
-          width: 0.8,
-        ),
+        border: Border.all(color: badgeColor, width: 0.8),
       ),
       child: Text(
-        isAdmin ? 'ADMIN' : 'ASSISTANT',
+        _getRoleBadgeLabel(role),
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
-          color: isAdmin ? AppTheme.primaryTeal : Colors.amber.shade700,
+          color: badgeColor,
         ),
       ),
     );
   }
+
+  String _getRoleBadgeLabel(UserRole role) => switch (role) {
+        UserRole.headDoctor => 'HEAD DR',
+        UserRole.doctor => 'DOCTOR',
+        UserRole.assistant => 'AGENT',
+      };
 
   Widget _buildLiveBadge() {
     return Container(
@@ -192,7 +208,7 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
           _StatCard(
-            label: "Today's Visits",
+            label: 'Today\'s Visits',
             value: data.stats.todayVisitsCount.toString(),
             icon: Icons.calendar_today_rounded,
             color: AppTheme.primaryTeal,
@@ -235,7 +251,8 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: patients.length,
-        itemBuilder: (_, i) => _PriorityCard(patient: patients[i], isAdmin: isAdmin),
+        itemBuilder: (_, i) =>
+            _PriorityCard(patient: patients[i], isAdmin: isAdmin),
       ),
     );
   }
@@ -250,17 +267,22 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: visits.length,
-      itemBuilder: (_, i) => _VisitCard(visit: visits[i], isAdmin: isAdmin, context: context),
+      itemBuilder: (_, i) =>
+          _VisitCard(visit: visits[i], isAdmin: isAdmin, context: context),
     );
   }
 
-  Widget _buildAssignedVisitsList(List<Map<String, dynamic>> visits, BuildContext context) {
+  Widget _buildAssignedVisitsList(
+    List<Map<String, dynamic>> visits,
+    BuildContext context,
+  ) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: visits.length,
-      itemBuilder: (_, i) => _AssignedVisitCard(visit: visits[i], context: context),
+      itemBuilder: (_, i) =>
+          _AssignedVisitCard(visit: visits[i], context: context),
     );
   }
 
@@ -296,8 +318,11 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.event_available_rounded,
-                  size: 52, color: Colors.grey.shade400),
+              Icon(
+                Icons.event_available_rounded,
+                size: 52,
+                color: Colors.grey.shade400,
+              ),
               const SizedBox(height: 12),
               Text(
                 'No visits recorded today',
@@ -319,14 +344,17 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
     );
   }
 
-  Widget _buildErrorState(
-      BuildContext context, WidgetRef ref, Object error) {
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: NeuCard(
         child: Column(
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 48, color: AppTheme.textMuted),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 48,
+              color: AppTheme.textMuted,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Unable to load dashboard',
@@ -346,7 +374,10 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
               child: const Text(
                 'Try Again',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -362,8 +393,6 @@ import 'package:mediflow/features/followups/followup_task_widget.dart';
     return 'Good evening,';
   }
 }
-
-// ── Stat Card ─────────────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
   final String label;
@@ -388,9 +417,15 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-              color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
+            color: Colors.white,
+            offset: Offset(-3, -3),
+            blurRadius: 8,
+          ),
           BoxShadow(
-              color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+            color: Color(0xFFA3B1C6),
+            offset: Offset(3, 3),
+            blurRadius: 8,
+          ),
         ],
       ),
       child: Column(
@@ -435,8 +470,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ── Priority Card ─────────────────────────────────────────────────────────────
-
 class _PriorityCard extends StatelessWidget {
   final Map<String, dynamic> patient;
   final bool isAdmin;
@@ -455,9 +488,15 @@ class _PriorityCard extends StatelessWidget {
         border: const Border(left: BorderSide(color: Colors.red, width: 4)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 6),
+            color: Color(0xFFA3B1C6),
+            offset: Offset(3, 3),
+            blurRadius: 6,
+          ),
           BoxShadow(
-              color: Colors.white, offset: Offset(-3, -3), blurRadius: 6),
+            color: Colors.white,
+            offset: Offset(-3, -3),
+            blurRadius: 6,
+          ),
         ],
       ),
       child: Column(
@@ -466,7 +505,11 @@ class _PriorityCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.red),
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 13,
+                color: Colors.red,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -492,14 +535,19 @@ class _PriorityCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.person_outline_rounded,
-                      size: 11, color: Colors.blueGrey),
+                  const Icon(
+                    Icons.person_outline_rounded,
+                    size: 11,
+                    color: Colors.blueGrey,
+                  ),
                   const SizedBox(width: 3),
                   Expanded(
                     child: Text(
                       'by ${patient['last_updated_by']}',
                       style: const TextStyle(
-                          fontSize: 10, color: Colors.blueGrey),
+                        fontSize: 10,
+                        color: Colors.blueGrey,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -512,8 +560,6 @@ class _PriorityCard extends StatelessWidget {
     );
   }
 }
-
-// ── Visit Card ────────────────────────────────────────────────────────────────
 
 class _AssignedVisitCard extends StatelessWidget {
   final Map<String, dynamic> visit;
@@ -537,10 +583,20 @@ class _AssignedVisitCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.bgColor,
           borderRadius: BorderRadius.circular(16),
-          border: const Border(left: BorderSide(color: AppTheme.primaryTeal, width: 4)),
+          border: const Border(
+            left: BorderSide(color: AppTheme.primaryTeal, width: 4),
+          ),
           boxShadow: const [
-            BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 6),
-            BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(2, 2), blurRadius: 6),
+            BoxShadow(
+              color: Colors.white,
+              offset: Offset(-2, -2),
+              blurRadius: 6,
+            ),
+            BoxShadow(
+              color: Color(0xFFA3B1C6),
+              offset: Offset(2, 2),
+              blurRadius: 6,
+            ),
           ],
         ),
         child: Padding(
@@ -553,19 +609,27 @@ class _AssignedVisitCard extends StatelessWidget {
                   children: [
                     Text(
                       patientName,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Visit at $visitTime',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                   ],
                 ),
               ),
               _StatusChip(
                 status: followupStatus,
-                color: followupStatus == 'completed' ? Colors.green : Colors.orange,
+                color: followupStatus == 'completed'
+                    ? Colors.green
+                    : Colors.orange,
               ),
             ],
           ),
@@ -599,7 +663,6 @@ class _VisitCard extends StatelessWidget {
     final status =
         (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
     final addedBy = visit['last_updated_by'] as String?;
-
     final statusColor = _statusColor(status);
 
     return GestureDetector(
@@ -621,9 +684,15 @@ class _VisitCard extends StatelessWidget {
           ),
           boxShadow: const [
             BoxShadow(
-                color: Colors.white, offset: Offset(-2, -2), blurRadius: 6),
+              color: Colors.white,
+              offset: Offset(-2, -2),
+              blurRadius: 6,
+            ),
             BoxShadow(
-                color: Color(0xFFA3B1C6), offset: Offset(2, 2), blurRadius: 6),
+              color: Color(0xFFA3B1C6),
+              offset: Offset(2, 2),
+              blurRadius: 6,
+            ),
           ],
         ),
         child: Padding(
@@ -652,13 +721,15 @@ class _VisitCard extends StatelessWidget {
                 runSpacing: 4,
                 children: [
                   _MiniChip(
-                      icon: Icons.access_time_rounded,
-                      label: visitTime,
-                      color: AppTheme.textMuted),
+                    icon: Icons.access_time_rounded,
+                    label: visitTime,
+                    color: AppTheme.textMuted,
+                  ),
                   _MiniChip(
-                      icon: Icons.category_rounded,
-                      label: visit['visit_type'] ?? 'OPD',
-                      color: AppTheme.primaryTeal),
+                    icon: Icons.category_rounded,
+                    label: visit['visit_type'] ?? 'OPD',
+                    color: AppTheme.primaryTeal,
+                  ),
                   if (visit['tests_performed'] != null)
                     _MiniChip(
                       icon: visit['tests_performed'] == true
@@ -677,8 +748,11 @@ class _VisitCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.person_outline_rounded,
-                        size: 12, color: Colors.grey.shade500),
+                    Icon(
+                      Icons.person_outline_rounded,
+                      size: 12,
+                      color: Colors.grey.shade500,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Recorded by Dr. $addedBy',
@@ -730,8 +804,11 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         status.toUpperCase(),
-        style:
-            TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -742,8 +819,11 @@ class _MiniChip extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _MiniChip(
-      {required this.icon, required this.label, required this.color});
+  const _MiniChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -755,14 +835,15 @@ class _MiniChip extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-              fontSize: 11, color: color, fontWeight: FontWeight.w500),
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
   }
 }
-
-// ── Pulse Dot ─────────────────────────────────────────────────────────────────
 
 class _PulseDot extends StatefulWidget {
   @override
@@ -778,8 +859,9 @@ class _PulseDotState extends State<_PulseDot>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
     _animation = Tween<double>(begin: 0.4, end: 1.0).animate(_controller);
   }
 
@@ -794,15 +876,16 @@ class _PulseDotState extends State<_PulseDot>
     return FadeTransition(
       opacity: _animation,
       child: Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-              color: Colors.green, shape: BoxShape.circle)),
+        width: 6,
+        height: 6,
+        decoration: const BoxDecoration(
+          color: Colors.green,
+          shape: BoxShape.circle,
+        ),
+      ),
     );
   }
 }
-
-// ── Dashboard Skeleton ────────────────────────────────────────────────────────
 
 class _DashboardSkeleton extends StatelessWidget {
   const _DashboardSkeleton();
@@ -814,7 +897,6 @@ class _DashboardSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Stat card skeletons
           SizedBox(
             height: 98,
             child: ListView.separated(
@@ -828,11 +910,14 @@ class _DashboardSkeleton extends StatelessWidget {
           const SizedBox(height: 24),
           const NeuShimmer(width: 200, height: 16, borderRadius: 8),
           const SizedBox(height: 12),
-          const NeuShimmer(width: double.infinity, height: 80, borderRadius: 16),
+          const NeuShimmer(
+              width: double.infinity, height: 80, borderRadius: 16),
           const SizedBox(height: 10),
-          const NeuShimmer(width: double.infinity, height: 80, borderRadius: 16),
+          const NeuShimmer(
+              width: double.infinity, height: 80, borderRadius: 16),
           const SizedBox(height: 10),
-          const NeuShimmer(width: double.infinity, height: 80, borderRadius: 16),
+          const NeuShimmer(
+              width: double.infinity, height: 80, borderRadius: 16),
         ],
       ),
     );
