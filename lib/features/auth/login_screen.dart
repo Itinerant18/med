@@ -18,12 +18,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _emailFocus = FocusNode();
+  final _phoneFocus = FocusNode();
   final _passwordFocus = FocusNode();
   bool _obscurePassword = true;
   bool _isSubmitting = false;
+  bool _isGoogleSubmitting = false;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -56,9 +57,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
-    _emailFocus.dispose();
+    _phoneFocus.dispose();
     _passwordFocus.dispose();
     _fadeController.dispose();
     _slideController.dispose();
@@ -73,12 +74,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     setState(() => _isSubmitting = true);
 
-    final email = _emailController.text.trim().toLowerCase();
-    debugPrint('[Auth] Attempting sign-in with email: $email');
-
     try {
-      await ref.read(authNotifierProvider.notifier).signIn(
-            email: email,
+      await ref.read(authNotifierProvider.notifier).signInWithPhone(
+            phone: _phoneController.text.trim(),
             password: _passwordController.text,
           );
     } catch (e) {
@@ -90,9 +88,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
+  Future<void> _onGoogleLoginTap() async {
+    FocusScope.of(context).unfocus();
+
+    final phone = _phoneController.text.trim();
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      AppSnackbar.showWarning(
+        context,
+        'Enter the mobile number you used during registration.',
+      );
+      return;
+    }
+
+    setState(() => _isGoogleSubmitting = true);
+
+    try {
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle(
+            phone: phone,
+            requireExistingAccount: true,
+          );
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, AppError.getMessage(e));
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleSubmitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       body: SafeArea(
@@ -102,7 +128,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             position: _slideAnimation,
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -138,31 +165,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             ),
                             const SizedBox(height: 28),
 
-                            // Email field
+                            // Mobile field
                             NeuTextField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
                               textCapitalization: TextCapitalization.none,
                               autocorrect: false,
                               enableSuggestions: false,
-                              label: 'Email Address',
-                              hint: 'doctor@mediflow.com',
-                              focusNode: _emailFocus,
+                              label: 'Mobile Number',
+                              hint: '+91 98765 43210',
+                              focusNode: _phoneFocus,
                               textInputAction: TextInputAction.next,
-                              onFieldSubmitted: (_) =>
-                                  FocusScope.of(context).requestFocus(_passwordFocus),
+                              onFieldSubmitted: (_) => FocusScope.of(context)
+                                  .requestFocus(_passwordFocus),
                               prefixIcon: const Icon(
-                                Icons.email_outlined,
+                                Icons.phone_iphone_rounded,
                                 color: AppTheme.primaryTeal,
                                 size: 18,
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Email is required';
+                                  return 'Mobile number is required';
                                 }
-                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$')
-                                    .hasMatch(value.trim())) {
-                                  return 'Enter a valid email address';
+                                final digits =
+                                    value.replaceAll(RegExp(r'\D'), '');
+                                if (digits.length < 10) {
+                                  return 'Enter a valid mobile number';
                                 }
                                 return null;
                               },
@@ -223,6 +251,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     letterSpacing: 0.5,
                                   ),
                                 ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed: _isGoogleSubmitting
+                                    ? null
+                                    : _onGoogleLoginTap,
+                                icon: _isGoogleSubmitting
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.g_mobiledata_rounded,
+                                        size: 28,
+                                        color: AppTheme.textColor,
+                                      ),
+                                label: const Text(
+                                  'Continue with Google',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textColor,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                    color: Color(0xFFD1D9E6),
+                                  ),
+                                  backgroundColor: AppTheme.bgColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Use your registered mobile number here. If Google is not linked yet, sign in with your password first and link it from Profile.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
                               ),
                             ),
                           ],

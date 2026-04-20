@@ -2,13 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
-import 'package:mediflow/features/auth/login_screen.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
 
 class AssistantProfileScreen extends ConsumerStatefulWidget {
   const AssistantProfileScreen({super.key});
@@ -21,6 +20,7 @@ class _AssistantProfileScreenState
     extends ConsumerState<AssistantProfileScreen> {
   bool _isEditMode = false;
   bool _hasPopulated = false;
+  bool _isLinkingGoogle = false;
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl = TextEditingController();
   late final TextEditingController _phoneCtrl = TextEditingController();
@@ -66,12 +66,27 @@ class _AssistantProfileScreenState
       ),
     );
     if (ok == true) {
-      await Supabase.instance.client.auth.signOut();
+      await ref.read(authNotifierProvider.notifier).signOut();
+      if (mounted) context.go('/');
+    }
+  }
+
+  Future<void> _linkGoogle() async {
+    setState(() => _isLinkingGoogle = true);
+    try {
+      await ref.read(authNotifierProvider.notifier).linkGoogleIdentity();
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (_) => false);
+        AppSnackbar.showSuccess(
+          context,
+          'Google sign-in linked. You can now use password or Google on this account.',
+        );
       }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, AppError.getMessage(e));
+      }
+    } finally {
+      if (mounted) setState(() => _isLinkingGoogle = false);
     }
   }
 
@@ -79,6 +94,7 @@ class _AssistantProfileScreenState
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileNotifierProvider);
     final statsAsync = ref.watch(profileStatsProvider);
+    final authAsync = ref.watch(authNotifierProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
@@ -257,6 +273,88 @@ class _AssistantProfileScreenState
                     ),
                     const SizedBox(height: 16),
 
+                    NeuCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 14),
+                            child: Text('SIGN-IN METHODS',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF718096),
+                                    letterSpacing: 1.2,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _providerChip(
+                                label: 'Password',
+                                enabled:
+                                    authAsync.valueOrNull?.hasPasswordIdentity ??
+                                        false,
+                                icon: Icons.lock_outline,
+                              ),
+                              _providerChip(
+                                label: 'Google',
+                                enabled:
+                                    authAsync.valueOrNull?.hasGoogleIdentity ??
+                                        false,
+                                icon: Icons.g_mobiledata_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            authAsync.valueOrNull?.hasGoogleIdentity ?? false
+                                ? 'This account is linked for both password and Google sign-in.'
+                                : 'Link Google once while signed in, then you can use either password or Google on the same account.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: (authAsync.valueOrNull?.hasGoogleIdentity ??
+                                          false) ||
+                                      _isLinkingGoogle
+                                  ? null
+                                  : _linkGoogle,
+                              icon: _isLinkingGoogle
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.link_rounded),
+                              label: Text(
+                                authAsync.valueOrNull?.hasGoogleIdentity ??
+                                        false
+                                    ? 'Google Linked'
+                                    : 'Link Google Sign-In',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFFD1D9E6),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // Access Note
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -352,6 +450,41 @@ class _AssistantProfileScreenState
           Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       );
+
+  Widget _providerChip({
+    required String label,
+    required bool enabled,
+    required IconData icon,
+  }) {
+    final color = enabled ? AppTheme.primaryTeal : AppTheme.textMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: enabled
+            ? AppTheme.primaryTeal.withValues(alpha: 0.08)
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: enabled ? AppTheme.primaryTeal : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _infoRow(IconData icon, String label, String value,
           {bool locked = false}) =>

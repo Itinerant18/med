@@ -1,7 +1,13 @@
 // lib/core/realtime_service.dart
+//
+// Subscribes to Supabase Realtime DB changes and fires:
+//  • Local push (flutter_local_notifications) for the current user
+//  • Remote FCM push (via Edge Function) to the assigned/affected doctor
+//
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_service.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/models/app_notification.dart';
@@ -16,7 +22,6 @@ class RealtimeService {
   WidgetRef? _ref;
 
   void subscribeToPatientChanges(String currentDoctorName, WidgetRef ref) {
-    // Avoid re-subscribing if same doctor is already subscribed
     if (_isSubscribed && _currentDoctorName == currentDoctorName) {
       _ref = ref;
       return;
@@ -34,41 +39,34 @@ class RealtimeService {
             event: PostgresChangeEvent.update,
             schema: 'public',
             table: 'patients',
-            callback: (payload) {
-              _handlePatientUpdate(payload, currentDoctorName);
-            },
+            callback: (payload) =>
+                _handlePatientUpdate(payload, currentDoctorName),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.insert,
             schema: 'public',
             table: 'patients',
-            callback: (payload) {
-              _handlePatientInsert(payload, currentDoctorName);
-            },
+            callback: (payload) =>
+                _handlePatientInsert(payload, currentDoctorName),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.update,
             schema: 'public',
             table: 'visits',
-            callback: (payload) {
-              _handleVisitUpdate(payload, currentDoctorName);
-            },
+            callback: (payload) =>
+                _handleVisitUpdate(payload, currentDoctorName),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.insert,
             schema: 'public',
             table: 'dr_visits',
-            callback: (payload) {
-              _handleDrVisitInsert(payload);
-            },
+            callback: (payload) => _handleDrVisitInsert(payload),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.insert,
             schema: 'public',
             table: 'followup_tasks',
-            callback: (payload) {
-              _handleFollowupTaskInsert(payload);
-            },
+            callback: (payload) => _handleFollowupTaskInsert(payload),
           )
           .subscribe((status, error) {
         if (error != null) {
@@ -83,6 +81,8 @@ class RealtimeService {
     }
   }
 
+  // ── dr_visits insert → notify assigned agent ──────────────────────────────
+
   void _handleDrVisitInsert(PostgresChangePayload payload) {
     try {
       final row = payload.newRecord;
@@ -91,29 +91,33 @@ class RealtimeService {
 
       if (assignedAgentId != null && assignedAgentId == currentUserId) {
         // In-app notification
-        if (_ref != null) {
-          final notification = AppNotification(
-            id: 'visit-${row['id']}',
-            title: 'New Visit Assigned',
-            body: 'You have been assigned a new patient visit.',
-            timestamp: DateTime.now(),
-            type: 'visit_assignment',
-          );
-          _ref!
-              .read(notificationProvider.notifier)
-              .addNotification(notification);
-        }
+        _addInAppNotification(
+          id: 'visit-${row['id']}',
+          title: 'New Visit Assigned',
+          body: 'You have been assigned a new patient visit.',
+          type: 'visit_assignment',
+        );
 
-        // Push notification
+        // Local push
         NotificationService.instance.showVisitAssignedNotification(
-          patientName: 'a patient', // Ideally fetch from patients table
+          patientName: 'a patient',
           doctorName: 'your lead',
+        );
+      } else if (assignedAgentId != null) {
+        // Send FCM push to the assigned agent
+        FcmService.sendToDoctor(
+          doctorId: assignedAgentId,
+          title: 'New Visit Assigned',
+          body: 'A new patient visit has been assigned to you.',
+          data: {'type': 'visit_assignment', 'visit_id': row['id']?.toString() ?? ''},
         );
       }
     } catch (e) {
       debugPrint('Error handling dr_visit insert: $e');
     }
   }
+
+  // ── followup_tasks insert → notify assigned agent ─────────────────────────
 
   void _handleFollowupTaskInsert(PostgresChangePayload payload) {
     try {
@@ -122,30 +126,31 @@ class RealtimeService {
       final currentUserId = Supabase.instance.client.auth.currentUser?.id;
 
       if (assignedTo != null && assignedTo == currentUserId) {
-        // In-app notification
-        if (_ref != null) {
-          final notification = AppNotification(
-            id: 'followup-${row['id']}',
-            title: 'New Follow-up Task',
-            body: 'A new follow-up task has been assigned to you.',
-            timestamp: DateTime.now(),
-            type: 'followup_task',
-          );
-          _ref!
-              .read(notificationProvider.notifier)
-              .addNotification(notification);
-        }
+        _addInAppNotification(
+          id: 'followup-${row['id']}',
+          title: 'New Follow-up Task',
+          body: 'A new follow-up task has been assigned to you.',
+          type: 'followup_task',
+        );
 
-        // Push notification
         NotificationService.instance.showFollowupNotification(
           patientName: 'a patient',
           dueDate: row['due_date']?.toString() ?? 'soon',
+        );
+      } else if (assignedTo != null) {
+        FcmService.sendToDoctor(
+          doctorId: assignedTo,
+          title: 'New Follow-up Task',
+          body: 'A follow-up task has been assigned. Due: ${row['due_date'] ?? 'soon'}',
+          data: {'type': 'followup_task', 'task_id': row['id']?.toString() ?? ''},
         );
       }
     } catch (e) {
       debugPrint('Error handling followup_task insert: $e');
     }
   }
+
+  // ── patients update ───────────────────────────────────────────────────────
 
   void _handlePatientUpdate(
       PostgresChangePayload payload, String currentDoctorName) {
@@ -164,6 +169,8 @@ class RealtimeService {
     }
   }
 
+  // ── patients insert ───────────────────────────────────────────────────────
+
   void _handlePatientInsert(
       PostgresChangePayload payload, String currentDoctorName) {
     try {
@@ -180,6 +187,8 @@ class RealtimeService {
     }
   }
 
+  // ── visits update ─────────────────────────────────────────────────────────
+
   void _handleVisitUpdate(
       PostgresChangePayload payload, String currentDoctorName) {
     try {
@@ -195,6 +204,25 @@ class RealtimeService {
     } catch (e) {
       debugPrint('Error handling visit update: $e');
     }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  void _addInAppNotification({
+    required String id,
+    required String title,
+    required String body,
+    required String type,
+  }) {
+    if (_ref == null) return;
+    final notification = AppNotification(
+      id: id,
+      title: title,
+      body: body,
+      timestamp: DateTime.now(),
+      type: type,
+    );
+    _ref!.read(notificationProvider.notifier).addNotification(notification);
   }
 
   void dispose() {

@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "381834929556",
+    "project_id": "mediflow-f1b78",
+    "storage_bucket": "mediflow-f1b78.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:381834929556:android:7618555b0d4f8c5c7e5b81",
+        "android_client_info": {
+          "package_name": "com.doctor.mediflow"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "381834929556-g033bbsle20b7tl6mf56upqgk1qvt7ob.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAz5kO3mpraNzoCg6DAowCTMTeAHN34prw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "381834929556-g033bbsle20b7tl6mf56upqgk1qvt7ob.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "381834929556-rt6qe9legfkmotu3iaa17nipcj8bs63b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mediflow"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:381834929556:android:8d8aa563dcf97fa07e5b81",
+        "android_client_info": {
+          "package_name": "com.mediflow.doctor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "381834929556-g033bbsle20b7tl6mf56upqgk1qvt7ob.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAz5kO3mpraNzoCg6DAowCTMTeAHN34prw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "381834929556-g033bbsle20b7tl6mf56upqgk1qvt7ob.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "381834929556-rt6qe9legfkmotu3iaa17nipcj8bs63b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mediflow"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

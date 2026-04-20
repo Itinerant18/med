@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/features/auth/phone_otp_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/app_snackbar.dart';
@@ -22,6 +23,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   final _fullNameController = TextEditingController();
   final _specializationController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -29,6 +31,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isSubmitting = false;
+  bool _phoneVerified = false; // ← NEW: phone OTP state
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -50,15 +53,56 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     _fullNameController.dispose();
     _specializationController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
 
+  // ── Phone verification ────────────────────────────────────────────────────
+
+  void _openPhoneVerification() {
+    final rawPhone = _phoneController.text.trim();
+
+    if (rawPhone.isEmpty) {
+      AppSnackbar.showWarning(context, 'Enter your mobile number first');
+      return;
+    }
+
+    // Build E.164 — default to India (+91) if no country code entered
+    final e164 = normalizePhoneNumber(rawPhone);
+
+    if (e164.isEmpty || e164.replaceAll(RegExp(r'\D'), '').length < 10) {
+      AppSnackbar.showWarning(context, 'Enter a valid mobile number');
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhoneOtpScreen(
+          phoneNumber: e164,
+          onVerified: () {
+            Navigator.of(context).pop(); // close OTP screen
+            setState(() => _phoneVerified = true);
+            AppSnackbar.showSuccess(context, '✓ Phone number verified');
+          },
+        ),
+      ),
+    );
+  }
+
+  // ── Registration ──────────────────────────────────────────────────────────
+
   Future<void> _onCreateAccount() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_phoneVerified) {
+      AppSnackbar.showWarning(
+          context, 'Please verify your phone number before registering');
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -68,22 +112,73 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             specialization: _specializationController.text.trim(),
             email: _emailController.text.trim().toLowerCase(),
             password: _passwordController.text,
+            phone: _phoneController.text.trim(),
             role: _selectedRole,
           );
 
       if (!mounted) return;
 
-      // Check if email confirmation is required (session will be null)
       final authState = ref.read(authNotifierProvider);
       if (authState.hasError) {
         AppSnackbar.showError(context, AppError.getMessage(authState.error));
       } else if (authState.value == null) {
-        // Email confirmation required
         _showConfirmationDialog();
       } else {
         AppSnackbar.showSuccess(
             context, 'Account created! Welcome to MediFlow.');
       }
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  bool _validateGoogleRegistration() {
+    if (_fullNameController.text.trim().length < 2) {
+      AppSnackbar.showWarning(context, 'Enter your full name first.');
+      return false;
+    }
+    if (_specializationController.text.trim().isEmpty) {
+      AppSnackbar.showWarning(context, 'Enter your specialization first.');
+      return false;
+    }
+    final digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      AppSnackbar.showWarning(context, 'Enter a valid mobile number first.');
+      return false;
+    }
+    if (!_phoneVerified) {
+      AppSnackbar.showWarning(
+        context,
+        'Verify your mobile number before continuing with Google.',
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _onGoogleRegister() async {
+    FocusScope.of(context).unfocus();
+    if (!_validateGoogleRegistration()) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle(
+            phone: _phoneController.text.trim(),
+            requireExistingAccount: false,
+            fullName: _fullNameController.text.trim(),
+            specialization: _specializationController.text.trim(),
+            role: _selectedRole,
+            phoneVerified: true,
+          );
+
+      if (!mounted) return;
+      AppSnackbar.showSuccess(
+        context,
+        'Google registration completed. Awaiting head doctor approval.',
+      );
     } catch (e) {
       if (mounted) {
         AppSnackbar.showError(context, AppError.getMessage(e));
@@ -122,6 +217,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       ),
     );
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +320,102 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   ),
                   const SizedBox(height: 16),
 
+                  // ── Phone Verification ──
+                  NeuCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionTitle(
+                            title: 'Mobile Verification',
+                            icon: Icons.phone_iphone_rounded),
+
+                        // Phone field + verify button row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: NeuTextField(
+                                controller: _phoneController,
+                                label: 'Mobile Number',
+                                hint: '+91 98765 43210',
+                                keyboardType: TextInputType.phone,
+                                textInputAction: TextInputAction.done,
+                                prefixIcon: const Icon(Icons.phone_rounded,
+                                    color: AppTheme.primaryTeal, size: 18),
+                                suffixIcon: _phoneVerified
+                                    ? const Icon(Icons.verified_rounded,
+                                        color: Color(0xFF38A169), size: 20)
+                                    : null,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Mobile number is required';
+                                  }
+                                  final digits =
+                                      value.replaceAll(RegExp(r'\D'), '');
+                                  if (digits.length < 10) {
+                                    return 'Enter a valid mobile number';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: NeuButton(
+                                onPressed: _phoneVerified
+                                    ? null
+                                    : _openPhoneVerification,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 16),
+                                color: _phoneVerified
+                                    ? const Color(0xFF38A169)
+                                    : AppTheme.primaryTeal,
+                                child: Text(
+                                  _phoneVerified ? 'Verified' : 'Send OTP',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Verification status
+                        if (_phoneVerified) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded,
+                                  size: 14, color: Color(0xFF38A169)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Phone number successfully verified',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Enter your number and tap Send OTP to receive a verification code.',
+                            style: TextStyle(
+                                fontSize: 11, color: AppTheme.textMuted),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // ── Account Info ──
                   NeuCard(
                     padding: const EdgeInsets.all(20),
@@ -271,8 +464,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               size: 18,
                             ),
                             onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
+                                () => _obscurePassword = !_obscurePassword),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -305,8 +497,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               size: 18,
                             ),
                             onPressed: () => setState(
-                              () => _obscureConfirm = !_obscureConfirm,
-                            ),
+                                () => _obscureConfirm = !_obscureConfirm),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -355,6 +546,41 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           letterSpacing: 0.5,
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSubmitting ? null : _onGoogleRegister,
+                      icon: const Icon(
+                        Icons.g_mobiledata_rounded,
+                        size: 28,
+                        color: AppTheme.textColor,
+                      ),
+                      label: const Text(
+                        'Register with Google',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textColor,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFD1D9E6)),
+                        backgroundColor: AppTheme.bgColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Google registration still requires a verified mobile number and role selection.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
                     ),
                   ),
                   const SizedBox(height: 20),

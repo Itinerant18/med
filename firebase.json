@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "mediflow-f1b78",
+          "appId": "1:381834929556:android:7618555b0d4f8c5c7e5b81",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mediflow-f1b78",
+          "configurations": {
+            "android": "1:381834929556:android:7618555b0d4f8c5c7e5b81",
+            "ios": "1:381834929556:ios:94bed3ddc0f71d137e5b81",
+            "macos": "1:381834929556:ios:94bed3ddc0f71d137e5b81",
+            "web": "1:381834929556:web:a8dfb1d711a7ba427e5b81",
+            "windows": "1:381834929556:web:a9c7d44c037f7f3d7e5b81"
+          }
+        }
+      }
+    }
+  }
+}
