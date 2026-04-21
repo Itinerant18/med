@@ -308,6 +308,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'patient-list-new-patient',
         backgroundColor: AppTheme.primaryTeal,
         foregroundColor: Colors.white,
         onPressed: () => _openPatientForm('/patients/new'),

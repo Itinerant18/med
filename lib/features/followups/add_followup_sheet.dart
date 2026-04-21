@@ -98,6 +98,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
   void _showPatientPicker() {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: AppTheme.bgColor,
       shape: const RoundedRectangleBorder(
@@ -384,9 +385,11 @@ class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
     );
 
     return Container(
+      width: double.infinity,
       height: MediaQuery.of(context).size.height * 0.8,
       padding: const EdgeInsets.all(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'Select Patient',

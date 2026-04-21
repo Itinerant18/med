@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:mediflow/core/navigation_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Background message handler — must be a top-level function.
@@ -213,15 +214,15 @@ class FcmService {
       message.hashCode,
       notification.title,
       notification.body,
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           'mediflow_alerts',
           'MediFlow Alerts',
           importance: Importance.max,
           priority: Priority.high,
-          largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+          largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         ),
-        iOS: const DarwinNotificationDetails(
+        iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -232,6 +233,10 @@ class FcmService {
 
   void _onMessageOpenedApp(RemoteMessage message) {
     debugPrint('[FCM Tap] ${message.data}');
-    // TODO: Navigate based on message.data['route'] if needed
+    final type = message.data['type']?.toString();
+    final patientId = message.data['patientId']?.toString();
+    if (type == 'stale_patient' && patientId != null) {
+      openPatientDetailFromNotification(patientId);
+    }
   }
 }

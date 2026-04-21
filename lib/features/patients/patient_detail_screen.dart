@@ -104,6 +104,7 @@ class PatientDetailScreen extends ConsumerWidget {
       ),
       floatingActionButton: patientAsync.hasValue && patientAsync.value != null
           ? FloatingActionButton.extended(
+              heroTag: 'patient-detail-new-visit',
               backgroundColor: AppTheme.primaryTeal,
               foregroundColor: Colors.white,
               onPressed: () {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/auth_gate.dart';
+import 'package:mediflow/core/navigation_service.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/analytics/analytics_screen.dart';
@@ -22,6 +23,7 @@ import 'package:mediflow/features/staff/staff_management_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: appNavigatorKey,
     initialLocation: '/',
     debugLogDiagnostics: false,
     errorBuilder: (context, state) => Scaffold(

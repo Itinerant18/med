@@ -69,6 +69,7 @@ class MyFollowupsScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'my-followups-add-task',
         backgroundColor: AppTheme.primaryTeal,
         foregroundColor: Colors.white,
         onPressed: () => showModalBottomSheet(
