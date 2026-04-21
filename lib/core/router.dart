@@ -10,6 +10,7 @@ import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/main_screen.dart';
+import 'package:mediflow/features/dashboard/performance_dashboard_screen.dart';
 import 'package:mediflow/features/patients/patient_detail_screen.dart';
 import 'package:mediflow/features/patients/patient_form_screen.dart';
 import 'package:mediflow/features/profile/about_screen.dart';
@@ -75,6 +76,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/audit-logs',
         builder: (context, state) => const AuditLogsScreen(),
+      ),
+      GoRoute(
+        path: '/performance',
+        builder: (context, state) => const PerformanceDashboardScreen(),
       ),
       GoRoute(
         path: '/patients/new',

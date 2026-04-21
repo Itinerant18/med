@@ -382,15 +382,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       context.push('/profile');
                     },
                   ),
-                  _buildDrawerItem(
-                    icon: Icons.bar_chart_rounded,
-                    title: 'Analytics',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      context.push('/analytics');
-                    },
-                  ),
                   if (ref.watch(isHeadDoctorProvider)) ...[
+                    _buildDrawerItem(
+                      icon: Icons.bar_chart_rounded,
+                      title: 'Assistant Performance',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/performance');
+                      },
+                    ),
                     _buildDrawerItem(
                       icon: Icons.people_alt_outlined,
                       title: 'Staff Accounts',
