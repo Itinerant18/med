@@ -20,8 +20,7 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
 
     var query = supabase.from('dr_visits').select('''
       *,
-      patients:patient_id(full_name),
-      agent:assigned_agent_id(full_name)
+      patients:patient_id(full_name)
     ''');
 
     if (role == UserRole.assistant && userState != null) {
@@ -29,7 +28,41 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     }
 
     final response = await query.order('visit_date', ascending: false);
-    return (response as List).map((json) => DrVisit.fromJson(json)).toList();
+    final rows = (response as List)
+        .map((json) => Map<String, dynamic>.from(json as Map))
+        .toList();
+
+    final agentIds = rows
+        .map((row) => row['assigned_agent_id']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final agentNames = <String, String>{};
+    if (agentIds.isNotEmpty) {
+      final agentResponse = await supabase
+          .from('doctors')
+          .select('id, full_name')
+          .inFilter('id', agentIds);
+
+      for (final row in agentResponse as List) {
+        final map = Map<String, dynamic>.from(row as Map);
+        final id = map['id']?.toString();
+        final fullName = map['full_name']?.toString();
+        if (id != null && fullName != null) {
+          agentNames[id] = fullName;
+        }
+      }
+    }
+
+    return rows.map((row) {
+      final assignedAgentId = row['assigned_agent_id']?.toString();
+      if (assignedAgentId != null && agentNames.containsKey(assignedAgentId)) {
+        row['agent'] = {'full_name': agentNames[assignedAgentId]};
+      }
+      return DrVisit.fromJson(row);
+    }).toList();
   }
 
   Future<void> createVisit({

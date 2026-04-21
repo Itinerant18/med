@@ -47,6 +47,9 @@ app.*.map.json
 # Secrets and sensitive files
 *-firebase-adminsdk-*.json
 .env*
+*.tmp_*
+.tmp_*
 tmp_*
 %f%
 google-auth-setup.md
+

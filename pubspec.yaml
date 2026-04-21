@@ -26,6 +26,7 @@ dependencies:
   firebase_messaging: ^15.1.3
   google_sign_in: ^6.2.1
   http: ^1.2.0 # for Edge Function calls
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

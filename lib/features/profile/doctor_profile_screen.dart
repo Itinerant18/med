@@ -108,6 +108,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
     final profileAsync = ref.watch(profileNotifierProvider);
     final statsAsync = ref.watch(profileStatsProvider);
     final authAsync = ref.watch(authNotifierProvider);
+    final isHeadDoctor = ref.watch(isHeadDoctorProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
@@ -209,7 +210,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                     size: 15, color: AppTheme.primaryTeal),
                                 const SizedBox(width: 5),
                                 Text(
-                                    ref.watch(isHeadDoctorProvider)
+                                    isHeadDoctor
                                         ? 'Head Doctor · Super Admin'
                                         : 'Doctor',
                                     style: const TextStyle(
@@ -385,7 +386,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
-                          if (ref.watch(isHeadDoctorProvider)) ...[
+                          if (isHeadDoctor) ...[
                             _tile(Icons.how_to_reg_rounded, 'Pending Approvals',
                                 AppTheme.primaryTeal, () {
                               Navigator.push(
@@ -398,13 +399,18 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             const Divider(height: 1),
                           ],
                           _tile(Icons.bar_chart_rounded, 'Analytics Dashboard',
-                              Colors.deepPurple, () {}),
-                          const Divider(height: 1),
-                          _tile(Icons.people_alt_outlined,
-                              'Manage Staff Accounts', Colors.orange, () {}),
-                          const Divider(height: 1),
-                          _tile(Icons.history_rounded, 'Audit Logs',
-                              Colors.blueGrey, () {}),
+                              Colors.deepPurple,
+                              () => context.push('/analytics')),
+                          if (isHeadDoctor) ...[
+                            const Divider(height: 1),
+                            _tile(Icons.people_alt_outlined,
+                                'Manage Staff Accounts', Colors.orange,
+                                () => context.push('/staff')),
+                            const Divider(height: 1),
+                            _tile(Icons.history_rounded, 'Audit Logs',
+                                Colors.blueGrey,
+                                () => context.push('/audit-logs')),
+                          ],
                           const Divider(height: 1),
                           _tile(
                               Icons.info_outline,

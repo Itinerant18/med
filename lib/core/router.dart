@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/auth_gate.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/features/analytics/analytics_screen.dart';
+import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/main_screen.dart';
@@ -15,6 +17,7 @@ import 'package:mediflow/features/profile/assistant_profile_screen.dart';
 import 'package:mediflow/features/profile/doctor_profile_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
+import 'package:mediflow/features/staff/staff_management_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -60,6 +63,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/about',
         builder: (context, state) => const AboutScreen(),
+      ),
+      GoRoute(
+        path: '/analytics',
+        builder: (context, state) => const AnalyticsScreen(),
+      ),
+      GoRoute(
+        path: '/staff',
+        builder: (context, state) => const StaffManagementScreen(),
+      ),
+      GoRoute(
+        path: '/audit-logs',
+        builder: (context, state) => const AuditLogsScreen(),
       ),
       GoRoute(
         path: '/patients/new',

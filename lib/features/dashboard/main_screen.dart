@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/notification_provider.dart';
+import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
@@ -370,6 +371,32 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       context.push('/profile');
                     },
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    title: 'Analytics',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push('/analytics');
+                    },
+                  ),
+                  if (ref.watch(isHeadDoctorProvider)) ...[
+                    _buildDrawerItem(
+                      icon: Icons.people_alt_outlined,
+                      title: 'Staff Accounts',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/staff');
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.history_rounded,
+                      title: 'Audit Logs',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/audit-logs');
+                      },
+                    ),
+                  ],
                   _buildDrawerItem(
                     icon: Icons.info_outline_rounded,
                     title: 'About MediFlow',

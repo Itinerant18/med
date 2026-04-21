@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/audit/audit_provider.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 
 final patientProvider = Provider((ref) => PatientService(ref));
@@ -42,10 +43,25 @@ class PatientService {
     finalData['created_at'] = DateTime.now().toIso8601String();
 
     await _supabase.from('patients').insert(finalData);
+
+    await AuditService.log(
+      ref: _ref,
+      action: 'INSERT',
+      targetTable: 'patients',
+      description:
+          'Patient registered: ${finalData['full_name'] ?? 'Unknown Patient'}',
+      newData: Map<String, dynamic>.from(finalData),
+    );
   }
 
   Future<void> updatePatient(
       String id, Map<String, dynamic> patientData) async {
+    final existing = await _supabase
+        .from('patients')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+
     final finalData = {
       ...patientData,
       'last_updated_by': _doctorName,
@@ -56,11 +72,46 @@ class PatientService {
     finalData.removeWhere((key, value) => value == null);
 
     await _supabase.from('patients').update(finalData).eq('id', id);
+
+    final patientName = (finalData['full_name'] ??
+            existing?['full_name'] ??
+            'Unknown Patient')
+        .toString();
+
+    await AuditService.log(
+      ref: _ref,
+      action: 'UPDATE',
+      targetTable: 'patients',
+      targetId: id,
+      description: 'Patient updated: $patientName',
+      oldData: existing == null ? null : Map<String, dynamic>.from(existing),
+      newData: {
+        ...(existing == null ? <String, dynamic>{} : Map<String, dynamic>.from(existing)),
+        ...finalData,
+      },
+    );
   }
 
   Future<void> deletePatient(String id) async {
     if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
+    final existing = await _supabase
+        .from('patients')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
     await _supabase.from('patients').delete().eq('id', id);
+
+    final patientName =
+        (existing?['full_name'] ?? 'Unknown Patient').toString();
+
+    await AuditService.log(
+      ref: _ref,
+      action: 'DELETE',
+      targetTable: 'patients',
+      targetId: id,
+      description: 'Patient deleted: $patientName',
+      oldData: existing == null ? null : Map<String, dynamic>.from(existing),
+    );
   }
 
   Future<List<Map<String, dynamic>>> searchPatients(String query,
