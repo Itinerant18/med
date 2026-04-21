@@ -126,34 +126,54 @@ class RealtimeService {
   // ── followup_tasks insert → notify assigned agent ─────────────────────────
 
   void _handleFollowupTaskInsert(PostgresChangePayload payload) {
-    try {
-      final row = payload.newRecord;
-      final assignedTo = row['assigned_to']?.toString();
-      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final row = payload.newRecord;
+    final assignedTo = row['assigned_to']?.toString();
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final patientId = row['patient_id']?.toString();
+    final dueDate = row['due_date']?.toString() ?? 'soon';
+    final taskId = row['id']?.toString() ?? '';
+    final title = row['title']?.toString();
+
+    // Resolve patient name asynchronously; the notification call is also async.
+    Future<void>(() async {
+      String patientName = 'a patient';
+      if (patientId != null && patientId.isNotEmpty) {
+        try {
+          final res = await Supabase.instance.client
+              .from('patients')
+              .select('full_name')
+              .eq('id', patientId)
+              .maybeSingle();
+          final name = res?['full_name']?.toString();
+          if (name != null && name.isNotEmpty) patientName = name;
+        } catch (e) {
+          debugPrint('followup_task: patient lookup failed: $e');
+        }
+      }
 
       if (assignedTo != null && assignedTo == currentUserId) {
         _addInAppNotification(
-          id: 'followup-${row['id']}',
+          id: 'followup-$taskId',
           title: 'New Follow-up Task',
-          body: 'A new follow-up task has been assigned to you.',
+          body: title?.isNotEmpty == true
+              ? '$title · $patientName (due $dueDate)'
+              : 'Follow-up for $patientName due $dueDate',
           type: 'followup_task',
         );
 
         NotificationService.instance.showFollowupNotification(
-          patientName: 'a patient',
-          dueDate: row['due_date']?.toString() ?? 'soon',
+          patientName: patientName,
+          dueDate: dueDate,
         );
       } else if (assignedTo != null) {
         FcmService.sendToDoctor(
           doctorId: assignedTo,
           title: 'New Follow-up Task',
-          body: 'A follow-up task has been assigned. Due: ${row['due_date'] ?? 'soon'}',
-          data: {'type': 'followup_task', 'task_id': row['id']?.toString() ?? ''},
+          body: 'Follow-up for $patientName due $dueDate',
+          data: {'type': 'followup_task', 'task_id': taskId},
         );
       }
-    } catch (e) {
-      debugPrint('Error handling followup_task insert: $e');
-    }
+    });
   }
 
   // ── patients update ───────────────────────────────────────────────────────

@@ -374,26 +374,24 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                 ),
               ),
               const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        child: SafeArea(
-          top: false,
-          child: NeuButton(
-            onPressed: _isLoading ? null : _submit,
-            isLoading: _isLoading,
-            child: const Text(
-              'SAVE OUTSIDE VISIT',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                letterSpacing: 0.8,
+              SizedBox(
+                width: double.infinity,
+                child: NeuButton(
+                  onPressed: _isLoading ? null : _submit,
+                  isLoading: _isLoading,
+                  child: const Text(
+                    'SAVE OUTSIDE VISIT',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 40),
+            ],
           ),
         ),
       ),
