@@ -6,19 +6,21 @@ import 'package:mediflow/core/auth_gate.dart';
 import 'package:mediflow/core/navigation_service.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/features/agent_visits/agent_outside_visit_form.dart';
+import 'package:mediflow/features/agent_visits/agent_outside_visit_list_screen.dart';
 import 'package:mediflow/features/analytics/analytics_screen.dart';
 import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/main_screen.dart';
 import 'package:mediflow/features/dashboard/performance_dashboard_screen.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
 import 'package:mediflow/features/patients/patient_detail_screen.dart';
 import 'package:mediflow/features/patients/patient_form_screen.dart';
 import 'package:mediflow/features/profile/about_screen.dart';
 import 'package:mediflow/features/profile/assistant_profile_screen.dart';
 import 'package:mediflow/features/profile/doctor_profile_screen.dart';
-import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
-import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
 import 'package:mediflow/features/staff/staff_management_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -123,6 +125,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final visitId = state.pathParameters['visitId']!;
           return DrVisitDetailScreen(visitId: visitId);
+        },
+      ),
+      GoRoute(
+        path: '/agent-visits',
+        builder: (context, state) => const AgentOutsideVisitListScreen(),
+      ),
+      GoRoute(
+        path: '/agent-visits/new',
+        builder: (context, state) {
+          final extra = state.extra;
+          String? followupTaskId;
+          String? patientId;
+          String? patientName;
+          if (extra is Map) {
+            followupTaskId = extra['followupTaskId'] as String?;
+            patientId = extra['patientId'] as String?;
+            patientName = extra['patientName'] as String?;
+          }
+          return AgentOutsideVisitForm(
+            followupTaskId: followupTaskId,
+            preselectedPatientId: patientId,
+            preselectedPatientName: patientName,
+          );
         },
       ),
     ],

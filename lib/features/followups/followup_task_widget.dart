@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
@@ -90,25 +91,11 @@ class FollowupTaskWidget extends ConsumerWidget {
                         value: isCompleted,
                         activeColor: AppTheme.successColor,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4)),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         onChanged: isCompleted
                             ? null
-                            : (val) async {
-                                if (val == true) {
-                                  await showModalBottomSheet<void>(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: AppTheme.bgColor,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(24),
-                                      ),
-                                    ),
-                                    builder: (_) =>
-                                        _CompleteFollowupSheet(task: task),
-                                  );
-                                }
-                              },
+                            : (val) => _handleCheckboxTap(context, val),
                       ),
                     ),
                   ],
@@ -117,6 +104,101 @@ class FollowupTaskWidget extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _handleCheckboxTap(BuildContext context, bool? val) async {
+    if (val != true) return;
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _CompleteChoiceSheet(task: task),
+    );
+
+    if (!context.mounted) return;
+
+    if (choice == 'direct') {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AppTheme.bgColor,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => _CompleteFollowupSheet(task: task),
+      );
+    } else if (choice == 'outside') {
+      await context.push<bool>(
+        '/agent-visits/new',
+        extra: {
+          'followupTaskId': task.id,
+          'patientId': task.patientId,
+          'patientName': task.patientName,
+        },
+      );
+    }
+  }
+}
+
+class _CompleteChoiceSheet extends StatelessWidget {
+  const _CompleteChoiceSheet({required this.task});
+
+  final FollowupTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'How was the follow-up completed?',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            task.patientName ?? 'Patient',
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 20),
+          ListTile(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            tileColor: AppTheme.primaryTeal.withValues(alpha: 0.06),
+            leading: const Icon(Icons.check_circle_outline_rounded,
+                color: AppTheme.primaryTeal),
+            title: const Text(
+              'Mark as completed',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle:
+                const Text('Simple completion without external doctor details'),
+            onTap: () => Navigator.pop(context, 'direct'),
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            tileColor: const Color(0xFF3182CE).withValues(alpha: 0.06),
+            leading: const Icon(Icons.local_hospital_outlined,
+                color: Color(0xFF3182CE)),
+            title: const Text(
+              'Record outside doctor visit',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle:
+                const Text('Add details of the external doctor visited'),
+            onTap: () => Navigator.pop(context, 'outside'),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
@@ -132,23 +214,15 @@ class _CompleteFollowupSheet extends ConsumerStatefulWidget {
       _CompleteFollowupSheetState();
 }
 
-class _CompleteFollowupSheetState extends ConsumerState<_CompleteFollowupSheet> {
+class _CompleteFollowupSheetState
+    extends ConsumerState<_CompleteFollowupSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _extNameCtrl = TextEditingController();
-  final _extSpecCtrl = TextEditingController();
-  final _extHospCtrl = TextEditingController();
-  final _extPhoneCtrl = TextEditingController();
   final _completionNotesCtrl = TextEditingController();
 
-  bool _isExternalDoctor = false;
   bool _saving = false;
 
   @override
   void dispose() {
-    _extNameCtrl.dispose();
-    _extSpecCtrl.dispose();
-    _extHospCtrl.dispose();
-    _extPhoneCtrl.dispose();
     _completionNotesCtrl.dispose();
     super.dispose();
   }
@@ -160,16 +234,7 @@ class _CompleteFollowupSheetState extends ConsumerState<_CompleteFollowupSheet> 
     try {
       await ref.read(followupTasksProvider.notifier).completeTask(
             widget.task.id,
-            isExternalDoctor: _isExternalDoctor,
-            extDoctorName:
-                _extNameCtrl.text.trim().isEmpty ? null : _extNameCtrl.text.trim(),
-            extDoctorSpecialization: _extSpecCtrl.text.trim().isEmpty
-                ? null
-                : _extSpecCtrl.text.trim(),
-            extDoctorHospital:
-                _extHospCtrl.text.trim().isEmpty ? null : _extHospCtrl.text.trim(),
-            extDoctorPhone:
-                _extPhoneCtrl.text.trim().isEmpty ? null : _extPhoneCtrl.text.trim(),
+            isExternalDoctor: false,
             completionNotes: _completionNotesCtrl.text.trim().isEmpty
                 ? null
                 : _completionNotesCtrl.text.trim(),
@@ -214,63 +279,10 @@ class _CompleteFollowupSheetState extends ConsumerState<_CompleteFollowupSheet> 
                 ),
               ),
               const SizedBox(height: 16),
-              NeuCard(
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Visited external doctor',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textColor,
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: _isExternalDoctor,
-                      onChanged: (value) {
-                        setState(() => _isExternalDoctor = value);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              if (_isExternalDoctor) ...[
-                const SizedBox(height: 12),
-                NeuTextField(
-                  controller: _extNameCtrl,
-                  label: 'Doctor Name *',
-                  validator: (value) {
-                    if (!_isExternalDoctor) return null;
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Doctor name is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                NeuTextField(
-                  controller: _extSpecCtrl,
-                  label: 'Specialization',
-                ),
-                const SizedBox(height: 12),
-                NeuTextField(
-                  controller: _extHospCtrl,
-                  label: 'Hospital',
-                ),
-                const SizedBox(height: 12),
-                NeuTextField(
-                  controller: _extPhoneCtrl,
-                  label: 'Phone',
-                  keyboardType: TextInputType.phone,
-                ),
-              ],
-              const SizedBox(height: 12),
               NeuTextField(
                 controller: _completionNotesCtrl,
                 label: 'Completion Notes',
-                hint: 'What happened during follow-up visit?',
+                hint: 'What happened during the follow-up?',
                 maxLines: 3,
               ),
               const SizedBox(height: 18),

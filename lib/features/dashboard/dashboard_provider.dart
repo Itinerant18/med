@@ -156,21 +156,18 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
           .toIso8601String()
           .split('T')[0];
 
-      await supabase
-          .from('followup_tasks')
-          .update({'status': 'overdue'})
-          .eq('assigned_to', userState.session.user.id)
-          .eq('status', 'pending')
-          .lt('due_date', todayStr);
-
+      // Overdue marking is handled by FollowupTasksNotifier when the
+      // Follow-ups tab opens; the dashboard just reads today's tasks.
       final followupRaw = await supabase
           .from('followup_tasks')
           .select('*, patients(full_name)')
           .eq('assigned_to', userState.session.user.id)
           .eq('due_date', todayStr)
+          .neq('status', 'completed')
           .order('created_at', ascending: false);
       followupTasks = (followupRaw as List)
-          .map((json) => FollowupTask.fromJson(json))
+          .map((json) =>
+              FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
     }
 

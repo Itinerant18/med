@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
-import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/role_provider.dart';
+import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
 import 'package:mediflow/features/followups/add_followup_sheet.dart';
+import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:mediflow/models/visit_model.dart';
-import 'package:go_router/go_router.dart';
 
 class DrVisitScreen extends ConsumerWidget {
   const DrVisitScreen({super.key});
@@ -20,17 +22,14 @@ class DrVisitScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('Dr Visits',
-            style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+        title: const Text(
+          'Dr Visits',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+        ),
         backgroundColor: Colors.transparent,
       ),
       body: visitsAsync.when(
         data: (visits) {
-          if (visits.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          // Group visits by date
           final groupedVisits = <String, List<DrVisit>>{};
           for (final visit in visits) {
             final dateStr = DateFormat('yyyy-MM-dd').format(visit.visitDate);
@@ -41,24 +40,24 @@ class DrVisitScreen extends ConsumerWidget {
             ..sort((a, b) => b.compareTo(a));
 
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(drVisitsProvider.future),
-            child: ListView.builder(
+            onRefresh: () async {
+              ref.invalidate(drVisitsProvider);
+              ref.invalidate(allAgentOutsideVisitsProvider);
+              await ref.read(drVisitsProvider.future);
+            },
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: sortedDates.length,
-              itemBuilder: (context, index) {
-                final dateStr = sortedDates[index];
-                final dateVisits = groupedVisits[dateStr]!;
-                final date = DateTime.parse(dateStr);
-                final formattedDate = _getFormattedDate(date);
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              children: [
+                if (visits.isEmpty)
+                  _buildEmptyState()
+                else
+                  for (final dateStr in sortedDates) ...[
                     Padding(
-                      padding:
-                          const EdgeInsets.only(left: 8, bottom: 12, top: 8),
+                      padding: const EdgeInsets.only(
+                          left: 8, bottom: 12, top: 8),
                       child: Text(
-                        formattedDate.toUpperCase(),
+                        _getFormattedDate(DateTime.parse(dateStr))
+                            .toUpperCase(),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -67,11 +66,12 @@ class DrVisitScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    ...dateVisits.map((visit) => _VisitCard(visit: visit)),
+                    ...groupedVisits[dateStr]!
+                        .map((visit) => _VisitCard(visit: visit)),
                     const SizedBox(height: 16),
                   ],
-                );
-              },
+                if (isAdmin) const _AgentOutsideVisitsSection(),
+              ],
             ),
           );
         },
@@ -107,9 +107,13 @@ class DrVisitScreen extends ConsumerWidget {
                   backgroundColor: AppTheme.primaryTeal,
                   onPressed: () => context.push('/dr-visits/new'),
                   icon: const Icon(Icons.add_rounded, color: Colors.white),
-                  label: const Text('New Visit',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'New Visit',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             )
@@ -129,7 +133,8 @@ class DrVisitScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -139,9 +144,10 @@ class DrVisitScreen extends ConsumerWidget {
           const Text(
             'No visits recorded',
             style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-                color: AppTheme.textColor),
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: AppTheme.textColor,
+            ),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -260,6 +266,97 @@ class _StatusChip extends StatelessWidget {
         label.toUpperCase(),
         style:
             TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _AgentOutsideVisitsSection extends ConsumerWidget {
+  const _AgentOutsideVisitsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final agentVisitsAsync = ref.watch(allAgentOutsideVisitsProvider);
+    return agentVisitsAsync.when(
+      data: (visits) {
+        if (visits.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(left: 8, bottom: 12, top: 8),
+              child: Text(
+                'AGENT OUTSIDE VISITS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textMuted,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            ...visits.take(5).map((v) => _AgentVisitSummaryCard(visit: v)),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _AgentVisitSummaryCard extends StatelessWidget {
+  final AgentOutsideVisit visit;
+  const _AgentVisitSummaryCard({required this.visit});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: NeuCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3182CE).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_hospital_outlined,
+                  color: Color(0xFF3182CE), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    visit.patientName ?? 'Unknown',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  Text(
+                    '${visit.extDoctorName}${visit.extDoctorSpecialization != null ? " · ${visit.extDoctorSpecialization}" : ""}',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              DateFormat('MMM d').format(visit.visitDate),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
