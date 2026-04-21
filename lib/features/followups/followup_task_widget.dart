@@ -93,11 +93,20 @@ class FollowupTaskWidget extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4)),
                         onChanged: isCompleted
                             ? null
-                            : (val) {
+                            : (val) async {
                                 if (val == true) {
-                                  ref
-                                      .read(followupTasksProvider.notifier)
-                                      .completeTask(task.id);
+                                  await showModalBottomSheet<void>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: AppTheme.bgColor,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(24),
+                                      ),
+                                    ),
+                                    builder: (_) =>
+                                        _CompleteFollowupSheet(task: task),
+                                  );
                                 }
                               },
                       ),
@@ -107,6 +116,180 @@ class FollowupTaskWidget extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompleteFollowupSheet extends ConsumerStatefulWidget {
+  const _CompleteFollowupSheet({required this.task});
+
+  final FollowupTask task;
+
+  @override
+  ConsumerState<_CompleteFollowupSheet> createState() =>
+      _CompleteFollowupSheetState();
+}
+
+class _CompleteFollowupSheetState extends ConsumerState<_CompleteFollowupSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _extNameCtrl = TextEditingController();
+  final _extSpecCtrl = TextEditingController();
+  final _extHospCtrl = TextEditingController();
+  final _extPhoneCtrl = TextEditingController();
+  final _completionNotesCtrl = TextEditingController();
+
+  bool _isExternalDoctor = false;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _extNameCtrl.dispose();
+    _extSpecCtrl.dispose();
+    _extHospCtrl.dispose();
+    _extPhoneCtrl.dispose();
+    _completionNotesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(followupTasksProvider.notifier).completeTask(
+            widget.task.id,
+            isExternalDoctor: _isExternalDoctor,
+            extDoctorName:
+                _extNameCtrl.text.trim().isEmpty ? null : _extNameCtrl.text.trim(),
+            extDoctorSpecialization: _extSpecCtrl.text.trim().isEmpty
+                ? null
+                : _extSpecCtrl.text.trim(),
+            extDoctorHospital:
+                _extHospCtrl.text.trim().isEmpty ? null : _extHospCtrl.text.trim(),
+            extDoctorPhone:
+                _extPhoneCtrl.text.trim().isEmpty ? null : _extPhoneCtrl.text.trim(),
+            completionNotes: _completionNotesCtrl.text.trim().isEmpty
+                ? null
+                : _completionNotesCtrl.text.trim(),
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Complete Follow-up',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.task.patientName ?? 'Unknown Patient',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 16),
+              NeuCard(
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Visited external doctor',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textColor,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: _isExternalDoctor,
+                      onChanged: (value) {
+                        setState(() => _isExternalDoctor = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              if (_isExternalDoctor) ...[
+                const SizedBox(height: 12),
+                NeuTextField(
+                  controller: _extNameCtrl,
+                  label: 'Doctor Name *',
+                  validator: (value) {
+                    if (!_isExternalDoctor) return null;
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Doctor name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                NeuTextField(
+                  controller: _extSpecCtrl,
+                  label: 'Specialization',
+                ),
+                const SizedBox(height: 12),
+                NeuTextField(
+                  controller: _extHospCtrl,
+                  label: 'Hospital',
+                ),
+                const SizedBox(height: 12),
+                NeuTextField(
+                  controller: _extPhoneCtrl,
+                  label: 'Phone',
+                  keyboardType: TextInputType.phone,
+                ),
+              ],
+              const SizedBox(height: 12),
+              NeuTextField(
+                controller: _completionNotesCtrl,
+                label: 'Completion Notes',
+                hint: 'What happened during follow-up visit?',
+                maxLines: 3,
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: NeuButton(
+                  onPressed: _saving ? null : _submit,
+                  isLoading: _saving,
+                  child: const Text(
+                    'MARK COMPLETED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

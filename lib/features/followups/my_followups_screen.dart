@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
-import 'package:mediflow/features/followups/add_followup_sheet.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
 
@@ -68,25 +67,7 @@ class MyFollowupsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'my-followups-add-task',
-        backgroundColor: AppTheme.primaryTeal,
-        foregroundColor: Colors.white,
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: AppTheme.bgColor,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          builder: (_) => const AddFollowupSheet(),
-        ),
-        icon: const Icon(Icons.add_task_rounded),
-        label: const Text(
-          'Add Follow-up',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
+      floatingActionButton: null,
     );
   }
 }

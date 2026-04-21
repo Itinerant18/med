@@ -12,6 +12,12 @@ class FollowupTask {
   final String? title;
   final String? notes;
   final String priority;
+  final bool isExternalDoctor;
+  final String? extDoctorName;
+  final String? extDoctorSpecialization;
+  final String? extDoctorHospital;
+  final String? extDoctorPhone;
+  final String? completionNotes;
   final String status;
   final DateTime? completedAt;
   final DateTime createdAt;
@@ -29,6 +35,12 @@ class FollowupTask {
     this.title,
     this.notes,
     this.priority = 'normal',
+    this.isExternalDoctor = false,
+    this.extDoctorName,
+    this.extDoctorSpecialization,
+    this.extDoctorHospital,
+    this.extDoctorPhone,
+    this.completionNotes,
     required this.status,
     this.completedAt,
     required this.createdAt,
@@ -46,6 +58,12 @@ class FollowupTask {
       title: json['title'],
       notes: json['notes'],
       priority: json['priority'] ?? 'normal',
+      isExternalDoctor: json['is_external_doctor'] ?? false,
+      extDoctorName: json['ext_doctor_name'],
+      extDoctorSpecialization: json['ext_doctor_specialization'],
+      extDoctorHospital: json['ext_doctor_hospital'],
+      extDoctorPhone: json['ext_doctor_phone'],
+      completionNotes: json['completion_notes'],
       status: json['status'],
       completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at']) : null,
       createdAt: DateTime.parse(json['created_at']),
@@ -96,10 +114,25 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
         .lt('due_date', today);
   }
 
-  Future<void> completeTask(String taskId) async {
+  Future<void> completeTask(
+    String taskId, {
+    bool isExternalDoctor = false,
+    String? extDoctorName,
+    String? extDoctorSpecialization,
+    String? extDoctorHospital,
+    String? extDoctorPhone,
+    String? completionNotes,
+  }) async {
     await _supabase.from('followup_tasks').update({
       'status': 'completed',
       'completed_at': DateTime.now().toIso8601String(),
+      'is_external_doctor': isExternalDoctor,
+      'ext_doctor_name': isExternalDoctor ? extDoctorName : null,
+      'ext_doctor_specialization':
+          isExternalDoctor ? extDoctorSpecialization : null,
+      'ext_doctor_hospital': isExternalDoctor ? extDoctorHospital : null,
+      'ext_doctor_phone': isExternalDoctor ? extDoctorPhone : null,
+      'completion_notes': completionNotes,
     }).eq('id', taskId);
 
     ref.invalidateSelf();
