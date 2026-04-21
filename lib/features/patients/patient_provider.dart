@@ -1,4 +1,6 @@
 // lib/features/patients/patient_provider.dart
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
@@ -38,6 +40,7 @@ class PatientService {
 
     finalData['created_by_id'] = userId;
     finalData['last_updated_by'] = _doctorName;
+    finalData['last_updated_by_id'] = userId;
     finalData['last_updated_at'] = DateTime.now().toIso8601String();
     finalData['service_status'] = 'pending';
     finalData['created_at'] = DateTime.now().toIso8601String();
@@ -65,6 +68,7 @@ class PatientService {
     final finalData = {
       ...patientData,
       'last_updated_by': _doctorName,
+      'last_updated_by_id': _userId,
       'last_updated_at': DateTime.now().toIso8601String(),
     };
 
@@ -77,6 +81,21 @@ class PatientService {
             existing?['full_name'] ??
             'Unknown Patient')
         .toString();
+    final oldStatus = existing?['service_status']?.toString();
+    final newStatus = patientData['service_status']?.toString();
+    final ownerId = existing?['created_by_id']?.toString();
+
+    if (newStatus != null && newStatus != oldStatus) {
+      unawaited(
+        _triggerStatusNotification(
+          patientId: id,
+          patientName: patientName,
+          oldStatus: oldStatus,
+          newStatus: newStatus,
+          ownerId: ownerId,
+        ),
+      );
+    }
 
     await AuditService.log(
       ref: _ref,
@@ -125,5 +144,29 @@ class PatientService {
         .limit(limit);
     
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> _triggerStatusNotification({
+    required String patientId,
+    required String patientName,
+    required String? oldStatus,
+    required String newStatus,
+    required String? ownerId,
+  }) async {
+    try {
+      await _supabase.functions.invoke(
+        'notify-status-change',
+        body: {
+          'patientId': patientId,
+          'patientName': patientName,
+          'oldStatus': oldStatus,
+          'newStatus': newStatus,
+          'updaterId': _userId,
+          'ownerId': ownerId,
+        },
+      );
+    } catch (_) {
+      // Best-effort only. Patient updates should not fail if notification fails.
+    }
   }
 }

@@ -68,6 +68,12 @@ class RealtimeService {
             table: 'followup_tasks',
             callback: (payload) => _handleFollowupTaskInsert(payload),
           )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.update,
+            schema: 'public',
+            table: 'followup_tasks',
+            callback: (payload) => _handleFollowupUpdate(payload),
+          )
           .subscribe((status, error) {
         if (error != null) {
           debugPrint('RealtimeService error: $error');
@@ -157,13 +163,24 @@ class RealtimeService {
     try {
       final row = payload.newRecord;
       final updatedBy = row['last_updated_by']?.toString() ?? '';
-      if (updatedBy.isNotEmpty && updatedBy != currentDoctorName) {
-        NotificationService.instance.showPatientUpdateNotification(
-          patientName: row['full_name']?.toString() ?? 'A patient',
-          updatedBy: updatedBy,
-          newStatus: row['service_status']?.toString() ?? 'Updated',
-        );
-      }
+      final newStatus = row['service_status']?.toString() ?? '';
+      final oldStatus = payload.oldRecord['service_status']?.toString();
+
+      if (updatedBy == currentDoctorName) return;
+      if (newStatus.isEmpty || oldStatus == newStatus) return;
+
+      NotificationService.instance.showPatientUpdateNotification(
+        patientName: row['full_name']?.toString() ?? 'A patient',
+        updatedBy: updatedBy,
+        newStatus: newStatus,
+      );
+
+      _addInAppNotification(
+        id: 'status-${row['id']}-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Status Updated: ${row['full_name'] ?? 'Patient'}',
+        body: '$oldStatus → $newStatus (by $updatedBy)',
+        type: 'status_change',
+      );
     } catch (e) {
       debugPrint('Error handling patient update: $e');
     }
@@ -203,6 +220,35 @@ class RealtimeService {
       }
     } catch (e) {
       debugPrint('Error handling visit update: $e');
+    }
+  }
+
+  void _handleFollowupUpdate(PostgresChangePayload payload) {
+    try {
+      final row = payload.newRecord;
+      final oldStatus = payload.oldRecord['status']?.toString();
+      final newStatus = row['status']?.toString();
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      final createdBy = row['created_by']?.toString();
+
+      if (createdBy != currentUserId) return;
+      if (newStatus == null || newStatus.isEmpty || oldStatus == newStatus) {
+        return;
+      }
+
+      _addInAppNotification(
+        id: 'fu-update-${row['id']}-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Follow-up Updated',
+        body: 'A follow-up task is now: $newStatus',
+        type: 'followup_update',
+      );
+
+      NotificationService.instance.showFollowupNotification(
+        patientName: row['patient_name']?.toString() ?? 'a patient',
+        dueDate: newStatus,
+      );
+    } catch (e) {
+      debugPrint('Error handling followup update: $e');
     }
   }
 
