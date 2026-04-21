@@ -17,6 +17,11 @@ class DrVisit {
   final String? lastUpdatedBy;
   final DateTime? lastUpdatedAt;
   final DateTime createdAt;
+  final bool isExternalDoctor;
+  final String? extDoctorName;
+  final String? extDoctorSpecialization;
+  final String? extDoctorHospital;
+  final String? extDoctorPhone;
 
   // Joined fields
   final String? patientName;
@@ -38,6 +43,11 @@ class DrVisit {
     this.lastUpdatedBy,
     this.lastUpdatedAt,
     required this.createdAt,
+    this.isExternalDoctor = false,
+    this.extDoctorName,
+    this.extDoctorSpecialization,
+    this.extDoctorHospital,
+    this.extDoctorPhone,
     this.patientName,
     this.agentName,
   });
@@ -63,6 +73,11 @@ class DrVisit {
           ? DateTime.parse(json['last_updated_at'])
           : null,
       createdAt: DateTime.parse(json['created_at']),
+      isExternalDoctor: json['is_external_doctor'] ?? false,
+      extDoctorName: json['ext_doctor_name'],
+      extDoctorSpecialization: json['ext_doctor_specialization'],
+      extDoctorHospital: json['ext_doctor_hospital'],
+      extDoctorPhone: json['ext_doctor_phone'],
       patientName: json['patients']?['full_name'],
       agentName: json['agent']?['full_name'],
     );
@@ -83,6 +98,11 @@ class DrVisit {
       'status': status,
       'created_by_id': createdById,
       'last_updated_by': lastUpdatedBy,
+      'is_external_doctor': isExternalDoctor,
+      'ext_doctor_name': extDoctorName,
+      'ext_doctor_specialization': extDoctorSpecialization,
+      'ext_doctor_hospital': extDoctorHospital,
+      'ext_doctor_phone': extDoctorPhone,
     };
   }
 }

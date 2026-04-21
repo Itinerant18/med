@@ -5,6 +5,7 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
 import 'package:mediflow/features/dr_visits/agents_provider.dart';
+import 'package:mediflow/features/dr_visits/external_doctor_fields.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
@@ -19,6 +20,7 @@ class DrVisitForm extends ConsumerStatefulWidget {
 class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isExternal = false;
 
   String? _selectedPatientId;
   String? _selectedPatientName;
@@ -27,6 +29,10 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   final _visitNotesController = TextEditingController();
   final _diagnosisController = TextEditingController();
   final _followupNotesController = TextEditingController();
+  final _extNameCtrl = TextEditingController();
+  final _extSpecCtrl = TextEditingController();
+  final _extHospCtrl = TextEditingController();
+  final _extPhoneCtrl = TextEditingController();
   DateTime? _followupDate;
 
   @override
@@ -34,6 +40,10 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
     _visitNotesController.dispose();
     _diagnosisController.dispose();
     _followupNotesController.dispose();
+    _extNameCtrl.dispose();
+    _extSpecCtrl.dispose();
+    _extHospCtrl.dispose();
+    _extPhoneCtrl.dispose();
     super.dispose();
   }
 
@@ -50,6 +60,11 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
       await ref.read(drVisitsProvider.notifier).createVisit(
             patientId: _selectedPatientId!,
             assignedAgentId: _selectedAgentId,
+            isExternal: _isExternal,
+            extDoctorName: _extNameCtrl.text.trim(),
+            extDoctorSpecialization: _extSpecCtrl.text.trim(),
+            extDoctorHospital: _extHospCtrl.text.trim(),
+            extDoctorPhone: _extPhoneCtrl.text.trim(),
             visitNotes: _visitNotesController.text.trim(),
             diagnosis: _diagnosisController.text.trim(),
             followupDate: _followupDate,
@@ -143,27 +158,77 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
               const SectionTitle(
                   title: 'Assign Assistant',
                   icon: Icons.assignment_ind_outlined),
-              assistantsAsync.when(
-                data: (assistants) => NeuCard(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedAgentId,
-                    decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none),
-                    hint: const Text('Select Assistant (Optional)'),
-                    items: assistants
-                        .map((a) => DropdownMenuItem(
-                            value: a.id, child: Text(a.fullName)))
-                        .toList(),
-                    onChanged: (val) => setState(() => _selectedAgentId = val),
-                  ),
+              NeuCard(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Doctor not in organization (external)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textColor,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: _isExternal,
+                      onChanged: (value) {
+                        setState(() {
+                          _isExternal = value;
+                          if (value) {
+                            _selectedAgentId = null;
+                          } else {
+                            _extNameCtrl.clear();
+                            _extSpecCtrl.clear();
+                            _extHospCtrl.clear();
+                            _extPhoneCtrl.clear();
+                          }
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Text('Error loading assistants: $err'),
               ),
+              const SizedBox(height: 12),
+              if (_isExternal)
+                const SectionTitle(
+                  title: 'External Doctor',
+                  icon: Icons.local_hospital_outlined,
+                ),
+              if (_isExternal)
+                ExternalDoctorFields(
+                  nameController: _extNameCtrl,
+                  specializationController: _extSpecCtrl,
+                  hospitalController: _extHospCtrl,
+                  phoneController: _extPhoneCtrl,
+                )
+              else
+                assistantsAsync.when(
+                  data: (assistants) => NeuCard(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedAgentId,
+                      decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none),
+                      hint: const Text('Select Assistant (Optional)'),
+                      items: assistants
+                          .map((a) => DropdownMenuItem(
+                              value: a.id, child: Text(a.fullName)))
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedAgentId = val),
+                    ),
+                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Text('Error loading assistants: $err'),
+                ),
               const SizedBox(height: 24),
 
               // Visit Details

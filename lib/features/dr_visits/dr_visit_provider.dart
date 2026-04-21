@@ -68,6 +68,11 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
   Future<void> createVisit({
     required String patientId,
     required String? assignedAgentId,
+    required bool isExternal,
+    String? extDoctorName,
+    String? extDoctorSpecialization,
+    String? extDoctorHospital,
+    String? extDoctorPhone,
     required String visitNotes,
     required String diagnosis,
     required DateTime? followupDate,
@@ -82,17 +87,23 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
         .insert({
           'patient_id': patientId,
           'doctor_id': user.id,
-          'assigned_agent_id': assignedAgentId,
+          'assigned_agent_id': isExternal ? null : assignedAgentId,
           'visit_notes': visitNotes,
           'diagnosis': diagnosis,
           'followup_date': followupDate?.toIso8601String().split('T')[0],
           'followup_notes': followupNotes,
           'created_by_id': user.id,
+          'is_external_doctor': isExternal,
+          if (isExternal) 'ext_doctor_name': extDoctorName,
+          if (isExternal)
+            'ext_doctor_specialization': extDoctorSpecialization,
+          if (isExternal) 'ext_doctor_hospital': extDoctorHospital,
+          if (isExternal) 'ext_doctor_phone': extDoctorPhone,
         })
         .select()
         .single();
 
-    if (followupDate != null && assignedAgentId != null) {
+    if (!isExternal && followupDate != null && assignedAgentId != null) {
       await supabase.from('followup_tasks').insert({
         'patient_id': patientId,
         'dr_visit_id': visitResponse['id'],

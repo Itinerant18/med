@@ -116,6 +116,57 @@ class DrVisitDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
+          if (visit.isExternalDoctor) ...[
+            const SectionTitle(
+              title: 'External Doctor Info',
+              icon: Icons.local_hospital_outlined,
+            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: const Border(
+                  left: BorderSide(
+                    color: AppTheme.warningColor,
+                    width: 4,
+                  ),
+                ),
+              ),
+              child: NeuCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _detailRow(
+                      'Name',
+                      visit.extDoctorName?.isNotEmpty == true
+                          ? visit.extDoctorName!
+                          : 'Not provided',
+                    ),
+                    _detailRow(
+                      'Specialization',
+                      visit.extDoctorSpecialization?.isNotEmpty == true
+                          ? visit.extDoctorSpecialization!
+                          : 'Not provided',
+                    ),
+                    _detailRow(
+                      'Hospital',
+                      visit.extDoctorHospital?.isNotEmpty == true
+                          ? visit.extDoctorHospital!
+                          : 'Not provided',
+                    ),
+                    _detailRow(
+                      'Phone',
+                      visit.extDoctorPhone?.isNotEmpty == true
+                          ? visit.extDoctorPhone!
+                          : 'Not provided',
+                      isLast: true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
           // Follow-up
           const SectionTitle(
               title: 'Follow-up Information', icon: Icons.event_repeat_rounded),
@@ -227,6 +278,34 @@ class DrVisitDetailScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value, {bool isLast = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textColor,
+            ),
+          ),
         ],
       ),
     );
