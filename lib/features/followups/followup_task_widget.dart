@@ -13,71 +13,100 @@ class FollowupTaskWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isOverdue = task.status == 'overdue';
     final isCompleted = task.status == 'completed';
+    final isUrgent = task.priority == 'urgent';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
           border: isOverdue
               ? Border.all(color: AppTheme.errorColor, width: 2)
               : null,
-          borderRadius: BorderRadius.circular(16),
         ),
-        child: NeuCard(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          children: [
+            if (isUrgent)
+              Container(
+                width: 4,
+                height: 92,
+                decoration: const BoxDecoration(
+                  color: AppTheme.errorColor,
+                  borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(16),
+                  ),
+                ),
+              ),
+            Expanded(
+              child: NeuCard(
+                padding: const EdgeInsets.all(16),
+                borderRadius: 16,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          task.patientName ?? 'Unknown Patient',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                task.patientName ?? 'Unknown Patient',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              if (isOverdue) ...[
+                                const SizedBox(width: 8),
+                                const _Badge(
+                                    label: 'OVERDUE',
+                                    color: AppTheme.errorColor),
+                              ],
+                              if (isUrgent) ...[
+                                const SizedBox(width: 8),
+                                const _Badge(
+                                  label: 'URGENT',
+                                  color: AppTheme.errorColor,
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
-                        if (isOverdue) ...[
-                          const SizedBox(width: 8),
-                          const _Badge(
-                              label: 'OVERDUE', color: AppTheme.errorColor),
+                          const SizedBox(height: 4),
+                          Text(
+                            task.title?.isNotEmpty == true
+                                ? '${task.title}\n${task.notes ?? 'No notes provided'}'
+                                : task.notes ?? 'No notes provided',
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.textMuted),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      task.notes ?? 'No notes provided',
-                      style: const TextStyle(
-                          fontSize: 13, color: AppTheme.textMuted),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Transform.scale(
+                      scale: 1.2,
+                      child: Checkbox(
+                        value: isCompleted,
+                        activeColor: AppTheme.successColor,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                        onChanged: isCompleted
+                            ? null
+                            : (val) {
+                                if (val == true) {
+                                  ref
+                                      .read(followupTasksProvider.notifier)
+                                      .completeTask(task.id);
+                                }
+                              },
+                      ),
                     ),
                   ],
                 ),
               ),
-              Transform.scale(
-                scale: 1.2,
-                child: Checkbox(
-                  value: isCompleted,
-                  activeColor: AppTheme.successColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4)),
-                  onChanged: isCompleted
-                      ? null
-                      : (val) {
-                          if (val == true) {
-                            ref
-                                .read(followupTasksProvider.notifier)
-                                .completeTask(task.id);
-                          }
-                        },
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

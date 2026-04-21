@@ -5,6 +5,7 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
+import 'package:mediflow/features/followups/add_followup_sheet.dart';
 import 'package:mediflow/models/visit_model.dart';
 import 'package:go_router/go_router.dart';
 
@@ -78,13 +79,39 @@ class DrVisitScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
       floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              backgroundColor: AppTheme.primaryTeal,
-              onPressed: () => context.push('/dr-visits/new'),
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('New Visit',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'add-followup-dr-visit',
+                  backgroundColor: AppTheme.warningColor,
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: AppTheme.bgColor,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    builder: (_) => const AddFollowupSheet(),
+                  ),
+                  child: const Icon(
+                    Icons.add_task_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'new-dr-visit',
+                  backgroundColor: AppTheme.primaryTeal,
+                  onPressed: () => context.push('/dr-visits/new'),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white),
+                  label: const Text('New Visit',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
             )
           : null,
     );

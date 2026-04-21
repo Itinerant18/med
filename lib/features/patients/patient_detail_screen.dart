@@ -9,6 +9,7 @@ import 'package:mediflow/features/patients/patient_provider.dart';
 import 'package:mediflow/features/patients/visit_history_provider.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/features/followups/add_followup_sheet.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 
@@ -46,6 +47,22 @@ class PatientDetailScreen extends ConsumerWidget {
             data: (patient) => canEdit(patient)
                 ? Row(
                     children: [
+                      IconButton(
+                        icon: const Icon(Icons.add_task_rounded,
+                            color: AppTheme.primaryTeal),
+                        tooltip: 'Add Follow-up',
+                        onPressed: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: AppTheme.bgColor,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          builder: (_) =>
+                              AddFollowupSheet(preselectedPatientId: patientId),
+                        ),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryTeal),
                         onPressed: () => context.push('/patients/edit/$patientId'),

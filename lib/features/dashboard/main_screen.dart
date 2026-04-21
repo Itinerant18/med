@@ -10,6 +10,7 @@ import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/dashboard_screen.dart';
 import 'package:mediflow/features/dashboard/notification_sheet.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_screen.dart';
+import 'package:mediflow/features/followups/my_followups_screen.dart';
 import 'package:mediflow/features/patients/patient_list_screen.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -24,13 +25,6 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
-
-  static const List<Widget> _screens = [
-    DashboardScreen(),
-    PatientListScreen(),
-    ClinicalEntryScreen(),
-    DrVisitScreen(),
-  ];
 
   Future<void> _confirmLogout() async {
     final shouldLogout = await showDialog<bool>(
@@ -81,6 +75,44 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         authAsync.valueOrNull?.specialization ?? 'Specialist';
     final role = authAsync.valueOrNull?.role ?? UserRole.assistant;
     final initials = _buildInitials(doctorName);
+    final screens = <Widget>[
+      const DashboardScreen(),
+      const PatientListScreen(),
+      const ClinicalEntryScreen(),
+      role == UserRole.assistant
+          ? const MyFollowupsScreen()
+          : const DrVisitScreen(),
+    ];
+    final destinations = <NavigationDestination>[
+      const NavigationDestination(
+        icon: Icon(Icons.dashboard_outlined),
+        selectedIcon: Icon(Icons.dashboard_rounded),
+        label: 'Dashboard',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.people_outlined),
+        selectedIcon: Icon(Icons.people_rounded),
+        label: 'Patients',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.medical_services_outlined),
+        selectedIcon: Icon(Icons.medical_services_rounded),
+        label: 'Clinical',
+      ),
+      NavigationDestination(
+        icon: Icon(
+          role == UserRole.assistant
+              ? Icons.add_task_rounded
+              : Icons.health_and_safety_rounded,
+        ),
+        selectedIcon: Icon(
+          role == UserRole.assistant
+              ? Icons.add_task_rounded
+              : Icons.health_and_safety_rounded,
+        ),
+        label: role == UserRole.assistant ? 'Follow-ups' : 'Dr Visit',
+      ),
+    ];
 
     return Scaffold(
       key: _scaffoldKey,
@@ -193,7 +225,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       // ── Body ──
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
 
       // ── Bottom Navigation ──
@@ -221,28 +253,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           backgroundColor: AppTheme.bgColor,
           elevation: 0,
           height: 68,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.people_outlined),
-              selectedIcon: Icon(Icons.people_rounded),
-              label: 'Patients',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.medical_services_outlined),
-              selectedIcon: Icon(Icons.medical_services_rounded),
-              label: 'Clinical',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.health_and_safety_rounded),
-              selectedIcon: Icon(Icons.health_and_safety_rounded),
-              label: 'Dr Visit',
-            ),
-          ],
+          destinations: destinations,
         ),
       ),
     );

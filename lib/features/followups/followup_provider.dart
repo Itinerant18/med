@@ -9,7 +9,9 @@ class FollowupTask {
   final String assignedTo;
   final String createdBy;
   final DateTime dueDate;
+  final String? title;
   final String? notes;
+  final String priority;
   final String status;
   final DateTime? completedAt;
   final DateTime createdAt;
@@ -24,7 +26,9 @@ class FollowupTask {
     required this.assignedTo,
     required this.createdBy,
     required this.dueDate,
+    this.title,
     this.notes,
+    this.priority = 'normal',
     required this.status,
     this.completedAt,
     required this.createdAt,
@@ -39,7 +43,9 @@ class FollowupTask {
       assignedTo: json['assigned_to'],
       createdBy: json['created_by'],
       dueDate: DateTime.parse(json['due_date']),
+      title: json['title'],
       notes: json['notes'],
+      priority: json['priority'] ?? 'normal',
       status: json['status'],
       completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at']) : null,
       createdAt: DateTime.parse(json['created_at']),
@@ -58,10 +64,10 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
 
   @override
   Future<List<FollowupTask>> build() async {
-    return _fetchTodayTasks();
+    return _fetchTasks();
   }
 
-  Future<List<FollowupTask>> _fetchTodayTasks() async {
+  Future<List<FollowupTask>> _fetchTasks() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
 
@@ -75,7 +81,7 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
         .from('followup_tasks')
         .select('*, patients(full_name)')
         .eq('assigned_to', user.id)
-        .eq('due_date', today)
+        .order('due_date', ascending: true)
         .order('created_at', ascending: false);
 
     return (response as List).map((json) => FollowupTask.fromJson(json)).toList();
@@ -95,6 +101,33 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
       'status': 'completed',
       'completed_at': DateTime.now().toIso8601String(),
     }).eq('id', taskId);
+
+    ref.invalidateSelf();
+  }
+
+  Future<void> createTask({
+    required String patientId,
+    required String assignedTo,
+    required DateTime dueDate,
+    String? notes,
+    String priority = 'normal',
+    String? title,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Not authenticated.');
+    }
+
+    await _supabase.from('followup_tasks').insert({
+      'patient_id': patientId,
+      'assigned_to': assignedTo,
+      'created_by': user.id,
+      'due_date': dueDate.toIso8601String().split('T')[0],
+      'notes': notes,
+      'title': title,
+      'priority': priority,
+      'status': 'pending',
+    });
 
     ref.invalidateSelf();
   }
