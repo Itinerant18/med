@@ -90,10 +90,10 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => const _PatientPickerSheet(),
     ).then((result) {
-      if (result != null && result is Map<String, String>) {
+      if (result != null && result is Map) {
         setState(() {
-          _selectedPatientId = result['id'];
-          _selectedPatientName = result['name'];
+          _selectedPatientId = result['id']?.toString();
+          _selectedPatientName = result['name']?.toString();
         });
       }
     });
