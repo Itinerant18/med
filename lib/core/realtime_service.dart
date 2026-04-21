@@ -19,15 +19,20 @@ class RealtimeService {
   RealtimeChannel? _channel;
   String? _currentDoctorName;
   bool _isSubscribed = false;
-  WidgetRef? _ref;
+  // Use the root ProviderContainer so we never hold onto a widget-bound Ref.
+  // ProviderContainer lives for the app's lifetime — safe to retain.
+  ProviderContainer? _container;
 
-  void subscribeToPatientChanges(String currentDoctorName, WidgetRef ref) {
+  void subscribeToPatientChanges(
+    String currentDoctorName,
+    ProviderContainer container,
+  ) {
     if (_isSubscribed && _currentDoctorName == currentDoctorName) {
-      _ref = ref;
+      _container = container;
       return;
     }
 
-    _ref = ref;
+    _container = container;
     _currentDoctorName = currentDoctorName;
     _channel?.unsubscribe();
     _isSubscribed = false;
@@ -280,15 +285,21 @@ class RealtimeService {
     required String body,
     required String type,
   }) {
-    if (_ref == null) return;
-    final notification = AppNotification(
-      id: id,
-      title: title,
-      body: body,
-      timestamp: DateTime.now(),
-      type: type,
-    );
-    _ref!.read(notificationProvider.notifier).addNotification(notification);
+    final container = _container;
+    if (container == null) return;
+    try {
+      container.read(notificationProvider.notifier).addNotification(
+            AppNotification(
+              id: id,
+              title: title,
+              body: body,
+              timestamp: DateTime.now(),
+              type: type,
+            ),
+          );
+    } catch (e) {
+      debugPrint('RealtimeService: addInAppNotification failed: $e');
+    }
   }
 
   void dispose() {
@@ -298,5 +309,6 @@ class RealtimeService {
     _channel = null;
     _isSubscribed = false;
     _currentDoctorName = null;
+    _container = null;
   }
 }

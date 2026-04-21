@@ -52,7 +52,7 @@ class AuthGate extends ConsumerWidget {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             try {
               RealtimeService.instance
-                  .subscribeToPatientChanges(doctorName, ref);
+                  .subscribeToPatientChanges(doctorName, ProviderScope.containerOf(context));
               if (userState.isHeadDoctor) {
                 ref
                     .read(pendingApprovalsProvider.notifier)

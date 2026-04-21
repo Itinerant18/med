@@ -185,6 +185,56 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
     }
   }
 
+  // ── OTP input handling ────────────────────────────────────────────────────
+
+  /// Handles both single-character typing and full 6-digit paste.
+  void _handleOtpInput(int index, String raw) {
+    // Keep only digits — paste often includes spaces or dashes.
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.length <= 1) {
+      // Single char typed (or cleared).
+      if (_controllers[index].text != digits) {
+        _controllers[index].value = TextEditingValue(
+          text: digits,
+          selection: TextSelection.collapsed(offset: digits.length),
+        );
+      }
+      if (digits.isNotEmpty && index < 5) {
+        _focusNodes[index + 1].requestFocus();
+      } else if (digits.isEmpty && index > 0) {
+        _focusNodes[index - 1].requestFocus();
+      } else if (index == 5 && digits.isNotEmpty) {
+        _verifyOtp();
+      }
+      return;
+    }
+
+    // Paste: distribute the digits across the boxes starting at `index`.
+    for (var i = 0; i < 6; i++) {
+      final sourceIndex = i - index;
+      final value =
+          (sourceIndex >= 0 && sourceIndex < digits.length)
+              ? digits[sourceIndex]
+              : _controllers[i].text;
+      if (_controllers[i].text != value) {
+        _controllers[i].value = TextEditingValue(
+          text: value,
+          selection: TextSelection.collapsed(offset: value.length),
+        );
+      }
+    }
+
+    // Move focus to the next empty box, or verify if all are filled.
+    final combined = _controllers.map((c) => c.text).join();
+    if (combined.length >= 6) {
+      _focusNodes[5].unfocus();
+      _verifyOtp();
+    } else {
+      _focusNodes[combined.length.clamp(0, 5)].requestFocus();
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   String _friendlyError(String code, [String? message]) {
@@ -358,7 +408,6 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
       child: TextField(
         controller: _controllers[index],
         focusNode: _focusNodes[index],
-        maxLength: 1,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         style: const TextStyle(
@@ -372,18 +421,7 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
         ),
-        onChanged: (value) {
-          if (value.isNotEmpty && index < 5) {
-            _focusNodes[index + 1].requestFocus();
-          }
-          if (value.isEmpty && index > 0) {
-            _focusNodes[index - 1].requestFocus();
-          }
-          // Auto-submit when last digit is entered
-          if (index == 5 && value.isNotEmpty) {
-            _verifyOtp();
-          }
-        },
+        onChanged: (value) => _handleOtpInput(index, value),
       ),
     );
   }

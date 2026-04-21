@@ -42,7 +42,7 @@ class StaffMember {
       specialization: json['specialization'] as String? ?? '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
-      role: json['role'] as String? ?? UserRole.assistant.name,
+      role: json['role'] as String? ?? UserRole.assistant.databaseValue,
       approvalStatus: json['approval_status'] as String? ?? 'pending',
       approvedBy: json['approved_by'] as String?,
       approvedAt: json['approved_at'] != null
@@ -124,7 +124,7 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
     await _writeAuditLog(
       actorId: actor.session.user.id,
       actorName: actor.displayName,
-      actorRole: actor.role.name,
+      actorRole: actor.role.databaseValue,
       action: 'UPDATE',
       targetId: doctorId,
       description: 'Role updated to ${newRole.name}',
@@ -144,7 +144,7 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
     await _writeAuditLog(
       actorId: actor.session.user.id,
       actorName: actor.displayName,
-      actorRole: actor.role.name,
+      actorRole: actor.role.databaseValue,
       action: 'UPDATE',
       targetId: doctorId,
       description: 'Account suspended',
@@ -164,7 +164,7 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
     await _writeAuditLog(
       actorId: actor.session.user.id,
       actorName: actor.displayName,
-      actorRole: actor.role.name,
+      actorRole: actor.role.databaseValue,
       action: 'UPDATE',
       targetId: doctorId,
       description: 'Account reinstated',
@@ -184,7 +184,7 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
     await _writeAuditLog(
       actorId: actor.session.user.id,
       actorName: actor.displayName,
-      actorRole: actor.role.name,
+      actorRole: actor.role.databaseValue,
       action: 'DELETE',
       targetId: doctorId,
       description: 'Staff account deleted from doctors table',

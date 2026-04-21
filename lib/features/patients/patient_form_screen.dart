@@ -1,6 +1,7 @@
 // lib/features/patients/patient_form_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -18,7 +19,9 @@ class PatientFormScreen extends ConsumerStatefulWidget {
 
 class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  bool _isInit = false;
+  // Track which patientId we last loaded so we re-fetch if the widget is
+  // reused with a different id (e.g. cached routes).
+  String? _loadedPatientId;
   bool _isLoading = false;
 
   // Personal Details
@@ -71,9 +74,9 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInit && _isEdit) {
+    if (_isEdit && _loadedPatientId != widget.patientId) {
+      _loadedPatientId = widget.patientId;
       _loadExistingPatient();
-      _isInit = true;
     }
   }
 
@@ -219,7 +222,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           _isEdit
               ? 'Patient updated successfully'
               : 'Patient registered successfully');
-      Navigator.pop(context, true);
+      context.pop(true);
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
     } finally {
@@ -412,7 +415,6 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
 
                     const SizedBox(height: 28),
 
-                    // Submit Button
                     SizedBox(
                       width: double.infinity,
                       height: 54,

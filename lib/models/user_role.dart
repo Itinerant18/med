@@ -3,7 +3,9 @@ enum UserRole {
   doctor,
   assistant;
 
-  String get name => switch (this) {
+  /// Value used when writing the role to Supabase / other databases.
+  /// Explicitly named to avoid shadowing Dart's built-in [Enum.name].
+  String get databaseValue => switch (this) {
         UserRole.headDoctor => 'head_doctor',
         UserRole.doctor => 'doctor',
         UserRole.assistant => 'assistant',

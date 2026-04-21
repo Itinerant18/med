@@ -112,12 +112,15 @@ class FollowupTask {
   }
 }
 
-// Auto-dispose so the provider re-fetches when the Follow-ups tab is re-entered.
-final followupTasksProvider = AsyncNotifierProvider.autoDispose<
-    FollowupTasksNotifier, List<FollowupTask>>(FollowupTasksNotifier.new);
+// Keep-alive provider — the Follow-ups tab, dashboard and other screens can
+// read/refresh it without fear of the provider being disposed mid-fetch. Call
+// `refresh()` explicitly when you want fresh data on re-entry.
+final followupTasksProvider =
+    AsyncNotifierProvider<FollowupTasksNotifier, List<FollowupTask>>(
+  FollowupTasksNotifier.new,
+);
 
-class FollowupTasksNotifier
-    extends AutoDisposeAsyncNotifier<List<FollowupTask>> {
+class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
   SupabaseClient get _supabase => ref.read(supabaseClientProvider);
 
   @override

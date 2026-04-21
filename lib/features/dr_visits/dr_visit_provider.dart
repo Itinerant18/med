@@ -5,7 +5,7 @@ import 'package:mediflow/models/visit_model.dart';
 import 'package:mediflow/models/user_role.dart';
 
 final drVisitsProvider = AsyncNotifierProvider<DrVisitsNotifier, List<DrVisit>>(
-    DrVisitsNotifier.new);
+    DrVisitsNotifier.new); final drVisitByIdProvider = Provider.family<DrVisit?, String>((ref, id) { final list = ref.watch(drVisitsProvider).valueOrNull; if (list == null) return null; for (final v in list) { if (v.id == id) return v; } return null; });
 
 class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
   @override

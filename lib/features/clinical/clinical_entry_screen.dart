@@ -1,6 +1,7 @@
 // lib/features/clinical/clinical_entry_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -11,7 +12,12 @@ import 'package:mediflow/features/patients/patient_provider.dart';
 
 class ClinicalEntryScreen extends ConsumerStatefulWidget {
   final String? patientId;
-  const ClinicalEntryScreen({super.key, this.patientId});
+  final String? patientName;
+  const ClinicalEntryScreen({
+    super.key,
+    this.patientId,
+    this.patientName,
+  });
 
   @override
   ConsumerState<ClinicalEntryScreen> createState() =>
@@ -56,6 +62,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     super.initState();
     if (widget.patientId != null) {
       _selectedPatientId = widget.patientId;
+      _selectedPatientName = widget.patientName;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _loadPatientInfo();
       });
@@ -67,6 +74,19 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         }
       });
     }
+  }
+
+  @override
+  void deactivate() {
+    // Reset search query when navigating away so the next entry starts clean.
+    // `deactivate` is called before `dispose`, while the element is still
+    // attached — using `ref.read` here is safe.
+    try {
+      ref.read(patientSearchQueryProvider.notifier).state = '';
+    } catch (_) {
+      // Provider may already be disposed — safe to ignore.
+    }
+    super.deactivate();
   }
 
   @override
@@ -105,18 +125,14 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
   }
 
   Future<void> _onCompleteVisit() async {
-    // Validate patient selected
     if (_selectedPatientId == null) {
       AppSnackbar.showError(context, 'Please select a patient first.');
       return;
     }
-
-    // Validate complaint selected
     if (_chiefComplaint == null) {
       AppSnackbar.showError(context, 'Please select a chief complaint.');
       return;
     }
-
     if (!_formKey.currentState!.validate()) return;
 
     final user = Supabase.instance.client.auth.currentUser;
@@ -144,7 +160,6 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       'visit_date': now,
     };
 
-    // Add optional fields
     if (_isOtherComplaint && _customComplaintController.text.isNotEmpty) {
       visitData['chief_complaint_custom'] =
           _customComplaintController.text.trim();
@@ -179,7 +194,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       AppSnackbar.showSuccess(context, 'Visit saved successfully');
       if (widget.patientId != null) {
         await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) context.pop();
       } else {
         _resetForm();
       }
@@ -246,7 +261,6 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
               ),
             ),
           ),
-          // Fixed bottom CTA
           Positioned(
             left: 0,
             right: 0,
@@ -340,7 +354,6 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           onChanged: (val) =>
               ref.read(patientSearchQueryProvider.notifier).state = val,
         ),
-        // Search results dropdown
         searchResults.when(
           data: (results) {
             if (results.isEmpty) return const SizedBox.shrink();
@@ -402,7 +415,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           loading: () => const Padding(
             padding: EdgeInsets.only(top: 8),
             child: LinearProgressIndicator(
-                color: AppTheme.primaryTeal, backgroundColor: AppTheme.bgColor),
+                color: AppTheme.primaryTeal,
+                backgroundColor: AppTheme.bgColor),
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),

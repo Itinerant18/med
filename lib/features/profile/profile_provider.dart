@@ -67,38 +67,42 @@ final profileNotifierProvider =
 
 final profileStatsProvider =
     FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  const empty = <String, int>{'patients': 0, 'visits': 0, 'days': 0};
+
   final user = Supabase.instance.client.auth.currentUser;
-  if (user == null) return {'patients': 0, 'visits': 0, 'days': 0};
+  if (user == null) return empty;
+
+  // Wait for the profile load to complete so we never run the patient count
+  // query with an empty name string (which would match zero rows but costs
+  // a round trip). If the profile query failed, propagate zeros.
+  final profileAsync = ref.watch(profileNotifierProvider);
+  final profileData = profileAsync.valueOrNull;
+  if (profileAsync.isLoading || profileData == null) return empty;
+
+  final doctorName = (profileData['full_name'] ?? '').toString();
+  if (doctorName.isEmpty) return empty;
 
   final supabase = ref.watch(supabaseClientProvider);
 
-  // Use doctor_id (UUID) for visits instead of name string
-  // Use created_by_id for patients if available, else fallback to name
   final visitsRes = await supabase
       .from('visits')
       .select('id')
       .eq('doctor_id', user.id);
 
-  // Get doctor name for patient count
-  final profileData = ref.watch(profileNotifierProvider).valueOrNull;
-  final doctorName = profileData?['full_name'] ?? '';
+  final patientsRes = await supabase
+      .from('patients')
+      .select('id')
+      .eq('last_updated_by', doctorName);
 
-  final patientsRes = doctorName.isNotEmpty
-      ? await supabase
-          .from('patients')
-          .select('id')
-          .eq('last_updated_by', doctorName)
-      : <dynamic>[];
-
-  final createdAtRaw = profileData?['created_at'];
+  final createdAtRaw = profileData['created_at'];
   final createdAt = createdAtRaw != null
       ? DateTime.tryParse(createdAtRaw.toString()) ?? DateTime.now()
       : DateTime.now();
   final daysActive = DateTime.now().difference(createdAt).inDays + 1;
 
   return {
-    'patients': patientsRes.length,
-    'visits': visitsRes.length,
+    'patients': (patientsRes as List).length,
+    'visits': (visitsRes as List).length,
     'days': daysActive,
   };
 });

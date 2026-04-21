@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/role_provider.dart';
+import 'package:mediflow/core/string_utils.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
@@ -12,6 +13,7 @@ import 'package:mediflow/features/dashboard/notification_sheet.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_screen.dart';
 import 'package:mediflow/features/followups/my_followups_screen.dart';
 import 'package:mediflow/features/patients/patient_list_screen.dart';
+import 'package:mediflow/features/profile/change_password_sheet.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -61,10 +63,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       await ref.read(authNotifierProvider.notifier).signOut();
       if (mounted) context.go('/');
     } catch (_) {
-      // Force sign out even if the call fails
+      // Force sign out even if the call fails.
       await Supabase.instance.client.auth.signOut();
       if (mounted) context.go('/');
     }
+  }
+
+  Future<void> _openChangePassword() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const ChangePasswordSheet(),
+    );
   }
 
   @override
@@ -74,7 +88,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final specialization =
         authAsync.valueOrNull?.specialization ?? 'Specialist';
     final role = authAsync.valueOrNull?.role ?? UserRole.assistant;
-    final initials = _buildInitials(doctorName);
+    final initials = initialsFor(doctorName);
     final screens = <Widget>[
       const DashboardScreen(),
       const PatientListScreen(),
@@ -116,16 +130,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-
-      // ── Side Drawer ──
       drawer: _buildDrawer(
         doctorName: doctorName,
         specialization: specialization,
         initials: initials,
         role: role,
       ),
-
-      // ── AppBar ──
       appBar: AppBar(
         backgroundColor: AppTheme.bgColor,
         elevation: 0,
@@ -168,7 +178,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ],
         ),
         actions: [
-          // Notification Bell
           Consumer(
             builder: (context, ref, _) {
               final unreadCount = ref.watch(unreadCountProvider);
@@ -221,14 +230,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ],
       ),
-
-      // ── Body ──
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
       ),
-
-      // ── Bottom Navigation ──
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppTheme.bgColor,
@@ -282,7 +287,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       child: SafeArea(
         child: Column(
           children: [
-            // Profile Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
@@ -368,8 +372,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 ],
               ),
             ),
-
-            // Menu Items
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -421,19 +423,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     title: 'Change Password',
                     onTap: () {
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Change Password coming soon.'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      _openChangePassword();
                     },
                   ),
                 ],
               ),
             ),
-
-            // Logout
             const Divider(height: 1),
             _buildDrawerItem(
               icon: Icons.logout_rounded,
@@ -480,16 +475,5 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
     );
-  }
-
-  String _buildInitials(String name) {
-    final parts =
-        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return 'DR';
-    if (parts.length == 1) {
-      final v = parts.first;
-      return v.length >= 2 ? v.substring(0, 2).toUpperCase() : v.toUpperCase();
-    }
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 }

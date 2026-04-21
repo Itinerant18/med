@@ -43,7 +43,7 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper>
       final result = await Connectivity().checkConnectivity();
       _updateConnectionStatus(result);
     } catch (_) {
-      // Silently fail — assume connected
+      // Silently fail — assume connected.
     }
   }
 
@@ -58,7 +58,7 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper>
       if (!isConnected) {
         _animController.forward();
       } else {
-        // Hide banner after a short delay when reconnected
+        // Hide banner after a short delay when reconnected.
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             _animController.reverse().then((_) {
@@ -79,57 +79,57 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper>
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Stack(
-        children: [
-          widget.child,
-          if (_showBanner)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                bottom: false,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Material(
-                    color: _isConnected
-                        ? const Color(0xFF38A169)
-                        : const Color(0xFFE53E3E),
-                    elevation: 4,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+    // MaterialApp already provides Directionality; don't duplicate it here.
+    return Stack(
+      children: [
+        widget.child,
+        if (_showBanner)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Material(
+                  color: _isConnected
+                      ? const Color(0xFF38A169)
+                      : const Color(0xFFE53E3E),
+                  elevation: 4,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8, horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _isConnected
+                              ? Icons.wifi_rounded
+                              : Icons.wifi_off_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isConnected
+                              ? 'Back online'
+                              : 'No internet connection',
+                          style: const TextStyle(
                             color: Colors.white,
-                            size: 16,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _isConnected
-                                ? 'Back online'
-                                : 'No internet connection',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

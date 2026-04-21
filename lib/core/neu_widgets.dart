@@ -25,6 +25,19 @@ const _pressedDark = BoxShadow(
   blurRadius: 5,
 );
 
+// Dimmed shadows used when a [NeuButton] is disabled so it reads as clearly
+// inactive rather than mimicking a "pressed but enabled" look.
+final _disabledLightShadow = BoxShadow(
+  color: Colors.white.withValues(alpha: 0.4),
+  offset: const Offset(-4, -4),
+  blurRadius: 10,
+);
+final _disabledDarkShadow = BoxShadow(
+  color: const Color(0xFFA3B1C6).withValues(alpha: 0.4),
+  offset: const Offset(4, 4),
+  blurRadius: 10,
+);
+
 class NeuCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -104,9 +117,11 @@ class _NeuButtonState extends State<NeuButton> {
               ? (widget.color ?? AppTheme.primaryTeal).withValues(alpha: 0.6)
               : (widget.color ?? AppTheme.primaryTeal),
           borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
-          boxShadow: _pressed || isDisabled
-              ? const [_pressedLight, _pressedDark]
-              : const [_lightShadow, _darkShadow],
+          boxShadow: isDisabled
+              ? [_disabledLightShadow, _disabledDarkShadow]
+              : (_pressed
+                  ? const [_pressedLight, _pressedDark]
+                  : const [_lightShadow, _darkShadow]),
         ),
         child: Center(
           child: widget.isLoading
@@ -246,7 +261,7 @@ class _NeuTextFieldState extends State<NeuTextField> {
   }
 }
 
-/// Section title used across forms
+/// Section title used across forms.
 class SectionTitle extends StatelessWidget {
   final String title;
   final IconData? icon;
@@ -278,7 +293,7 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-/// A shimmer loading placeholder
+/// A shimmer loading placeholder.
 class NeuShimmer extends StatefulWidget {
   final double width;
   final double height;

@@ -8,8 +8,8 @@ final notificationProvider =
   (ref) => NotificationNotifier(),
 );
 
-// Keep the family alias for backward compatibility
-final notificationProviderFamily = notificationProvider;
+
+
 
 final unreadCountProvider = Provider<int>((ref) {
   return ref.watch(notificationProvider).where((n) => !n.isRead).length;

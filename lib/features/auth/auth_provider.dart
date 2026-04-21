@@ -214,7 +214,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         'phone': normalizedPhone,
         'phone_verified': true, // ← Phone was verified via Firebase OTP
         'role':
-            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.name,
+            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.databaseValue,
         'approval_status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
@@ -311,7 +311,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         'phone': normalizedPhone,
         'phone_verified': true,
         'role':
-            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.name,
+            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.databaseValue,
         'approval_status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');

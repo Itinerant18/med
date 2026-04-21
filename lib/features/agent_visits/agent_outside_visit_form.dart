@@ -1,12 +1,14 @@
 // lib/features/agent_visits/agent_outside_visit_form.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart';
+import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
 
@@ -131,14 +133,16 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
             nextFollowupDate: _nextFollowupDate,
           );
 
-      // Refresh follow-up tasks so the completed task disappears.
+      // Refresh dependent screens so the new visit shows everywhere.
       if (widget.followupTaskId != null) {
         ref.invalidate(followupTasksProvider);
       }
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(roleAwarePatientsProvider);
 
       if (mounted) {
         AppSnackbar.showSuccess(context, 'Outside visit recorded successfully');
-        Navigator.of(context).pop(true);
+        context.pop(true);
       }
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));

@@ -161,11 +161,13 @@ class AuditState {
     required this.entries,
     required this.hasMore,
     required this.nextCursor,
+    required this.nextCursorId,
   });
 
   final List<AuditLogEntry> entries;
   final bool hasMore;
   final String? nextCursor;
+  final String? nextCursorId;
 }
 
 final auditLogsProvider =
@@ -179,7 +181,7 @@ class AuditNotifier extends AsyncNotifier<AuditState> {
 
   @override
   Future<AuditState> build() async {
-    return _fetchPage(reset: true);
+    return _fetchPage();
   }
 
   Future<void> loadMore() async {
@@ -190,8 +192,8 @@ class AuditNotifier extends AsyncNotifier<AuditState> {
 
     final lastEntry = current.entries.last;
     final nextPage = await _runFetch(
-      reset: false,
       cursor: lastEntry.createdAt,
+      cursorId: lastEntry.id,
     );
 
     state = AsyncData(
@@ -199,13 +201,14 @@ class AuditNotifier extends AsyncNotifier<AuditState> {
         entries: [...current.entries, ...nextPage.entries],
         hasMore: nextPage.hasMore,
         nextCursor: nextPage.nextCursor,
+        nextCursorId: nextPage.nextCursorId,
       ),
     );
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetchPage(reset: true));
+    state = await AsyncValue.guard(_fetchPage);
   }
 
   Future<void> applyFilter(AuditFilter filter) async {
@@ -213,19 +216,22 @@ class AuditNotifier extends AsyncNotifier<AuditState> {
     await refresh();
   }
 
-  Future<AuditState> _fetchPage({required bool reset}) {
-    return _runFetch(reset: reset);
-  }
+  Future<AuditState> _fetchPage() => _runFetch();
 
   Future<AuditState> _runFetch({
-    required bool reset,
     DateTime? cursor,
+    String? cursorId,
   }) async {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     final isHeadDoctor = ref.read(isHeadDoctorProvider);
 
     if (authState == null) {
-      return const AuditState(entries: [], hasMore: false, nextCursor: null);
+      return const AuditState(
+        entries: [],
+        hasMore: false,
+        nextCursor: null,
+        nextCursorId: null,
+      );
     }
 
     var query = _supabase.from('audit_logs').select();
@@ -249,22 +255,39 @@ class AuditNotifier extends AsyncNotifier<AuditState> {
     if (_filter.dateTo != null) {
       query = query.lte('created_at', _filter.dateTo!.toIso8601String());
     }
+
+    // Composite cursor — (created_at, id). Without the `id` tiebreaker, two
+    // rows that share a millisecond would cause `lt` to skip one forever.
     if (cursor != null) {
-      query = query.lt('created_at', cursor.toIso8601String());
+      final cursorIso = cursor.toIso8601String();
+      if (cursorId != null && cursorId.isNotEmpty) {
+        query = query.or(
+          'created_at.lt.$cursorIso,'
+          'and(created_at.eq.$cursorIso,id.lt.$cursorId)',
+        );
+      } else {
+        query = query.lt('created_at', cursorIso);
+      }
     }
 
-    final response =
-        await query.order('created_at', ascending: false).limit(_pageSize);
+    final response = await query
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .limit(_pageSize);
+
     final rows = (response as List<dynamic>)
         .map((row) => AuditLogEntry.fromJson(
               Map<String, dynamic>.from(row as Map),
             ))
         .toList();
 
+    final last = rows.isEmpty ? null : rows.last;
+
     return AuditState(
       entries: rows,
       hasMore: rows.length == _pageSize,
-      nextCursor: rows.isEmpty ? null : rows.last.createdAt.toIso8601String(),
+      nextCursor: last?.createdAt.toIso8601String(),
+      nextCursorId: last?.id,
     );
   }
 }
@@ -319,7 +342,7 @@ class AuditService {
       await ref.read(supabaseClientProvider).from('audit_logs').insert({
         'actor_id': authState.session.user.id,
         'actor_name': authState.displayName,
-        'actor_role': authState.role.name,
+        'actor_role': authState.role.databaseValue,
         'action': action,
         'target_table': targetTable,
         'target_id': targetId,

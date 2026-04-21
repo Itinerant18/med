@@ -15,6 +15,8 @@ class DrVisitDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Cached lookup — avoids re-scanning the visits list on every rebuild.
+    final visit = ref.watch(drVisitByIdProvider(visitId));
     final visitsAsync = ref.watch(drVisitsProvider);
     final isAdmin = ref.watch(isAdminProvider);
 
@@ -26,9 +28,15 @@ class DrVisitDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
       ),
       body: visitsAsync.when(
-        data: (visits) {
-          final visit = visits.firstWhere((v) => v.id == visitId,
-              orElse: () => throw Exception('Visit not found'));
+        data: (_) {
+          if (visit == null) {
+            return const Center(
+              child: Text(
+                'Visit not found',
+                style: TextStyle(color: AppTheme.textMuted),
+              ),
+            );
+          }
           return _buildContent(context, ref, visit, isAdmin);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -44,7 +52,6 @@ class DrVisitDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Card
           NeuCard(
             child: Row(
               children: [
@@ -76,8 +83,6 @@ class DrVisitDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-
-          // Diagnosis & Notes
           const SectionTitle(
               title: 'Diagnosis & Notes', icon: Icons.description_outlined),
           SizedBox(
@@ -115,7 +120,6 @@ class DrVisitDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-
           if (visit.isExternalDoctor) ...[
             const SectionTitle(
               title: 'External Doctor Info',
@@ -166,8 +170,6 @@ class DrVisitDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
           ],
-
-          // Follow-up
           const SectionTitle(
               title: 'Follow-up Information', icon: Icons.event_repeat_rounded),
           SizedBox(
@@ -231,8 +233,6 @@ class DrVisitDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 32),
-
-          // Actions
           if (visit.followupStatus == 'pending')
             SizedBox(
               width: double.infinity,
@@ -253,7 +253,6 @@ class DrVisitDetailScreen extends ConsumerWidget {
                         color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
-
           if (isAdmin && visit.status == 'active') ...[
             const SizedBox(height: 12),
             SizedBox(

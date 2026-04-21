@@ -26,8 +26,8 @@ class NotificationSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifications = ref.watch(notificationProviderFamily);
-    final notifier = ref.read(notificationProviderFamily.notifier);
+    final notifications = ref.watch(notificationProvider);
+    final notifier = ref.read(notificationProvider.notifier);
 
     return DraggableScrollableSheet(
       minChildSize: 0.4,

@@ -71,6 +71,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/analytics',
+        redirect: (context, state) {
+          // Analytics is admin-only. Bounce non-admins back to root.
+          final container = ProviderScope.containerOf(context);
+          final isAdmin = container.read(isAdminProvider);
+          return isAdmin ? null : '/';
+        },
         builder: (context, state) => const AnalyticsScreen(),
       ),
       GoRoute(
@@ -111,9 +117,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra;
           String? id;
-          if (extra is String) id = extra;
-          if (extra is Map) id = extra['patientId'] as String?;
-          return ClinicalEntryScreen(patientId: id);
+          String? name;
+          if (extra is String) {
+            id = extra;
+          } else if (extra is Map) {
+            id = extra['patientId'] as String?;
+            name = extra['patientName'] as String?;
+          }
+          return ClinicalEntryScreen(patientId: id, patientName: name);
         },
       ),
       GoRoute(

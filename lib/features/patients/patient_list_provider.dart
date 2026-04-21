@@ -84,7 +84,7 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
   final userState = ref.watch(authNotifierProvider).value;
   final role = ref.watch(currentRoleProvider);
 
-  var query = supabase.from('patients').select();
+  var query = supabase.from('patients').select('id, full_name, phone, email, symptoms, health_scheme, service_status, is_high_priority, last_updated_by, last_updated_at, created_by_id, created_at, area_affected, last_visit_at, last_visit_date, last_visit_type, visit_type, date_of_birth');
 
   // Agents only see patients they created (UUID match, not name string).
   if (role == UserRole.assistant && userState != null) {

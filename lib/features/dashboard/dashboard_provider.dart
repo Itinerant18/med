@@ -68,15 +68,19 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
   @override
   Future<DashboardState> build() async {
     _disposed = false;
+
+    // Cancel any timer left over from a previous build (e.g. hot reload)
+    // before scheduling a new one.
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (_disposed) return;
+      if (state.hasValue) refresh();
+    });
+
     ref.onDispose(() {
       _disposed = true;
       _timer?.cancel();
-    });
-
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (state.hasValue) {
-        refresh();
-      }
+      _timer = null;
     });
 
     return _fetch();

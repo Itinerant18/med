@@ -1,6 +1,7 @@
 // lib/features/patients/patient_provider.dart
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
@@ -9,7 +10,7 @@ import 'package:mediflow/features/auth/auth_provider.dart';
 
 final patientProvider = Provider((ref) => PatientService(ref));
 
-/// Provider to fetch a single patient by ID
+/// Provider to fetch a single patient by ID.
 final patientDetailProvider =
     FutureProvider.family<Map<String, dynamic>?, String>((ref, id) async {
   if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
@@ -32,10 +33,11 @@ class PatientService {
 
   Future<void> registerPatient(Map<String, dynamic> patientData) async {
     final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) throw Exception('Not authenticated. Please sign in again.');
+    if (userId == null) {
+      throw Exception('Not authenticated. Please sign in again.');
+    }
 
     final finalData = {...patientData};
-    // Remove null values to avoid unnecessary DB errors
     finalData.removeWhere((key, value) => value == null || value == '');
 
     finalData['created_by_id'] = userId;
@@ -58,12 +60,27 @@ class PatientService {
   }
 
   Future<void> updatePatient(
-      String id, Map<String, dynamic> patientData) async {
-    final existing = await _supabase
-        .from('patients')
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    String id,
+    Map<String, dynamic> patientData,
+  ) async {
+    if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
+
+    Map<String, dynamic>? existing;
+    try {
+      existing = await _supabase
+          .from('patients')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+    } catch (e) {
+      throw Exception('Unable to load patient: $e');
+    }
+
+    if (existing == null) {
+      throw Exception(
+        'Patient not found or you do not have permission to edit it.',
+      );
+    }
 
     final finalData = {
       ...patientData,
@@ -71,19 +88,16 @@ class PatientService {
       'last_updated_by_id': _userId,
       'last_updated_at': DateTime.now().toIso8601String(),
     };
-
-    // Remove null values
     finalData.removeWhere((key, value) => value == null);
 
     await _supabase.from('patients').update(finalData).eq('id', id);
 
-    final patientName = (finalData['full_name'] ??
-            existing?['full_name'] ??
-            'Unknown Patient')
-        .toString();
-    final oldStatus = existing?['service_status']?.toString();
+    final patientName =
+        (finalData['full_name'] ?? existing['full_name'] ?? 'Unknown Patient')
+            .toString();
+    final oldStatus = existing['service_status']?.toString();
     final newStatus = patientData['service_status']?.toString();
-    final ownerId = existing?['created_by_id']?.toString();
+    final ownerId = existing['created_by_id']?.toString();
 
     if (newStatus != null && newStatus != oldStatus) {
       unawaited(
@@ -103,9 +117,9 @@ class PatientService {
       targetTable: 'patients',
       targetId: id,
       description: 'Patient updated: $patientName',
-      oldData: existing == null ? null : Map<String, dynamic>.from(existing),
+      oldData: Map<String, dynamic>.from(existing),
       newData: {
-        ...(existing == null ? <String, dynamic>{} : Map<String, dynamic>.from(existing)),
+        ...Map<String, dynamic>.from(existing),
         ...finalData,
       },
     );
@@ -113,15 +127,31 @@ class PatientService {
 
   Future<void> deletePatient(String id) async {
     if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
-    final existing = await _supabase
-        .from('patients')
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+
+    Map<String, dynamic>? existing;
+    try {
+      existing = await _supabase
+          .from('patients')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+    } catch (e) {
+      throw Exception('Unable to load patient: $e');
+    }
+
+    if (existing == null) {
+      throw Exception(
+        'Patient not found or you do not have permission to delete it.',
+      );
+    }
+
+    // Best-effort: clean up stored documents before deleting the row so we
+    // don't leak files in Supabase Storage. Failures here are non-fatal.
+    await _cleanupPatientStorage(id, existing);
+
     await _supabase.from('patients').delete().eq('id', id);
 
-    final patientName =
-        (existing?['full_name'] ?? 'Unknown Patient').toString();
+    final patientName = (existing['full_name'] ?? 'Unknown Patient').toString();
 
     await AuditService.log(
       ref: _ref,
@@ -129,20 +159,59 @@ class PatientService {
       targetTable: 'patients',
       targetId: id,
       description: 'Patient deleted: $patientName',
-      oldData: existing == null ? null : Map<String, dynamic>.from(existing),
+      oldData: Map<String, dynamic>.from(existing),
     );
   }
 
-  Future<List<Map<String, dynamic>>> searchPatients(String query,
-      {int limit = 10}) async {
+  Future<void> _cleanupPatientStorage(
+    String patientId,
+    Map<String, dynamic> existing,
+  ) async {
+    try {
+      final urls = (existing['document_urls'] as List?)
+              ?.map((u) => u?.toString() ?? '')
+              .where((u) => u.isNotEmpty)
+              .toList() ??
+          const <String>[];
+
+      final paths = <String>[];
+      const marker = '/patient-docs/';
+      for (final url in urls) {
+        final idx = url.indexOf(marker);
+        if (idx != -1) paths.add(url.substring(idx + marker.length));
+      }
+
+      if (paths.isNotEmpty) {
+        await _supabase.storage.from('patient-docs').remove(paths);
+        return;
+      }
+
+      // Fallback: list everything under `{patientId}/` and remove it.
+      final listed =
+          await _supabase.storage.from('patient-docs').list(path: patientId);
+      if (listed.isNotEmpty) {
+        final toRemove = listed
+            .map((e) => '$patientId/${e.name}')
+            .toList(growable: false);
+        await _supabase.storage.from('patient-docs').remove(toRemove);
+      }
+    } catch (e) {
+      debugPrint('patient storage cleanup failed: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchPatients(
+    String query, {
+    int limit = 10,
+  }) async {
     if (query.trim().length < 2) return [];
-    
+
     final response = await _supabase
         .from('patients')
         .select('id, full_name, date_of_birth, phone')
         .ilike('full_name', '%${query.trim()}%')
         .limit(limit);
-    
+
     return List<Map<String, dynamic>>.from(response);
   }
 
