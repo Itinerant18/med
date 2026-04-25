@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/supabase_client.dart';
@@ -88,21 +89,21 @@ class AuditLogEntry {
   IconData get actionIcon {
     switch (action) {
       case 'INSERT':
-        return Icons.add_circle_rounded;
+        return AppIcons.add_circle_rounded;
       case 'UPDATE':
-        return Icons.edit_rounded;
+        return AppIcons.edit_rounded;
       case 'DELETE':
-        return Icons.delete_rounded;
+        return AppIcons.delete_rounded;
       case 'APPROVE':
-        return Icons.check_circle_rounded;
+        return AppIcons.check_circle_rounded;
       case 'REJECT':
-        return Icons.cancel_rounded;
+        return AppIcons.cancel_rounded;
       case 'LOGIN':
-        return Icons.login_rounded;
+        return AppIcons.login_rounded;
       case 'LOGOUT':
-        return Icons.logout_rounded;
+        return AppIcons.logout_rounded;
       default:
-        return Icons.history_rounded;
+        return AppIcons.history_rounded;
     }
   }
 

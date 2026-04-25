@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/role_provider.dart';
@@ -21,7 +22,7 @@ class PerformanceDashboardScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.lock_outline_rounded,
+                    AppIcons.lock_outline_rounded,
                     size: 32,
                     color: AppTheme.textMuted,
                   ),
@@ -91,9 +92,8 @@ class PerformanceDashboardScreen extends ConsumerWidget {
               items.fold<int>(0, (sum, item) => sum + item.followupsTotal);
           final totalCompleted =
               items.fold<int>(0, (sum, item) => sum + item.followupsCompleted);
-          final overallRate = totalFollowups == 0
-              ? 0.0
-              : totalCompleted / totalFollowups * 100;
+          final overallRate =
+              totalFollowups == 0 ? 0.0 : totalCompleted / totalFollowups * 100;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -104,7 +104,7 @@ class PerformanceDashboardScreen extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Assistants',
                       value: '$totalAssistants',
-                      icon: Icons.people_alt_outlined,
+                      icon: AppIcons.people_alt_outlined,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -112,7 +112,7 @@ class PerformanceDashboardScreen extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Patients',
                       value: '$totalPatients',
-                      icon: Icons.person_rounded,
+                      icon: AppIcons.person_rounded,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -120,7 +120,7 @@ class PerformanceDashboardScreen extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Follow-up Rate',
                       value: '${overallRate.toStringAsFixed(0)}%',
-                      icon: Icons.insights_rounded,
+                      icon: AppIcons.insights_rounded,
                     ),
                   ),
                 ],
@@ -278,7 +278,7 @@ class _AssistantCard extends StatelessWidget {
                   child: _MetricTile(
                     label: 'Patients',
                     value: kpi.patientsRegistered.toString(),
-                    icon: Icons.person_rounded,
+                    icon: AppIcons.person_rounded,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -286,7 +286,7 @@ class _AssistantCard extends StatelessWidget {
                   child: _MetricTile(
                     label: 'Visits',
                     value: kpi.visitsCreated.toString(),
-                    icon: Icons.health_and_safety_rounded,
+                    icon: AppIcons.health_and_safety_rounded,
                   ),
                 ),
               ],
@@ -298,7 +298,7 @@ class _AssistantCard extends StatelessWidget {
                   child: _MetricTile(
                     label: 'Done',
                     value: kpi.followupsCompleted.toString(),
-                    icon: Icons.check_circle_rounded,
+                    icon: AppIcons.check_circle_rounded,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -306,7 +306,7 @@ class _AssistantCard extends StatelessWidget {
                   child: _MetricTile(
                     label: 'Overdue',
                     value: kpi.followupsOverdue.toString(),
-                    icon: Icons.warning_rounded,
+                    icon: AppIcons.warning_rounded,
                     color: kpi.followupsOverdue > 0 ? Colors.red : null,
                   ),
                 ),
@@ -319,7 +319,7 @@ class _AssistantCard extends StatelessWidget {
                   child: _MetricTile(
                     label: 'Outside Visits',
                     value: kpi.outsideVisitsTotal.toString(),
-                    icon: Icons.local_hospital_outlined,
+                    icon: AppIcons.local_hospital_outlined,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -356,8 +356,11 @@ class _AssistantCard extends StatelessWidget {
   }
 
   static String _initials(String name) {
-    final parts =
-        name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return 'A';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();

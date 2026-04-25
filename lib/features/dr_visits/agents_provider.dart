@@ -15,7 +15,8 @@ final agentsProvider = FutureProvider<List<DoctorModel>>((ref) async {
       .eq('approval_status', 'approved');
 
   return (response as List)
-      .map((json) => DoctorModel.fromJson(Map<String, dynamic>.from(json as Map)))
+      .map((json) =>
+          DoctorModel.fromJson(Map<String, dynamic>.from(json as Map)))
       .toList();
 });
 
@@ -26,12 +27,12 @@ final doctorsProvider = FutureProvider<List<DoctorModel>>((ref) async {
       .from('doctors')
       .select('id, full_name, specialization, email, role, approval_status')
       .inFilter('role', [
-        UserRole.headDoctor.databaseValue,
-        UserRole.doctor.databaseValue,
-      ])
-      .eq('approval_status', 'approved');
+    UserRole.headDoctor.databaseValue,
+    UserRole.doctor.databaseValue,
+  ]).eq('approval_status', 'approved');
 
   return (response as List)
-      .map((json) => DoctorModel.fromJson(Map<String, dynamic>.from(json as Map)))
+      .map((json) =>
+          DoctorModel.fromJson(Map<String, dynamic>.from(json as Map)))
       .toList();
 });

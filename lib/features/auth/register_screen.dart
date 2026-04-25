@@ -1,5 +1,6 @@
 // lib/features/auth/register_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -196,7 +197,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryTeal),
+            Icon(AppIcons.mark_email_read_rounded, color: AppTheme.primaryTeal),
             SizedBox(width: 10),
             Text('Check Your Email'),
           ],
@@ -228,7 +229,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+          icon: const Icon(AppIcons.arrow_back_ios_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
         title: const Text('Create Account'),
@@ -278,13 +279,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       children: [
                         const SectionTitle(
                             title: 'Personal Details',
-                            icon: Icons.person_outline),
+                            icon: AppIcons.person_outline),
                         NeuTextField(
                           controller: _fullNameController,
                           label: 'Full Name',
                           hint: 'Dr. John Smith',
                           textCapitalization: TextCapitalization.words,
-                          prefixIcon: const Icon(Icons.person_outline,
+                          prefixIcon: const Icon(AppIcons.person_outline,
                               color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.next,
                           validator: (value) {
@@ -304,7 +305,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           hint: 'e.g. Cardiology, General Medicine',
                           textCapitalization: TextCapitalization.words,
                           prefixIcon: const Icon(
-                              Icons.medical_services_outlined,
+                              AppIcons.medical_services_outlined,
                               color: AppTheme.primaryTeal,
                               size: 18),
                           textInputAction: TextInputAction.next,
@@ -328,7 +329,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       children: [
                         const SectionTitle(
                             title: 'Mobile Verification',
-                            icon: Icons.phone_iphone_rounded),
+                            icon: AppIcons.phone_iphone_rounded),
 
                         // Phone field + verify button row
                         Row(
@@ -341,10 +342,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                 hint: '+91 98765 43210',
                                 keyboardType: TextInputType.phone,
                                 textInputAction: TextInputAction.done,
-                                prefixIcon: const Icon(Icons.phone_rounded,
+                                prefixIcon: const Icon(AppIcons.phone_rounded,
                                     color: AppTheme.primaryTeal, size: 18),
                                 suffixIcon: _phoneVerified
-                                    ? const Icon(Icons.verified_rounded,
+                                    ? const Icon(AppIcons.verified_rounded,
                                         color: Color(0xFF38A169), size: 20)
                                     : null,
                                 validator: (value) {
@@ -390,7 +391,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           const SizedBox(height: 10),
                           Row(
                             children: [
-                              const Icon(Icons.check_circle_rounded,
+                              const Icon(AppIcons.check_circle_rounded,
                                   size: 14, color: Color(0xFF38A169)),
                               const SizedBox(width: 6),
                               Text(
@@ -423,7 +424,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SectionTitle(
-                            title: 'Account Details', icon: Icons.lock_outline),
+                            title: 'Account Details',
+                            icon: AppIcons.lock_outline),
                         NeuTextField(
                           controller: _emailController,
                           label: 'Email Address',
@@ -432,7 +434,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           textCapitalization: TextCapitalization.none,
                           autocorrect: false,
                           enableSuggestions: false,
-                          prefixIcon: const Icon(Icons.email_outlined,
+                          prefixIcon: const Icon(AppIcons.email_outlined,
                               color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.next,
                           validator: (value) {
@@ -452,14 +454,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           obscureText: _obscurePassword,
                           label: 'Password',
                           hint: 'At least 8 characters',
-                          prefixIcon: const Icon(Icons.lock_outlined,
+                          prefixIcon: const Icon(AppIcons.lock_outlined,
                               color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.next,
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
+                                  ? AppIcons.visibility_outlined
+                                  : AppIcons.visibility_off_outlined,
                               color: AppTheme.textMuted,
                               size: 18,
                             ),
@@ -485,14 +487,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           obscureText: _obscureConfirm,
                           label: 'Confirm Password',
                           hint: 'Re-enter your password',
-                          prefixIcon: const Icon(Icons.lock_outlined,
+                          prefixIcon: const Icon(AppIcons.lock_outlined,
                               color: AppTheme.primaryTeal, size: 18),
                           textInputAction: TextInputAction.done,
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirm
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
+                                  ? AppIcons.visibility_outlined
+                                  : AppIcons.visibility_off_outlined,
                               color: AppTheme.textMuted,
                               size: 18,
                             ),
@@ -522,7 +524,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       children: [
                         const SectionTitle(
                             title: 'Account Role',
-                            icon: Icons.admin_panel_settings_outlined),
+                            icon: AppIcons.admin_panel_settings_outlined),
                         const SizedBox(height: 4),
                         _buildRoleSelector(),
                       ],
@@ -555,7 +557,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     child: OutlinedButton.icon(
                       onPressed: _isSubmitting ? null : _onGoogleRegister,
                       icon: const Icon(
-                        Icons.g_mobiledata_rounded,
+                        AppIcons.g_mobiledata_rounded,
                         size: 28,
                         color: AppTheme.textColor,
                       ),
@@ -658,8 +660,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   children: [
                     Icon(
                       role == UserRole.doctor
-                          ? Icons.medical_services_rounded
-                          : Icons.support_agent_rounded,
+                          ? AppIcons.medical_services_rounded
+                          : AppIcons.support_agent_rounded,
                       color: isSelected
                           ? AppTheme.primaryTeal
                           : AppTheme.textMuted,

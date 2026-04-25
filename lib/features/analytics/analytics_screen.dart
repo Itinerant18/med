@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/role_provider.dart';
@@ -34,7 +35,7 @@ class AnalyticsScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Refresh',
             onPressed: () => _refresh(ref),
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(AppIcons.refresh_rounded),
           ),
         ],
       ),
@@ -44,7 +45,8 @@ class AnalyticsScreen extends ConsumerWidget {
               color: AppTheme.primaryTeal,
               onRefresh: () => _refresh(ref),
               child: ref.watch(analyticsSummaryProvider).when(
-                    loading: () => _AnalyticsLoading(isHeadDoctor: isHeadDoctor),
+                    loading: () =>
+                        _AnalyticsLoading(isHeadDoctor: isHeadDoctor),
                     error: (error, _) => _AnalyticsError(
                       message: error.toString(),
                       onRetry: () => _refresh(ref),
@@ -74,7 +76,7 @@ class _NoAccessView extends StatelessWidget {
           child: Column(
             children: [
               Icon(
-                Icons.lock_outline_rounded,
+                AppIcons.lock_outline_rounded,
                 size: 48,
                 color: AppTheme.textMuted,
               ),
@@ -124,7 +126,7 @@ class _AnalyticsError extends StatelessWidget {
           child: Column(
             children: [
               const Icon(
-                Icons.error_outline_rounded,
+                AppIcons.error_outline_rounded,
                 size: 48,
                 color: AppTheme.errorColor,
               ),
@@ -139,7 +141,9 @@ class _AnalyticsError extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                message.length > 140 ? '${message.substring(0, 140)}...' : message,
+                message.length > 140
+                    ? '${message.substring(0, 140)}...'
+                    : message,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
@@ -179,7 +183,8 @@ class _AnalyticsLoading extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        const SectionTitle(title: 'Overview', icon: Icons.analytics_outlined),
+        const SectionTitle(
+            title: 'Overview', icon: AppIcons.analytics_outlined),
         SizedBox(
           height: 108,
           child: ListView.separated(
@@ -193,7 +198,7 @@ class _AnalyticsLoading extends StatelessWidget {
         const SizedBox(height: 20),
         const SectionTitle(
           title: 'Visits by Type',
-          icon: Icons.medical_services_outlined,
+          icon: AppIcons.medical_services_outlined,
         ),
         const Row(
           children: [
@@ -207,14 +212,14 @@ class _AnalyticsLoading extends StatelessWidget {
         const SizedBox(height: 20),
         const SectionTitle(
           title: 'Last 30 Days Activity',
-          icon: Icons.show_chart_rounded,
+          icon: AppIcons.show_chart_rounded,
         ),
         const NeuShimmer(width: double.infinity, height: 200, borderRadius: 18),
         if (isHeadDoctor) ...[
           const SizedBox(height: 20),
           const SectionTitle(
             title: 'Health Scheme Breakdown',
-            icon: Icons.account_tree_outlined,
+            icon: AppIcons.account_tree_outlined,
           ),
           const NeuShimmer(
             width: double.infinity,
@@ -224,7 +229,7 @@ class _AnalyticsLoading extends StatelessWidget {
           const SizedBox(height: 20),
           const SectionTitle(
             title: 'Staff Performance Table',
-            icon: Icons.groups_rounded,
+            icon: AppIcons.groups_rounded,
           ),
           const NeuShimmer(
             width: double.infinity,
@@ -252,31 +257,32 @@ class _AnalyticsBody extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        const SectionTitle(title: 'Overview', icon: Icons.analytics_outlined),
+        const SectionTitle(
+            title: 'Overview', icon: AppIcons.analytics_outlined),
         _OverviewRow(summary: summary),
         const SizedBox(height: 20),
         const SectionTitle(
           title: 'Visits by Type',
-          icon: Icons.medical_services_outlined,
+          icon: AppIcons.medical_services_outlined,
         ),
         _VisitTypeSection(summary: summary),
         const SizedBox(height: 20),
         const SectionTitle(
           title: 'Last 30 Days Activity',
-          icon: Icons.show_chart_rounded,
+          icon: AppIcons.show_chart_rounded,
         ),
         _ActivityChart(summary: summary),
         if (isHeadDoctor) ...[
           const SizedBox(height: 20),
           const SectionTitle(
             title: 'Health Scheme Breakdown',
-            icon: Icons.account_tree_outlined,
+            icon: AppIcons.account_tree_outlined,
           ),
           _SchemeBreakdown(summary: summary),
           const SizedBox(height: 20),
           const SectionTitle(
             title: 'Staff Performance Table',
-            icon: Icons.groups_rounded,
+            icon: AppIcons.groups_rounded,
           ),
           const _StaffPerformanceSection(),
         ],
@@ -296,37 +302,37 @@ class _OverviewRow extends StatelessWidget {
       _OverviewCardData(
         title: 'Total Patients',
         value: '${summary.totalPatients}',
-        icon: Icons.people_rounded,
+        icon: AppIcons.people_rounded,
         color: AppTheme.primaryTeal,
       ),
       _OverviewCardData(
         title: "Today's Visits",
         value: '${summary.todayVisits}',
-        icon: Icons.calendar_today_rounded,
+        icon: AppIcons.calendar_today_rounded,
         color: AppTheme.primaryTeal,
       ),
       _OverviewCardData(
         title: 'Clinical Visits',
         value: '${summary.totalVisits}',
-        icon: Icons.medical_services_rounded,
+        icon: AppIcons.medical_services_rounded,
         color: const Color(0xFF3182CE),
       ),
       _OverviewCardData(
         title: 'High Priority',
         value: '${summary.highPriorityPatients}',
-        icon: Icons.priority_high_rounded,
+        icon: AppIcons.priority_high_rounded,
         color: AppTheme.errorColor,
       ),
       _OverviewCardData(
         title: 'Avg Visits/Day',
         value: summary.avgVisitsPerDay.toStringAsFixed(1),
-        icon: Icons.insights_rounded,
+        icon: AppIcons.insights_rounded,
         color: const Color(0xFF805AD5),
       ),
       _OverviewCardData(
         title: 'Followup Rate',
         value: '${(summary.followupCompletion * 100).toStringAsFixed(0)}%',
-        icon: Icons.event_repeat_rounded,
+        icon: AppIcons.event_repeat_rounded,
         color: const Color(0xFFDD6B20),
       ),
     ];
@@ -617,23 +623,23 @@ class _StaffPerformanceSection extends ConsumerWidget {
             child: Column(
               children: [
                 const Icon(
-                  Icons.error_outline_rounded,
+                  AppIcons.error_outline_rounded,
                   color: AppTheme.errorColor,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 ),
               ],
             ),
           ),
           data: (rows) {
-            final sortedRows = [...rows]
-              ..sort((a, b) => descending
-                  ? b.visitsCount.compareTo(a.visitsCount)
-                  : a.visitsCount.compareTo(b.visitsCount));
+            final sortedRows = [...rows]..sort((a, b) => descending
+                ? b.visitsCount.compareTo(a.visitsCount)
+                : a.visitsCount.compareTo(b.visitsCount));
 
             return NeuCard(
               borderRadius: 18,
@@ -712,8 +718,8 @@ class _TableHeader extends StatelessWidget {
                   const SizedBox(width: 4),
                   Icon(
                     descending
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded,
+                        ? AppIcons.arrow_downward_rounded
+                        : AppIcons.arrow_upward_rounded,
                     size: 14,
                     color: AppTheme.primaryTeal,
                   ),
@@ -764,9 +770,7 @@ class _TableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      color: useAlt
-          ? Colors.white.withValues(alpha: 0.5)
-          : AppTheme.bgColor,
+      color: useAlt ? Colors.white.withValues(alpha: 0.5) : AppTheme.bgColor,
       child: Row(
         children: [
           _BodyCell(item.doctorName, 170, bold: true),
@@ -815,10 +819,12 @@ class _BarChart extends CustomPainter {
     const leftPadding = 6.0;
     const bottomPadding = 24.0;
     const maxBarHeight = 120.0;
-    final usableHeight = math.min(maxBarHeight, size.height - bottomPadding - 8);
+    final usableHeight =
+        math.min(maxBarHeight, size.height - bottomPadding - 8);
     final usableWidth = size.width - leftPadding * 2;
     final barWidth = points.isEmpty ? 0.0 : usableWidth / points.length;
-    final maxCount = points.fold<int>(0, (max, item) => math.max(max, item.count));
+    final maxCount =
+        points.fold<int>(0, (max, item) => math.max(max, item.count));
 
     final barPaint = Paint()
       ..color = AppTheme.primaryTeal.withValues(alpha: 0.7)

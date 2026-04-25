@@ -2,7 +2,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
 
-final visitHistoryProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, patientId) async {
+final visitHistoryProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, patientId) async {
   final supabase = ref.read(supabaseClientProvider);
   final response = await supabase
       .from('visits')

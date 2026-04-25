@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -119,7 +120,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
             children: [
               // Patient Selection
               const SectionTitle(
-                  title: 'Patient', icon: Icons.person_search_rounded),
+                  title: 'Patient', icon: AppIcons.person_search_rounded),
               GestureDetector(
                 onTap: _showPatientPicker,
                 child: NeuCard(
@@ -127,7 +128,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
-                      Icon(Icons.person_rounded,
+                      Icon(AppIcons.person_rounded,
                           color: _selectedPatientId == null
                               ? AppTheme.textMuted
                               : AppTheme.primaryTeal),
@@ -146,7 +147,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                           ),
                         ),
                       ),
-                      const Icon(Icons.arrow_drop_down_rounded,
+                      const Icon(AppIcons.arrow_drop_down_rounded,
                           color: AppTheme.textMuted),
                     ],
                   ),
@@ -157,7 +158,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
               // Agent Assignment
               const SectionTitle(
                   title: 'Assign Assistant',
-                  icon: Icons.assignment_ind_outlined),
+                  icon: AppIcons.assignment_ind_outlined),
               NeuCard(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -196,7 +197,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
               if (_isExternal)
                 const SectionTitle(
                   title: 'External Doctor',
-                  icon: Icons.local_hospital_outlined,
+                  icon: AppIcons.local_hospital_outlined,
                 ),
               if (_isExternal)
                 ExternalDoctorFields(
@@ -234,7 +235,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
               // Visit Details
               const SectionTitle(
                   title: 'Visit Details',
-                  icon: Icons.medical_information_outlined),
+                  icon: AppIcons.medical_information_outlined),
               NeuTextField(
                 controller: _visitNotesController,
                 label: 'Visit Notes',
@@ -251,7 +252,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
 
               // Follow-up
               const SectionTitle(
-                  title: 'Follow-up', icon: Icons.event_note_rounded),
+                  title: 'Follow-up', icon: AppIcons.event_note_rounded),
               GestureDetector(
                 onTap: () async {
                   final date = await showDatePicker(
@@ -267,7 +268,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded,
+                      const Icon(AppIcons.calendar_today_rounded,
                           color: AppTheme.primaryTeal, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
@@ -289,7 +290,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                       ),
                       if (_followupDate != null)
                         IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          icon: const Icon(AppIcons.clear_rounded, size: 18),
                           onPressed: () => setState(() => _followupDate = null),
                         ),
                     ],
@@ -358,7 +359,7 @@ class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
           const SizedBox(height: 16),
           NeuTextField(
             label: 'Search Patient',
-            prefixIcon: const Icon(Icons.search),
+            prefixIcon: const Icon(AppIcons.search),
             onChanged: (v) => setState(() => _query = v),
           ),
           const SizedBox(height: 16),

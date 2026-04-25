@@ -13,15 +13,16 @@ class DocumentNotifier extends FamilyAsyncNotifier<List<String>, String> {
         .select('document_urls')
         .eq('id', arg)
         .maybeSingle();
-    
-if (response == null) return const <String>[]; final urls = response['document_urls'] as List?;
+
+    if (response == null) return const <String>[];
+    final urls = response['document_urls'] as List?;
     return urls?.map((e) => e.toString()).toList() ?? [];
   }
 
   Future<void> uploadDocument(XFile file) async {
     final patientId = arg;
     final supabase = ref.read(supabaseClientProvider);
-    
+
     // Check file size (5MB limit)
     final bytes = await file.readAsBytes();
     if (bytes.length > 5 * 1024 * 1024) {
@@ -29,13 +30,13 @@ if (response == null) return const <String>[]; final urls = response['document_u
     }
 
     final path = '$patientId/${DateTime.now().millisecondsSinceEpoch}.jpg';
-    
+
     // 1. Upload to Storage
     await supabase.storage.from('patient-docs').uploadBinary(
-      path,
-      bytes,
-      fileOptions: const FileOptions(contentType: 'image/jpeg'),
-    );
+          path,
+          bytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'),
+        );
 
     // 2. Get Public URL
     final newUrl = supabase.storage.from('patient-docs').getPublicUrl(path);
@@ -60,7 +61,8 @@ if (response == null) return const <String>[]; final urls = response['document_u
     final uri = Uri.parse(url);
     final pathSegments = uri.pathSegments;
     // Assuming URL format like .../storage/v1/object/public/patient-docs/patientId/filename.jpg
-    final storagePath = pathSegments.skip(pathSegments.indexOf('patient-docs') + 1).join('/');
+    final storagePath =
+        pathSegments.skip(pathSegments.indexOf('patient-docs') + 1).join('/');
 
     // 2. Remove from Storage
     await supabase.storage.from('patient-docs').remove([storagePath]);
@@ -78,6 +80,7 @@ if (response == null) return const <String>[]; final urls = response['document_u
   }
 }
 
-final documentNotifierProvider = AsyncNotifierProviderFamily<DocumentNotifier, List<String>, String>(
+final documentNotifierProvider =
+    AsyncNotifierProviderFamily<DocumentNotifier, List<String>, String>(
   () => DocumentNotifier(),
 );

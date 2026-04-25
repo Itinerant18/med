@@ -1,13 +1,14 @@
-// lib/core/app_snackbar.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
+import 'package:mediflow/core/theme.dart';
 
 class AppSnackbar {
   static void showError(BuildContext context, String message) {
     _showSnackBar(
       context,
       message,
-      const Color(0xFFE53E3E),
-      Icons.error_outline_rounded,
+      const Color(0xFFA85448),
+      AppIcons.error_outline_rounded,
     );
   }
 
@@ -15,8 +16,8 @@ class AppSnackbar {
     _showSnackBar(
       context,
       message,
-      const Color(0xFF38A169),
-      Icons.check_circle_outline_rounded,
+      const Color(0xFF5D7052),
+      AppIcons.check_circle_outline_rounded,
     );
   }
 
@@ -24,8 +25,8 @@ class AppSnackbar {
     _showSnackBar(
       context,
       message,
-      const Color(0xFF3182CE),
-      Icons.info_outline_rounded,
+      const Color(0xFF7A9169),
+      AppIcons.info_outline_rounded,
     );
   }
 
@@ -33,8 +34,8 @@ class AppSnackbar {
     _showSnackBar(
       context,
       message,
-      const Color(0xFFD69E2E),
-      Icons.warning_amber_rounded,
+      const Color(0xFFC18C5D),
+      AppIcons.warning_amber_rounded,
     );
   }
 
@@ -45,7 +46,7 @@ class AppSnackbar {
     IconData icon,
   ) {
     if (!context.mounted) return;
-    
+
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -53,10 +54,10 @@ class AppSnackbar {
         content: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: Colors.white, size: 18),
             ),
@@ -67,7 +68,7 @@ class AppSnackbar {
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -75,10 +76,13 @@ class AppSnackbar {
         ),
         backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide(color: AppTheme.border.withValues(alpha: 0.35)),
+        ),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         duration: const Duration(seconds: 4),
-        elevation: 6,
+        elevation: 0,
         action: SnackBarAction(
           label: 'DISMISS',
           textColor: Colors.white.withValues(alpha: 0.85),

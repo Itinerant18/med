@@ -1,5 +1,6 @@
 // lib/features/auth/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -179,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               onFieldSubmitted: (_) => FocusScope.of(context)
                                   .requestFocus(_passwordFocus),
                               prefixIcon: const Icon(
-                                Icons.phone_iphone_rounded,
+                                AppIcons.phone_iphone_rounded,
                                 color: AppTheme.primaryTeal,
                                 size: 18,
                               ),
@@ -207,15 +208,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               textInputAction: TextInputAction.done,
                               onFieldSubmitted: (_) => _onLoginTap(),
                               prefixIcon: const Icon(
-                                Icons.lock_outlined,
+                                AppIcons.lock_outlined,
                                 color: AppTheme.primaryTeal,
                                 size: 18,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
+                                      ? AppIcons.visibility_outlined
+                                      : AppIcons.visibility_off_outlined,
                                   color: AppTheme.textMuted,
                                   size: 18,
                                 ),
@@ -270,7 +271,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         ),
                                       )
                                     : const Icon(
-                                        Icons.g_mobiledata_rounded,
+                                        AppIcons.g_mobiledata_rounded,
                                         size: 28,
                                         color: AppTheme.textColor,
                                       ),
@@ -367,7 +368,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
-              Icons.local_hospital_rounded,
+              AppIcons.local_hospital_rounded,
               color: Colors.white,
               size: 36,
             ),

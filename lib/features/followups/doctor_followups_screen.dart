@@ -10,6 +10,7 @@
 //
 // Tapping a card opens FollowupReviewScreen via /followups/review/:taskId.
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -52,8 +53,7 @@ class DoctorFollowupsScreen extends ConsumerStatefulWidget {
       _DoctorFollowupsScreenState();
 }
 
-class _DoctorFollowupsScreenState
-    extends ConsumerState<DoctorFollowupsScreen> {
+class _DoctorFollowupsScreenState extends ConsumerState<DoctorFollowupsScreen> {
   _DoctorFollowupTab _tab = _DoctorFollowupTab.needsReview;
 
   @override
@@ -74,9 +74,8 @@ class _DoctorFollowupsScreenState
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () =>
-                ref.invalidate(doctorAssignedFollowupsProvider),
+            icon: const Icon(AppIcons.refresh_rounded),
+            onPressed: () => ref.invalidate(doctorAssignedFollowupsProvider),
           ),
         ],
       ),
@@ -107,8 +106,7 @@ class _DoctorFollowupsScreenState
           Expanded(
             child: tasksAsync.when(
               data: (tasks) {
-                final filtered =
-                    tasks.where((t) => _tab.matches(t)).toList();
+                final filtered = tasks.where((t) => _tab.matches(t)).toList();
                 if (filtered.isEmpty) return _buildEmptyState();
                 return RefreshIndicator(
                   color: AppTheme.primaryTeal,
@@ -134,9 +132,7 @@ class _DoctorFollowupsScreenState
                 itemBuilder: (_, __) => const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: NeuShimmer(
-                      width: double.infinity,
-                      height: 96,
-                      borderRadius: 16),
+                      width: double.infinity, height: 96, borderRadius: 16),
                 ),
               ),
               error: (e, _) => Center(
@@ -162,7 +158,7 @@ class _DoctorFollowupsScreenState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.fact_check_outlined,
+          const Icon(AppIcons.fact_check_outlined,
               size: 64, color: AppTheme.textMuted),
           const SizedBox(height: 12),
           Text(
@@ -227,7 +223,7 @@ class _DoctorFollowupCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.assignment_ind_outlined,
+                  const Icon(AppIcons.assignment_ind_outlined,
                       size: 13, color: AppTheme.textMuted),
                   const SizedBox(width: 4),
                   Text(
@@ -240,19 +236,17 @@ class _DoctorFollowupCard extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded,
+                  Icon(AppIcons.calendar_today_rounded,
                       size: 13,
-                      color: isOverdue
-                          ? AppTheme.errorColor
-                          : AppTheme.textMuted),
+                      color:
+                          isOverdue ? AppTheme.errorColor : AppTheme.textMuted),
                   const SizedBox(width: 4),
                   Text(
                     'Due ${DateFormat('MMM d, yyyy').format(task.dueDate)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: isOverdue
-                          ? AppTheme.errorColor
-                          : AppTheme.textMuted,
+                      color:
+                          isOverdue ? AppTheme.errorColor : AppTheme.textMuted,
                       fontWeight:
                           isOverdue ? FontWeight.w700 : FontWeight.normal,
                     ),
@@ -262,8 +256,8 @@ class _DoctorFollowupCard extends StatelessWidget {
               if (task.needsReview) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.warningColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -271,7 +265,7 @@ class _DoctorFollowupCard extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.fact_check_outlined,
+                      Icon(AppIcons.fact_check_outlined,
                           size: 14, color: AppTheme.warningColor),
                       SizedBox(width: 6),
                       Text(

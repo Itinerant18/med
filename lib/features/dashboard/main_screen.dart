@@ -1,7 +1,11 @@
 // lib/features/dashboard/main_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mediflow/core/app_icons.dart';
+import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/string_utils.dart';
@@ -14,6 +18,7 @@ import 'package:mediflow/features/dr_visits/dr_visit_screen.dart';
 import 'package:mediflow/features/followups/my_followups_screen.dart';
 import 'package:mediflow/features/patients/patient_list_screen.dart';
 import 'package:mediflow/features/profile/change_password_sheet.dart';
+import 'package:mediflow/models/app_notification.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -27,6 +32,22 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
+  AppNotification? _bannerNotification;
+  Timer? _bannerTimer;
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showNotificationBanner(AppNotification notification) {
+    _bannerTimer?.cancel();
+    setState(() => _bannerNotification = notification);
+    _bannerTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _bannerNotification = null);
+    });
+  }
 
   Future<void> _confirmLogout() async {
     final shouldLogout = await showDialog<bool>(
@@ -35,7 +56,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+            Icon(AppIcons.logout_rounded, color: Colors.red, size: 20),
             SizedBox(width: 10),
             Text('Sign Out', style: TextStyle(fontSize: 18)),
           ],
@@ -83,6 +104,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<List<AppNotification>>(notificationProvider, (previous, next) {
+      if (previous == null || next.isEmpty) return;
+      final latest = next.first;
+      if (previous.isEmpty || previous.first.id != latest.id) {
+        _showNotificationBanner(latest);
+      }
+    });
+
     final authAsync = ref.watch(authNotifierProvider);
     final doctorName = authAsync.valueOrNull?.doctorName ?? 'Doctor';
     final specialization =
@@ -99,30 +128,30 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     ];
     final destinations = <NavigationDestination>[
       const NavigationDestination(
-        icon: Icon(Icons.dashboard_outlined),
-        selectedIcon: Icon(Icons.dashboard_rounded),
+        icon: Icon(AppIcons.dashboard_outlined),
+        selectedIcon: Icon(AppIcons.dashboard_rounded),
         label: 'Dashboard',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.people_outlined),
-        selectedIcon: Icon(Icons.people_rounded),
+        icon: Icon(AppIcons.people_outlined),
+        selectedIcon: Icon(AppIcons.people_rounded),
         label: 'Patients',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.medical_services_outlined),
-        selectedIcon: Icon(Icons.medical_services_rounded),
+        icon: Icon(AppIcons.medical_services_outlined),
+        selectedIcon: Icon(AppIcons.medical_services_rounded),
         label: 'Clinical',
       ),
       NavigationDestination(
         icon: Icon(
           role == UserRole.assistant
-              ? Icons.add_task_rounded
-              : Icons.health_and_safety_rounded,
+              ? AppIcons.add_task_rounded
+              : AppIcons.health_and_safety_rounded,
         ),
         selectedIcon: Icon(
           role == UserRole.assistant
-              ? Icons.add_task_rounded
-              : Icons.health_and_safety_rounded,
+              ? AppIcons.add_task_rounded
+              : AppIcons.health_and_safety_rounded,
         ),
         label: role == UserRole.assistant ? 'Follow-ups' : 'Dr Visit',
       ),
@@ -141,7 +170,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, size: 24),
+          icon: const Icon(AppIcons.menu_rounded, size: 24),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           tooltip: 'Menu',
         ),
@@ -187,7 +216,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   clipBehavior: Clip.none,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.notifications_none_rounded,
+                      icon: const Icon(AppIcons.notifications_none_rounded,
                           size: 24),
                       onPressed: () {
                         showModalBottomSheet<void>(
@@ -230,9 +259,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _currentIndex,
+            children: screens,
+          ),
+          _NotificationBanner(
+            notification: _bannerNotification,
+            onClose: () {
+              _bannerTimer?.cancel();
+              setState(() => _bannerNotification = null);
+            },
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -377,7 +417,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
                   _buildDrawerItem(
-                    icon: Icons.person_outline_rounded,
+                    icon: AppIcons.person_outline_rounded,
                     title: 'My Profile',
                     onTap: () {
                       Navigator.of(context).pop();
@@ -386,7 +426,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   ),
                   if (ref.watch(isHeadDoctorProvider)) ...[
                     _buildDrawerItem(
-                      icon: Icons.bar_chart_rounded,
+                      icon: AppIcons.bar_chart_rounded,
                       title: 'Assistant Performance',
                       onTap: () {
                         Navigator.of(context).pop();
@@ -394,7 +434,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       },
                     ),
                     _buildDrawerItem(
-                      icon: Icons.people_alt_outlined,
+                      icon: AppIcons.people_alt_outlined,
                       title: 'Staff Accounts',
                       onTap: () {
                         Navigator.of(context).pop();
@@ -402,7 +442,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       },
                     ),
                     _buildDrawerItem(
-                      icon: Icons.history_rounded,
+                      icon: AppIcons.history_rounded,
                       title: 'Audit Logs',
                       onTap: () {
                         Navigator.of(context).pop();
@@ -411,7 +451,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     ),
                   ],
                   _buildDrawerItem(
-                    icon: Icons.info_outline_rounded,
+                    icon: AppIcons.info_outline_rounded,
                     title: 'About MediFlow',
                     onTap: () {
                       Navigator.of(context).pop();
@@ -419,7 +459,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     },
                   ),
                   _buildDrawerItem(
-                    icon: Icons.lock_outline_rounded,
+                    icon: AppIcons.lock_outline_rounded,
                     title: 'Change Password',
                     onTap: () {
                       Navigator.of(context).pop();
@@ -431,7 +471,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             ),
             const Divider(height: 1),
             _buildDrawerItem(
-              icon: Icons.logout_rounded,
+              icon: AppIcons.logout_rounded,
               title: 'Sign Out',
               color: Colors.red,
               onTap: () {
@@ -474,6 +514,86 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+    );
+  }
+}
+
+class _NotificationBanner extends StatelessWidget {
+  const _NotificationBanner({
+    required this.notification,
+    required this.onClose,
+  });
+
+  final AppNotification? notification;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final notification = this.notification;
+    final visible = notification != null;
+    return Positioned(
+      top: 8,
+      left: 16,
+      right: 16,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedSlide(
+          offset: visible ? Offset.zero : const Offset(0, -1.2),
+          duration: AppTheme.durationGentle,
+          curve: AppTheme.curveOrganic,
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: AppTheme.durationGentle,
+            child: notification == null
+                ? const SizedBox.shrink()
+                : GlassContainer(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        OrganicIconContainer(
+                          icon: AppIcons.forNotificationCategory(
+                              notification.category),
+                          size: 42,
+                          iconSize: 16,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                notification.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.bodyFont(
+                                    size: 14, weight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                notification.body,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.bodyFont(
+                                  size: 12,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: onClose,
+                          icon: const Icon(AppIcons.close_rounded, size: 16),
+                          tooltip: 'Dismiss notification',
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -12,6 +12,7 @@
 //     patient pre-selected, so the doctor can chain a follow-up without
 //     leaving the screen.
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -34,8 +35,7 @@ class FollowupReviewScreen extends ConsumerStatefulWidget {
       _FollowupReviewScreenState();
 }
 
-class _FollowupReviewScreenState
-    extends ConsumerState<FollowupReviewScreen> {
+class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
   final _reviewCtrl = TextEditingController();
   bool _saving = false;
   bool _hasPopulated = false;
@@ -82,8 +82,8 @@ class _FollowupReviewScreenState
       ),
     );
     if (created == true && mounted) {
-      AppSnackbar.showSuccess(
-          context, 'New follow-up created for ${task.patientName ?? "patient"}');
+      AppSnackbar.showSuccess(context,
+          'New follow-up created for ${task.patientName ?? "patient"}');
     }
   }
 
@@ -113,8 +113,7 @@ class _FollowupReviewScreenState
             );
           }
 
-          if (!_hasPopulated &&
-              (task.doctorReviewNotes?.isNotEmpty ?? false)) {
+          if (!_hasPopulated && (task.doctorReviewNotes?.isNotEmpty ?? false)) {
             _reviewCtrl.text = task.doctorReviewNotes!;
             _hasPopulated = true;
           }
@@ -144,7 +143,8 @@ class _FollowupReviewScreenState
                             ),
                           ),
                           _StatusChip(
-                            label: task.isReviewed ? 'REVIEWED' : 'NEEDS REVIEW',
+                            label:
+                                task.isReviewed ? 'REVIEWED' : 'NEEDS REVIEW',
                             color: task.isReviewed
                                 ? AppTheme.successColor
                                 : AppTheme.warningColor,
@@ -164,13 +164,13 @@ class _FollowupReviewScreenState
                       ],
                       const SizedBox(height: 10),
                       _MetaRow(
-                        icon: Icons.calendar_today_rounded,
+                        icon: AppIcons.calendar_today_rounded,
                         label: 'Due',
                         value: DateFormat('MMM d, yyyy').format(task.dueDate),
                       ),
                       if (task.completedAt != null)
                         _MetaRow(
-                          icon: Icons.check_circle_outline_rounded,
+                          icon: AppIcons.check_circle_outline_rounded,
                           label: 'Completed',
                           value: DateFormat('MMM d, yyyy · HH:mm')
                               .format(task.completedAt!),
@@ -191,12 +191,14 @@ class _FollowupReviewScreenState
                           [
                             task.targetExtDoctorName,
                             task.targetExtDoctorSpecialization
-                          ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
+                          ]
+                              .whereType<String>()
+                              .where((s) => s.isNotEmpty)
+                              .join(' · '),
                           style: const TextStyle(
                               fontSize: 13, fontWeight: FontWeight.w700),
                         ),
-                        if ((task.targetExtDoctorHospital?.isNotEmpty ??
-                            false))
+                        if ((task.targetExtDoctorHospital?.isNotEmpty ?? false))
                           Text(
                             task.targetExtDoctorHospital!,
                             style: const TextStyle(
@@ -217,8 +219,7 @@ class _FollowupReviewScreenState
                         const SizedBox(height: 4),
                         Text(
                           task.visitInstructions!,
-                          style: const TextStyle(
-                              fontSize: 13, height: 1.4),
+                          style: const TextStyle(fontSize: 13, height: 1.4),
                         ),
                       ],
                     ],
@@ -243,7 +244,7 @@ class _FollowupReviewScreenState
                       return NeuCard(
                         child: Row(
                           children: [
-                            const Icon(Icons.info_outline_rounded,
+                            const Icon(AppIcons.info_outline_rounded,
                                 color: AppTheme.textMuted),
                             const SizedBox(width: 10),
                             Expanded(
@@ -270,7 +271,7 @@ class _FollowupReviewScreenState
                 // ── Doctor review notes ──
                 const SectionTitle(
                   title: 'Your review notes',
-                  icon: Icons.edit_note_rounded,
+                  icon: AppIcons.edit_note_rounded,
                 ),
                 NeuTextField(
                   controller: _reviewCtrl,
@@ -288,9 +289,7 @@ class _FollowupReviewScreenState
                     onPressed: _saving ? null : () => _acknowledge(task),
                     isLoading: _saving,
                     child: Text(
-                      task.isReviewed
-                          ? 'UPDATE REVIEW'
-                          : 'ACKNOWLEDGE & CLOSE',
+                      task.isReviewed ? 'UPDATE REVIEW' : 'ACKNOWLEDGE & CLOSE',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -304,13 +303,12 @@ class _FollowupReviewScreenState
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _saving ? null : () => _chainFollowup(task),
-                    icon: const Icon(Icons.add_task_rounded),
+                    icon: const Icon(AppIcons.add_task_rounded),
                     label: const Text('Create new follow-up from this'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryTeal,
                       side: const BorderSide(color: AppTheme.primaryTeal),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
@@ -338,7 +336,7 @@ class _OutsideVisitCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.local_hospital_rounded,
+              const Icon(AppIcons.local_hospital_rounded,
                   color: Color(0xFF3182CE)),
               const SizedBox(width: 8),
               const Expanded(
@@ -377,8 +375,7 @@ class _OutsideVisitCard extends StatelessWidget {
           if ((visit.extDoctorHospital?.isNotEmpty ?? false))
             Text(
               visit.extDoctorHospital!,
-              style: const TextStyle(
-                  fontSize: 12, color: AppTheme.textMuted),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
             ),
           const Divider(height: 22),
           if ((visit.chiefComplaint?.isNotEmpty ?? false))

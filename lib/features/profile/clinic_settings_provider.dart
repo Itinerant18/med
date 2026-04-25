@@ -6,12 +6,9 @@ class ClinicSettingsNotifier extends AsyncNotifier<Map<String, dynamic>> {
   @override
   FutureOr<Map<String, dynamic>> build() async {
     final supabase = ref.watch(supabaseClientProvider);
-    final response = await supabase
-        .from('clinic_settings')
-        .select()
-        .limit(1)
-        .maybeSingle();
-    
+    final response =
+        await supabase.from('clinic_settings').select().limit(1).maybeSingle();
+
     return response ?? {};
   }
 
@@ -22,10 +19,10 @@ class ClinicSettingsNotifier extends AsyncNotifier<Map<String, dynamic>> {
       final current = state.valueOrNull;
 
       if (current != null && current.containsKey('id')) {
-        await supabase
-            .from('clinic_settings')
-            .update({...data, 'updated_at': DateTime.now().toIso8601String()})
-            .eq('id', current['id']);
+        await supabase.from('clinic_settings').update({
+          ...data,
+          'updated_at': DateTime.now().toIso8601String()
+        }).eq('id', current['id']);
       } else {
         await supabase
             .from('clinic_settings')
@@ -37,11 +34,14 @@ class ClinicSettingsNotifier extends AsyncNotifier<Map<String, dynamic>> {
           .select()
           .limit(1)
           .maybeSingle();
-      return updated == null ? <String, dynamic>{} : Map<String, dynamic>.from(updated);
+      return updated == null
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(updated);
     });
   }
 }
 
-final clinicSettingsProvider = AsyncNotifierProvider<ClinicSettingsNotifier, Map<String, dynamic>>(() {
+final clinicSettingsProvider =
+    AsyncNotifierProvider<ClinicSettingsNotifier, Map<String, dynamic>>(() {
   return ClinicSettingsNotifier();
 });

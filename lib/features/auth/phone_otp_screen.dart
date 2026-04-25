@@ -2,12 +2,13 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 
 class PhoneOtpScreen extends StatefulWidget {
-  final String phoneNumber;   // E.164 format e.g. "+919876543210"
+  final String phoneNumber; // E.164 format e.g. "+919876543210"
   final VoidCallback onVerified;
 
   const PhoneOtpScreen({
@@ -92,7 +93,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
           });
           _startResendTimer();
           if (isResend) {
-            AppSnackbar.showSuccess(context, 'New OTP sent to ${widget.phoneNumber}');
+            AppSnackbar.showSuccess(
+                context, 'New OTP sent to ${widget.phoneNumber}');
           }
         },
 
@@ -115,7 +117,10 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
     _timer?.cancel();
     setState(() => _resendCountdown = 60);
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() {
         if (_resendCountdown > 0) {
           _resendCountdown--;
@@ -131,11 +136,13 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
   Future<void> _verifyOtp() async {
     final otp = _controllers.map((c) => c.text.trim()).join();
     if (otp.length != 6) {
-      AppSnackbar.showWarning(context, 'Enter the 6-digit code sent to your phone');
+      AppSnackbar.showWarning(
+          context, 'Enter the 6-digit code sent to your phone');
       return;
     }
     if (_verificationId == null) {
-      AppSnackbar.showError(context, 'Verification not started. Please resend OTP.');
+      AppSnackbar.showError(
+          context, 'Verification not started. Please resend OTP.');
       return;
     }
 
@@ -213,10 +220,9 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
     // Paste: distribute the digits across the boxes starting at `index`.
     for (var i = 0; i < 6; i++) {
       final sourceIndex = i - index;
-      final value =
-          (sourceIndex >= 0 && sourceIndex < digits.length)
-              ? digits[sourceIndex]
-              : _controllers[i].text;
+      final value = (sourceIndex >= 0 && sourceIndex < digits.length)
+          ? digits[sourceIndex]
+          : _controllers[i].text;
       if (_controllers[i].text != value) {
         _controllers[i].value = TextEditingValue(
           text: value,
@@ -290,8 +296,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
                 borderRadius: 80,
                 child: Icon(
                   _codeSent
-                      ? Icons.sms_rounded
-                      : Icons.phone_iphone_rounded,
+                      ? AppIcons.sms_rounded
+                      : AppIcons.phone_iphone_rounded,
                   size: 52,
                   color: AppTheme.primaryTeal,
                 ),
@@ -370,7 +376,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
                 if (_resendCountdown > 0)
                   Text(
                     'Resend OTP in ${_resendCountdown}s',
-                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                    style: const TextStyle(
+                        color: AppTheme.textMuted, fontSize: 14),
                   )
                 else
                   GestureDetector(
@@ -402,7 +409,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
-          BoxShadow(color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+          BoxShadow(
+              color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
         ],
       ),
       child: TextField(

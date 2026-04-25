@@ -1,5 +1,6 @@
 // lib/features/agent_visits/agent_outside_visit_form.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -79,9 +80,10 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
     _extHospCtrl.text = widget.prefillExtDoctorHospital ?? '';
     _extSpecCtrl.text = widget.prefillExtDoctorSpecialization ?? '';
     _extPhoneCtrl.text = widget.prefillExtDoctorPhone ?? '';
-    _instructionsForBanner = widget.prefillVisitInstructions?.trim().isEmpty == true
-        ? null
-        : widget.prefillVisitInstructions;
+    _instructionsForBanner =
+        widget.prefillVisitInstructions?.trim().isEmpty == true
+            ? null
+            : widget.prefillVisitInstructions;
 
     // If we got a followupTaskId but no inline prefill (e.g. opened from a
     // notification), fetch the task once and apply.
@@ -95,8 +97,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   Future<void> _hydrateFromTask(String taskId) async {
     setState(() => _instructionsLoading = true);
     try {
-      final task =
-          await ref.read(followupTaskByIdProvider(taskId).future);
+      final task = await ref.read(followupTaskByIdProvider(taskId).future);
       if (!mounted || task == null) return;
       setState(() {
         if (_extNameCtrl.text.isEmpty &&
@@ -266,7 +267,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded,
+                      const Icon(AppIcons.info_outline_rounded,
                           color: AppTheme.primaryTeal, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
@@ -283,18 +284,18 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                 ),
 
               const SectionTitle(
-                  title: 'Patient', icon: Icons.person_search_rounded),
+                  title: 'Patient', icon: AppIcons.person_search_rounded),
               GestureDetector(
                 onTap: widget.preselectedPatientId != null
                     ? null
                     : _showPatientPicker,
                 child: NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       Icon(
-                        Icons.person_rounded,
+                        AppIcons.person_rounded,
                         color: _selectedPatientId == null
                             ? AppTheme.textMuted
                             : AppTheme.primaryTeal,
@@ -315,7 +316,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                         ),
                       ),
                       if (widget.preselectedPatientId == null)
-                        const Icon(Icons.arrow_drop_down_rounded,
+                        const Icon(AppIcons.arrow_drop_down_rounded,
                             color: AppTheme.textMuted),
                     ],
                   ),
@@ -323,15 +324,15 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               ),
               const SizedBox(height: 20),
               const SectionTitle(
-                  title: 'Visit Date', icon: Icons.calendar_today_rounded),
+                  title: 'Visit Date', icon: AppIcons.calendar_today_rounded),
               GestureDetector(
                 onTap: () => _pickDate(true),
                 child: NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded,
+                      const Icon(AppIcons.calendar_today_rounded,
                           color: AppTheme.primaryTeal, size: 18),
                       const SizedBox(width: 12),
                       Text(
@@ -349,7 +350,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               const SizedBox(height: 20),
               const SectionTitle(
                   title: 'External Doctor',
-                  icon: Icons.local_hospital_outlined),
+                  icon: AppIcons.local_hospital_outlined),
               NeuCard(
                 child: Column(
                   children: [
@@ -388,7 +389,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               const SizedBox(height: 20),
               const SectionTitle(
                   title: 'Visit Details',
-                  icon: Icons.medical_information_outlined),
+                  icon: AppIcons.medical_information_outlined),
               NeuCard(
                 child: Column(
                   children: [
@@ -424,15 +425,15 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               ),
               const SizedBox(height: 20),
               const SectionTitle(
-                  title: 'Next Follow-up', icon: Icons.event_repeat_rounded),
+                  title: 'Next Follow-up', icon: AppIcons.event_repeat_rounded),
               GestureDetector(
                 onTap: () => _pickDate(false),
                 child: NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
-                      const Icon(Icons.event_repeat_rounded,
+                      const Icon(AppIcons.event_repeat_rounded,
                           color: AppTheme.primaryTeal, size: 18),
                       const SizedBox(width: 12),
                       Expanded(
@@ -454,7 +455,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                       ),
                       if (_nextFollowupDate != null)
                         IconButton(
-                          icon: const Icon(Icons.clear_rounded,
+                          icon: const Icon(AppIcons.clear_rounded,
                               size: 18, color: AppTheme.textMuted),
                           onPressed: () =>
                               setState(() => _nextFollowupDate = null),
@@ -512,7 +513,7 @@ class _DoctorInstructionsBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.assignment_outlined,
+          const Icon(AppIcons.assignment_outlined,
               color: AppTheme.warningColor, size: 18),
           const SizedBox(width: 10),
           Expanded(
@@ -585,7 +586,7 @@ class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
               const SizedBox(height: 16),
               NeuTextField(
                 label: 'Search',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(AppIcons.search),
                 onChanged: (v) => setState(() => _query = v),
               ),
               const SizedBox(height: 16),

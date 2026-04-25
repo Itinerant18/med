@@ -116,10 +116,8 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
           schema: 'public',
           table: 'doctors',
           callback: (payload) {
-            final oldStatus =
-                payload.oldRecord['approval_status']?.toString();
-            final newStatus =
-                payload.newRecord['approval_status']?.toString();
+            final oldStatus = payload.oldRecord['approval_status']?.toString();
+            final newStatus = payload.newRecord['approval_status']?.toString();
             if (oldStatus == newStatus) return;
             ref.invalidateSelf();
           },

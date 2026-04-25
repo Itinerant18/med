@@ -1,5 +1,6 @@
 // lib/features/profile/assistant_profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -104,7 +105,7 @@ class _AssistantProfileScreenState
             style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: Icon(_isEditMode ? Icons.close : Icons.edit_outlined,
+            icon: Icon(_isEditMode ? AppIcons.close : AppIcons.edit_outlined,
                 color: AppTheme.primaryTeal),
             onPressed: () {
               if (!_isEditMode) _populate(profileAsync.value ?? {});
@@ -178,7 +179,7 @@ class _AssistantProfileScreenState
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.support_agent_rounded,
+                                Icon(AppIcons.support_agent_rounded,
                                     size: 15, color: Colors.amber.shade700),
                                 const SizedBox(width: 5),
                                 Text('Assistant',
@@ -260,12 +261,12 @@ class _AssistantProfileScreenState
                                 label: 'Phone',
                                 keyboardType: TextInputType.phone),
                           ] else ...[
-                            _infoRow(Icons.person_outline, 'Full Name',
+                            _infoRow(AppIcons.person_outline, 'Full Name',
                                 _nameCtrl.text),
-                            _infoRow(
-                                Icons.phone_outlined, 'Phone', _phoneCtrl.text),
+                            _infoRow(AppIcons.phone_outlined, 'Phone',
+                                _phoneCtrl.text),
                           ],
-                          _infoRow(Icons.email_outlined, 'Email',
+                          _infoRow(AppIcons.email_outlined, 'Email',
                               data['email'] ?? '',
                               locked: true),
                         ],
@@ -292,17 +293,17 @@ class _AssistantProfileScreenState
                             children: [
                               _providerChip(
                                 label: 'Password',
-                                enabled:
-                                    authAsync.valueOrNull?.hasPasswordIdentity ??
-                                        false,
-                                icon: Icons.lock_outline,
+                                enabled: authAsync
+                                        .valueOrNull?.hasPasswordIdentity ??
+                                    false,
+                                icon: AppIcons.lock_outline,
                               ),
                               _providerChip(
                                 label: 'Google',
                                 enabled:
                                     authAsync.valueOrNull?.hasGoogleIdentity ??
                                         false,
-                                icon: Icons.g_mobiledata_rounded,
+                                icon: AppIcons.g_mobiledata_rounded,
                               ),
                             ],
                           ),
@@ -320,11 +321,12 @@ class _AssistantProfileScreenState
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: (authAsync.valueOrNull?.hasGoogleIdentity ??
-                                          false) ||
-                                      _isLinkingGoogle
-                                  ? null
-                                  : _linkGoogle,
+                              onPressed:
+                                  (authAsync.valueOrNull?.hasGoogleIdentity ??
+                                              false) ||
+                                          _isLinkingGoogle
+                                      ? null
+                                      : _linkGoogle,
                               icon: _isLinkingGoogle
                                   ? const SizedBox(
                                       width: 16,
@@ -333,7 +335,7 @@ class _AssistantProfileScreenState
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Icon(Icons.link_rounded),
+                                  : const Icon(AppIcons.link_rounded),
                               label: Text(
                                 authAsync.valueOrNull?.hasGoogleIdentity ??
                                         false
@@ -365,7 +367,7 @@ class _AssistantProfileScreenState
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline_rounded,
+                          Icon(AppIcons.info_outline_rounded,
                               color: Colors.amber.shade700, size: 18),
                           const SizedBox(width: 10),
                           Expanded(
@@ -386,25 +388,37 @@ class _AssistantProfileScreenState
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.info_outline,
+                            leading: const Icon(AppIcons.info_outline,
                                 color: AppTheme.primaryTeal, size: 20),
                             title: const Text('About MediFlow'),
-                            trailing: const Icon(Icons.chevron_right,
+                            trailing: const Icon(AppIcons.chevron_right,
                                 size: 18, color: Colors.grey),
                             onTap: () => context.push('/about'),
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.lock_outline,
+                            leading: const Icon(
+                                AppIcons.notifications_none_rounded,
+                                color: AppTheme.secondary,
+                                size: 20),
+                            title: const Text('Notification Preferences'),
+                            trailing: const Icon(AppIcons.chevron_right,
+                                size: 18, color: Colors.grey),
+                            onTap: () =>
+                                context.push('/notification-preferences'),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(AppIcons.lock_outline,
                                 color: AppTheme.primaryTeal, size: 20),
                             title: const Text('Change Password'),
-                            trailing: const Icon(Icons.chevron_right,
+                            trailing: const Icon(AppIcons.chevron_right,
                                 size: 18, color: Colors.grey),
                             onTap: () {},
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.logout,
+                            leading: const Icon(AppIcons.logout,
                                 color: Colors.red, size: 20),
                             title: const Text('Logout',
                                 style: TextStyle(
@@ -507,7 +521,7 @@ class _AssistantProfileScreenState
               ],
             )),
             if (locked)
-              const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+              const Icon(AppIcons.lock_outline, size: 14, color: Colors.grey),
           ],
         ),
       );

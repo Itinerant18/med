@@ -1,5 +1,6 @@
 // lib/core/router.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/auth_gate.dart';
@@ -14,13 +15,16 @@ import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/performance_dashboard_screen.dart';
-import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart'; import 'package:mediflow/features/followups/doctor_followups_screen.dart'; import 'package:mediflow/features/followups/followup_review_screen.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
+import 'package:mediflow/features/followups/doctor_followups_screen.dart';
+import 'package:mediflow/features/followups/followup_review_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
 import 'package:mediflow/features/patients/patient_detail_screen.dart';
 import 'package:mediflow/features/patients/patient_form_screen.dart';
 import 'package:mediflow/features/profile/about_screen.dart';
 import 'package:mediflow/features/profile/assistant_profile_screen.dart';
 import 'package:mediflow/features/profile/doctor_profile_screen.dart';
+import 'package:mediflow/features/profile/notification_preferences_screen.dart';
 import 'package:mediflow/features/staff/staff_management_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -34,11 +38,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 64, color: AppTheme.textMuted),
+            const Icon(AppIcons.error_outline_rounded,
+                size: 64, color: AppTheme.textMuted),
             const SizedBox(height: 16),
-            const Text('Page not found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text('Page not found',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            Text(state.uri.toString(), style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+            Text(state.uri.toString(),
+                style:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
             const SizedBox(height: 24),
             TextButton(
               onPressed: () => context.go('/'),
@@ -60,6 +68,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const _RoleBasedProfileRouter(),
+      ),
+      GoRoute(
+        path: '/notification-preferences',
+        builder: (context, state) => const NotificationPreferencesScreen(),
       ),
       GoRoute(
         path: '/pending-approvals',
@@ -169,8 +181,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             prefillExtDoctorSpecialization:
                 readString('prefillExtDoctorSpecialization'),
             prefillExtDoctorPhone: readString('prefillExtDoctorPhone'),
-            prefillVisitInstructions:
-                readString('prefillVisitInstructions'),
+            prefillVisitInstructions: readString('prefillVisitInstructions'),
           );
         },
       ),

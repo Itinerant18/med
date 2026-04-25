@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -58,7 +59,7 @@ class DrVisitDetailScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                  child: const Icon(Icons.person_rounded,
+                  child: const Icon(AppIcons.person_rounded,
                       color: AppTheme.primaryTeal, size: 30),
                 ),
                 const SizedBox(width: 16),
@@ -84,7 +85,7 @@ class DrVisitDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           const SectionTitle(
-              title: 'Diagnosis & Notes', icon: Icons.description_outlined),
+              title: 'Diagnosis & Notes', icon: AppIcons.description_outlined),
           SizedBox(
             width: double.infinity,
             child: NeuCard(
@@ -123,7 +124,7 @@ class DrVisitDetailScreen extends ConsumerWidget {
           if (visit.isExternalDoctor) ...[
             const SectionTitle(
               title: 'External Doctor Info',
-              icon: Icons.local_hospital_outlined,
+              icon: AppIcons.local_hospital_outlined,
             ),
             Container(
               decoration: BoxDecoration(
@@ -171,7 +172,8 @@ class DrVisitDetailScreen extends ConsumerWidget {
             const SizedBox(height: 20),
           ],
           const SectionTitle(
-              title: 'Follow-up Information', icon: Icons.event_repeat_rounded),
+              title: 'Follow-up Information',
+              icon: AppIcons.event_repeat_rounded),
           SizedBox(
             width: double.infinity,
             child: NeuCard(
@@ -219,7 +221,7 @@ class DrVisitDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.person_outline,
+                        const Icon(AppIcons.person_outline,
                             size: 16, color: AppTheme.primaryTeal),
                         const SizedBox(width: 8),
                         Text(visit.agentName!,

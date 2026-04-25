@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -50,7 +51,9 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);
     } else {
-      if (mounted) AppSnackbar.showError(context, 'Could not launch email client');
+      if (mounted) {
+        AppSnackbar.showError(context, 'Could not launch email client');
+      }
     }
   }
 
@@ -61,7 +64,9 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
         title: Text(title),
         content: SingleChildScrollView(child: Text(content)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
         ],
       ),
     );
@@ -74,7 +79,8 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('About MediFlow', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('About MediFlow',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -82,15 +88,24 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
         child: Column(
           children: [
             // SECTION 1 — App Identity
-            const Icon(Icons.local_hospital, size: 64, color: AppTheme.primaryTeal),
+            const Icon(AppIcons.local_hospital,
+                size: 64, color: AppTheme.primaryTeal),
             const SizedBox(height: 12),
-            const Text('MediFlow', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
-            const Text('Smart Clinic Management', style: TextStyle(fontSize: 16, color: Colors.grey)),
+            const Text('MediFlow',
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryTeal)),
+            const Text('Smart Clinic Management',
+                style: TextStyle(fontSize: 16, color: Colors.grey)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(20)),
-              child: const Text('Version 1.0.0', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(20)),
+              child: const Text('Version 1.0.0',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 32),
 
@@ -157,17 +172,29 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSectionHeader('Your Clinic'),
-                      NeuTextField(controller: _clinicNameController, label: 'Clinic Name'),
+                      NeuTextField(
+                          controller: _clinicNameController,
+                          label: 'Clinic Name'),
                       const SizedBox(height: 12),
-                      NeuTextField(controller: _clinicAddrController, label: 'Clinic Address', maxLines: 2),
+                      NeuTextField(
+                          controller: _clinicAddrController,
+                          label: 'Clinic Address',
+                          maxLines: 2),
                       const SizedBox(height: 12),
-                      NeuTextField(controller: _clinicPhoneController, label: 'Clinic Phone', keyboardType: TextInputType.phone),
+                      NeuTextField(
+                          controller: _clinicPhoneController,
+                          label: 'Clinic Phone',
+                          keyboardType: TextInputType.phone),
                       const SizedBox(height: 20),
                       NeuButton(
-                        onPressed: clinicAsync.isLoading ? null : _handleClinicUpdate,
+                        onPressed:
+                            clinicAsync.isLoading ? null : _handleClinicUpdate,
                         isLoading: clinicAsync.isLoading,
                         color: AppTheme.primaryTeal,
-                        child: const Text('Update Clinic Info', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: const Text('Update Clinic Info',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -185,18 +212,21 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                 children: [
                   ListTile(
                     title: const Text('Privacy Policy'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showInfoDialog('Privacy Policy', 'Your data is encrypted and handled according to healthcare standards. We do not sell doctor or patient information to third parties.'),
+                    trailing: const Icon(AppIcons.chevron_right),
+                    onTap: () => _showInfoDialog('Privacy Policy',
+                        'Your data is encrypted and handled according to healthcare standards. We do not sell doctor or patient information to third parties.'),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     title: const Text('Terms of Use'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showInfoDialog('Terms of Use', 'By using MediFlow, you agree to maintain professional confidentiality and comply with local medical regulations.'),
+                    trailing: const Icon(AppIcons.chevron_right),
+                    onTap: () => _showInfoDialog('Terms of Use',
+                        'By using MediFlow, you agree to maintain professional confidentiality and comply with local medical regulations.'),
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.email_outlined, color: AppTheme.primaryTeal),
+                    leading: const Icon(AppIcons.email_outlined,
+                        color: AppTheme.primaryTeal),
                     title: const Text('Contact Support'),
                     onTap: _contactSupport,
                   ),
@@ -204,7 +234,8 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            const Text('Made with care for healthcare professionals', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Made with care for healthcare professionals',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 32),
           ],
         ),
@@ -227,7 +258,12 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 12, color: Color(0xFF718096), letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+      child: Text(title.toUpperCase(),
+          style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF718096),
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600)),
     );
   }
 
@@ -236,7 +272,8 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline, size: 18, color: AppTheme.primaryTeal),
+          const Icon(AppIcons.check_circle_outline,
+              size: 18, color: AppTheme.primaryTeal),
           const SizedBox(width: 12),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
         ],
@@ -246,7 +283,9 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
 
   Widget _buildTechChip(String label, Color color) {
     return Chip(
-      label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+      label: Text(label,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
       backgroundColor: color,
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

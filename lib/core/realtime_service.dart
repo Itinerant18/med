@@ -39,7 +39,8 @@ class RealtimeService {
 
     try {
       _channel = Supabase.instance.client
-          .channel('mediflow:patients:${Supabase.instance.client.auth.currentUser?.id ?? "anon"}')
+          .channel(
+              'mediflow:patients:${Supabase.instance.client.auth.currentUser?.id ?? "anon"}')
           .onPostgresChanges(
             event: PostgresChangeEvent.update,
             schema: 'public',
@@ -107,6 +108,8 @@ class RealtimeService {
           title: 'New Visit Assigned',
           body: 'You have been assigned a new patient visit.',
           type: 'visit_assignment',
+          category: 'visit',
+          priority: 'high',
         );
 
         // Local push
@@ -120,7 +123,10 @@ class RealtimeService {
           doctorId: assignedAgentId,
           title: 'New Visit Assigned',
           body: 'A new patient visit has been assigned to you.',
-          data: {'type': 'visit_assignment', 'visit_id': row['id']?.toString() ?? ''},
+          data: {
+            'type': 'visit_assignment',
+            'visit_id': row['id']?.toString() ?? ''
+          },
         );
       }
     } catch (e) {
@@ -164,6 +170,8 @@ class RealtimeService {
               ? '$title · $patientName (due $dueDate)'
               : 'Follow-up for $patientName due $dueDate',
           type: 'followup_task',
+          category: 'followup',
+          priority: 'high',
         );
 
         NotificationService.instance.showFollowupNotification(
@@ -205,6 +213,8 @@ class RealtimeService {
         title: 'Status Updated: ${row['full_name'] ?? 'Patient'}',
         body: '$oldStatus → $newStatus (by $updatedBy)',
         type: 'status_change',
+        category: 'patient',
+        priority: 'normal',
       );
     } catch (e) {
       debugPrint('Error handling patient update: $e');
@@ -274,6 +284,8 @@ class RealtimeService {
           title: 'Follow-up completed',
           body: 'An assistant completed a follow-up. Tap to review.',
           type: 'followup_review_needed',
+          category: 'followup',
+          priority: 'urgent',
         );
         NotificationService.instance.showFollowupNotification(
           patientName: row['patient_name']?.toString() ?? 'a patient',
@@ -285,7 +297,8 @@ class RealtimeService {
           FcmService.sendToDoctor(
             doctorId: createdBy,
             title: 'Follow-up completed',
-            body: 'An assistant completed a follow-up. Open MediFlow to review.',
+            body:
+                'An assistant completed a follow-up. Open MediFlow to review.',
             data: {
               'type': 'followup_review_needed',
               'task_id': taskId,
@@ -304,6 +317,8 @@ class RealtimeService {
         title: 'Follow-up Updated',
         body: 'A follow-up task is now: $newStatus',
         type: 'followup_update',
+        category: 'followup',
+        priority: 'normal',
       );
       NotificationService.instance.showFollowupNotification(
         patientName: row['patient_name']?.toString() ?? 'a patient',
@@ -321,6 +336,8 @@ class RealtimeService {
     required String title,
     required String body,
     required String type,
+    String category = 'patient',
+    String priority = 'normal',
   }) {
     final container = _container;
     if (container == null) return;
@@ -332,6 +349,8 @@ class RealtimeService {
               body: body,
               timestamp: DateTime.now(),
               type: type,
+              category: category,
+              priority: priority,
             ),
           );
     } catch (e) {

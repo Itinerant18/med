@@ -1,5 +1,6 @@
 // lib/features/profile/doctor_profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -117,7 +118,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
             style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: Icon(_isEditMode ? Icons.close : Icons.edit_outlined,
+            icon: Icon(_isEditMode ? AppIcons.close : AppIcons.edit_outlined,
                 color: AppTheme.primaryTeal),
             onPressed: () {
               if (!_isEditMode) _populate(profileAsync.value ?? {});
@@ -174,7 +175,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                   color: Color(0xFF1A6B5A),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.verified,
+                                child: const Icon(AppIcons.verified,
                                     size: 18, color: Colors.white),
                               ),
                             ],
@@ -198,7 +199,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.admin_panel_settings,
+                                const Icon(AppIcons.admin_panel_settings,
                                     size: 15, color: AppTheme.primaryTeal),
                                 const SizedBox(width: 5),
                                 Text(
@@ -254,14 +255,14 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                 label: 'Phone',
                                 keyboardType: TextInputType.phone),
                           ] else ...[
-                            _infoRow(Icons.person_outline, 'Full Name',
+                            _infoRow(AppIcons.person_outline, 'Full Name',
                                 _nameCtrl.text),
-                            _infoRow(Icons.medical_services_outlined,
+                            _infoRow(AppIcons.medical_services_outlined,
                                 'Specialization', _specCtrl.text),
-                            _infoRow(
-                                Icons.phone_outlined, 'Phone', _phoneCtrl.text),
+                            _infoRow(AppIcons.phone_outlined, 'Phone',
+                                _phoneCtrl.text),
                           ],
-                          _infoRow(Icons.email_outlined, 'Email',
+                          _infoRow(AppIcons.email_outlined, 'Email',
                               data['email'] ?? '',
                               locked: true),
                         ],
@@ -283,9 +284,9 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                 label: 'Clinic Address',
                                 maxLines: 2),
                           ] else ...[
-                            _infoRow(Icons.local_hospital_outlined, 'Clinic',
+                            _infoRow(AppIcons.local_hospital_outlined, 'Clinic',
                                 _clinicNameCtrl.text),
-                            _infoRow(Icons.location_on_outlined, 'Address',
+                            _infoRow(AppIcons.location_on_outlined, 'Address',
                                 _clinicAddrCtrl.text),
                           ],
                         ],
@@ -306,14 +307,14 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                 enabled: authAsync
                                         .valueOrNull?.hasPasswordIdentity ??
                                     false,
-                                icon: Icons.lock_outline,
+                                icon: AppIcons.lock_outline,
                               ),
                               _providerChip(
                                 label: 'Google',
                                 enabled:
                                     authAsync.valueOrNull?.hasGoogleIdentity ??
                                         false,
-                                icon: Icons.g_mobiledata_rounded,
+                                icon: AppIcons.g_mobiledata_rounded,
                               ),
                             ],
                           ),
@@ -345,7 +346,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Icon(Icons.link_rounded),
+                                  : const Icon(AppIcons.link_rounded),
                               label: Text(
                                 authAsync.valueOrNull?.hasGoogleIdentity ??
                                         false
@@ -372,7 +373,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                         children: [
                           if (isHeadDoctor) ...[
                             _tile(
-                              Icons.how_to_reg_rounded,
+                              AppIcons.how_to_reg_rounded,
                               'Pending Approvals',
                               AppTheme.primaryTeal,
                               () => context.push('/pending-approvals'),
@@ -380,7 +381,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             const Divider(height: 1),
                           ],
                           _tile(
-                            Icons.bar_chart_rounded,
+                            AppIcons.bar_chart_rounded,
                             'Analytics Dashboard',
                             Colors.deepPurple,
                             () => context.push('/analytics'),
@@ -388,14 +389,14 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                           if (isHeadDoctor) ...[
                             const Divider(height: 1),
                             _tile(
-                              Icons.people_alt_outlined,
+                              AppIcons.people_alt_outlined,
                               'Manage Staff Accounts',
                               Colors.orange,
                               () => context.push('/staff'),
                             ),
                             const Divider(height: 1),
                             _tile(
-                              Icons.history_rounded,
+                              AppIcons.history_rounded,
                               'Audit Logs',
                               Colors.blueGrey,
                               () => context.push('/audit-logs'),
@@ -403,20 +404,27 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                           ],
                           const Divider(height: 1),
                           _tile(
-                            Icons.info_outline,
+                            AppIcons.info_outline,
                             'About MediFlow',
                             AppTheme.primaryTeal,
                             () => context.push('/about'),
                           ),
                           const Divider(height: 1),
                           _tile(
-                            Icons.lock_outline,
+                            AppIcons.notifications_none_rounded,
+                            'Notification Preferences',
+                            AppTheme.secondary,
+                            () => context.push('/notification-preferences'),
+                          ),
+                          const Divider(height: 1),
+                          _tile(
+                            AppIcons.lock_outline,
                             'Change Password',
                             AppTheme.primaryTeal,
                             () {},
                           ),
                           const Divider(height: 1),
-                          _tile(Icons.logout, 'Logout', Colors.red, _logout),
+                          _tile(AppIcons.logout, 'Logout', Colors.red, _logout),
                         ],
                       ),
                     ),
@@ -447,11 +455,8 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
   // Initials helper that tolerates empty names and single-word names without
   // throwing on `[0]` index access.
   String _initials(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((p) => p.isNotEmpty)
-        .toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return 'DR';
     if (parts.length == 1) {
       final first = parts.first;
@@ -542,7 +547,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               ],
             )),
             if (locked)
-              const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+              const Icon(AppIcons.lock_outline, size: 14, color: Colors.grey),
           ],
         ),
       );
@@ -555,7 +560,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               color: color == Colors.red ? Colors.red : null,
               fontWeight: color == Colors.red ? FontWeight.bold : null,
             )),
-        trailing: Icon(Icons.chevron_right,
+        trailing: Icon(AppIcons.chevron_right,
             size: 18, color: color == Colors.red ? Colors.red : Colors.grey),
         onTap: onTap,
       );

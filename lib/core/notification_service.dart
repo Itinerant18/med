@@ -1,4 +1,5 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; import 'package:mediflow/core/app_config.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mediflow/core/app_config.dart';
 
 class NotificationService {
   NotificationService._();
@@ -18,125 +19,112 @@ class NotificationService {
         .initialize(const InitializationSettings(android: android, iOS: ios));
   }
 
-  Future<void> showPatientUpdateNotification({
-    required String patientName,
-    required String updatedBy,
-    required String newStatus,
-  }) async {
-    final int id = patientName.hashCode;
-    const String title = 'Patient Status Updated';
-    final String body = '$patientName → $newStatus  (by Dr. $updatedBy)';
-
-    const details = NotificationDetails(
+  NotificationDetails _details({String category = 'system'}) {
+    return NotificationDetails(
       android: AndroidNotificationDetails(
         AppConfig.notificationChannelId,
         AppConfig.notificationChannelName,
         importance: Importance.high,
-        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+        priority: Priority.high,
+        groupKey: 'mediflow.$category',
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       ),
-      iOS: DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(
+        threadIdentifier: 'mediflow.$category',
+      ),
     );
+  }
 
-    await _notifications.show(id, title, body, details);
+  Future<void> showGenericNotification({
+    required String title,
+    required String body,
+    String category = 'system',
+    int? id,
+  }) async {
+    await _notifications.show(
+      id ?? Object.hash(title, body, category),
+      title,
+      body,
+      _details(category: category),
+    );
+  }
+
+  Future<void> showPatientUpdateNotification({
+    required String patientName,
+    required String updatedBy,
+    required String newStatus,
+    String category = 'patient',
+  }) async {
+    await showGenericNotification(
+      id: patientName.hashCode,
+      title: 'Patient Status Updated',
+      body: '$patientName -> $newStatus  (by Dr. $updatedBy)',
+      category: category,
+    );
   }
 
   Future<void> showNewPatientNotification({
     required String patientName,
     required String addedBy,
+    String category = 'patient',
   }) async {
-    final int id = patientName.hashCode ^ 'new'.hashCode;
-    const String title = 'New Patient Registered';
-    final String body = '$patientName added by Dr. $addedBy';
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        AppConfig.notificationChannelId,
-        AppConfig.notificationChannelName,
-        importance: Importance.high,
-      ),
-      iOS: DarwinNotificationDetails(),
+    await showGenericNotification(
+      id: patientName.hashCode ^ 'new'.hashCode,
+      title: 'New Patient Registered',
+      body: '$patientName added by Dr. $addedBy',
+      category: category,
     );
-
-    await _notifications.show(id, title, body, details);
   }
 
   Future<void> showAppointmentReminder({
     required String patientName,
     required String time,
+    String category = 'visit',
   }) async {
-    final int id = patientName.hashCode ^ 'appointment'.hashCode;
-    const String title = 'Upcoming Appointment';
-    final String body = '$patientName at $time';
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        AppConfig.notificationChannelId,
-        AppConfig.notificationChannelName,
-        importance: Importance.high,
-      ),
-      iOS: DarwinNotificationDetails(),
+    await showGenericNotification(
+      id: patientName.hashCode ^ 'appointment'.hashCode,
+      title: 'Upcoming Appointment',
+      body: '$patientName at $time',
+      category: category,
     );
-
-    await _notifications.show(id, title, body, details);
   }
 
   Future<void> showVisitAssignedNotification({
     required String patientName,
     required String doctorName,
+    String category = 'visit',
   }) async {
-    final int id = patientName.hashCode ^ 'assigned'.hashCode;
-    const String title = 'New Visit Assigned';
-    final String body = 'Dr. $doctorName assigned you to $patientName';
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        AppConfig.notificationChannelId,
-        AppConfig.notificationChannelName,
-        importance: Importance.high,
-      ),
-      iOS: DarwinNotificationDetails(),
+    await showGenericNotification(
+      id: patientName.hashCode ^ 'assigned'.hashCode,
+      title: 'New Visit Assigned',
+      body: 'Dr. $doctorName assigned you to $patientName',
+      category: category,
     );
-
-    await _notifications.show(id, title, body, details);
   }
 
   Future<void> showFollowupNotification({
     required String patientName,
     required String dueDate,
+    String category = 'followup',
   }) async {
-    final int id = patientName.hashCode ^ 'followup'.hashCode;
-    const String title = 'New Follow-up Task';
-    final String body = 'Follow-up for $patientName due on $dueDate';
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        AppConfig.notificationChannelId,
-        AppConfig.notificationChannelName,
-        importance: Importance.high,
-      ),
-      iOS: DarwinNotificationDetails(),
+    await showGenericNotification(
+      id: patientName.hashCode ^ 'followup'.hashCode,
+      title: 'New Follow-up Task',
+      body: 'Follow-up for $patientName due on $dueDate',
+      category: category,
     );
-
-    await _notifications.show(id, title, body, details);
   }
 
   Future<void> showNewRegistrationNotification({
     required String name,
     required String role,
+    String category = 'system',
   }) async {
-    final int id = name.hashCode ^ 'registration'.hashCode;
-    const String title = 'New Registration Request';
-    final String body = '$name wants to join as ${role.replaceAll('_', ' ')}';
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        AppConfig.notificationChannelId,
-        AppConfig.notificationChannelName,
-        importance: Importance.high,
-      ),
-      iOS: DarwinNotificationDetails(),
+    await showGenericNotification(
+      id: name.hashCode ^ 'registration'.hashCode,
+      title: 'New Registration Request',
+      body: '$name wants to join as ${role.replaceAll('_', ' ')}',
+      category: category,
     );
-
-    await _notifications.show(id, title, body, details);
   }
 }

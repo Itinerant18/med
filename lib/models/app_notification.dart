@@ -9,6 +9,8 @@ class AppNotification {
     required this.timestamp,
     this.isRead = false,
     this.type = 'patient_update',
+    this.category = 'patient',
+    this.priority = 'normal',
   });
 
   final String id;
@@ -17,6 +19,8 @@ class AppNotification {
   final DateTime timestamp;
   final bool isRead;
   final String type; // 'patient_update' | 'new_patient' | 'appointment'
+  final String category; // patient | visit | followup | system
+  final String priority; // normal | high | urgent
 
   AppNotification copyWith({
     String? id,
@@ -25,6 +29,8 @@ class AppNotification {
     DateTime? timestamp,
     bool? isRead,
     String? type,
+    String? category,
+    String? priority,
   }) {
     return AppNotification(
       id: id ?? this.id,
@@ -33,6 +39,8 @@ class AppNotification {
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
       type: type ?? this.type,
+      category: category ?? this.category,
+      priority: priority ?? this.priority,
     );
   }
 }

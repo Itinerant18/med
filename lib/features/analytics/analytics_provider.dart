@@ -137,7 +137,8 @@ class StaffPerformance {
 
 final _last30DaysStartProvider = Provider<DateTime>((ref) {
   final now = DateTime.now();
-  return DateTime(now.year, now.month, now.day).subtract(const Duration(days: 29));
+  return DateTime(now.year, now.month, now.day)
+      .subtract(const Duration(days: 29));
 });
 
 /// Provides dashboard analytics for the signed-in user.
@@ -245,7 +246,8 @@ final analyticsSummaryProvider =
     'other': 0,
   };
   for (final patient in patients) {
-    final scheme = (patient['health_scheme'] ?? 'other').toString().toLowerCase();
+    final scheme =
+        (patient['health_scheme'] ?? 'other').toString().toLowerCase();
     final normalizedScheme =
         patientsByScheme.containsKey(scheme) ? scheme : 'other';
     patientsByScheme[normalizedScheme] =
@@ -266,7 +268,8 @@ final analyticsSummaryProvider =
 
   final totalFollowups = followups.length;
   final completedFollowups = followups
-      .where((task) => (task['status'] ?? '').toString().toLowerCase() == 'completed')
+      .where((task) =>
+          (task['status'] ?? '').toString().toLowerCase() == 'completed')
       .length;
   final followupCompletion =
       totalFollowups == 0 ? 0.0 : completedFollowups / totalFollowups;
@@ -290,9 +293,8 @@ final analyticsSummaryProvider =
   });
 
   final activeDays = last30DaysVisits.where((entry) => entry.count > 0).length;
-  final avgVisitsPerDay = activeDays == 0
-      ? 0.0
-      : recentVisits.length / activeDays;
+  final avgVisitsPerDay =
+      activeDays == 0 ? 0.0 : recentVisits.length / activeDays;
 
   final activeStaff = isHeadDoctor
       ? doctors
@@ -352,7 +354,8 @@ final staffPerformanceProvider =
 
   final doctors = List<Map<String, dynamic>>.from(results[0] as List)
       .where((doctor) =>
-          (doctor['approval_status'] ?? '').toString().toLowerCase() == 'approved')
+          (doctor['approval_status'] ?? '').toString().toLowerCase() ==
+          'approved')
       .toList();
   final visits = List<Map<String, dynamic>>.from(results[1] as List);
   final patients = List<Map<String, dynamic>>.from(results[2] as List);
@@ -362,10 +365,13 @@ final staffPerformanceProvider =
   final performance = doctors.map((doctor) {
     final doctorId = doctor['id'].toString();
     final visitsCount = visits
-        .where((visit) => (visit['doctor_id'] ?? visit['created_by_id']).toString() == doctorId)
+        .where((visit) =>
+            (visit['doctor_id'] ?? visit['created_by_id']).toString() ==
+            doctorId)
         .length;
     final patientsCount = patients
-        .where((patient) => (patient['created_by_id'] ?? '').toString() == doctorId)
+        .where((patient) =>
+            (patient['created_by_id'] ?? '').toString() == doctorId)
         .length;
     final drVisitsCount = drVisits
         .where((drVisit) => (drVisit['doctor_id'] ?? '').toString() == doctorId)

@@ -1,7 +1,8 @@
-// lib/core/connectivity_wrapper.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:mediflow/core/theme.dart';
 
 class ConnectivityWrapper extends StatefulWidget {
   final Widget child;
@@ -79,7 +80,6 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper>
 
   @override
   Widget build(BuildContext context) {
-    // MaterialApp already provides Directionality; don't duplicate it here.
     return Stack(
       children: [
         widget.child,
@@ -92,37 +92,45 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper>
               bottom: false,
               child: SlideTransition(
                 position: _slideAnimation,
-                child: Material(
-                  color: _isConnected
-                      ? const Color(0xFF38A169)
-                      : const Color(0xFFE53E3E),
-                  elevation: 4,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 8, horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _isConnected
-                              ? Icons.wifi_rounded
-                              : Icons.wifi_off_rounded,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _isConnected
-                              ? 'Back online'
-                              : 'No internet connection',
-                          style: const TextStyle(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Material(
+                    color: _isConnected
+                        ? AppTheme.primaryTeal
+                        : AppTheme.errorColor,
+                    elevation: 0,
+                    borderRadius: BorderRadius.circular(100),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(100),
+                        boxShadow: const [AppTheme.shadowSoft],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _isConnected
+                                ? AppIcons.wifi_rounded
+                                : AppIcons.wifi_off_rounded,
                             color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                            size: 16,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            _isConnected
+                                ? 'Back online'
+                                : 'No internet connection',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

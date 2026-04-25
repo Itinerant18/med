@@ -1,4 +1,4 @@
-﻿// lib/features/patients/patient_list_provider.dart
+// lib/features/patients/patient_list_provider.dart
 // NOTE: Supabase RLS must enforce:
 // - Head doctors and doctors: can SELECT/INSERT/UPDATE/DELETE all rows in patients
 // - Agents: can only SELECT/INSERT/UPDATE rows where created_by_id = auth.uid()
@@ -84,7 +84,8 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
   final userState = ref.watch(authNotifierProvider).value;
   final role = ref.watch(currentRoleProvider);
 
-  var query = supabase.from('patients').select('id, full_name, phone, email, symptoms, health_scheme, service_status, is_high_priority, last_updated_by, last_updated_at, created_by_id, created_at, area_affected, date_of_birth');
+  var query = supabase.from('patients').select(
+      'id, full_name, phone, email, symptoms, health_scheme, service_status, is_high_priority, last_updated_by, last_updated_at, created_by_id, created_at, area_affected, date_of_birth');
 
   // Agents only see patients they created (UUID match, not name string).
   if (role == UserRole.assistant && userState != null) {

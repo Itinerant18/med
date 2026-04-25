@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -57,9 +58,8 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () =>
-                ref.read(followupTasksProvider.notifier).refresh(),
+            icon: const Icon(AppIcons.refresh_rounded),
+            onPressed: () => ref.read(followupTasksProvider.notifier).refresh(),
           ),
         ],
       ),
@@ -109,9 +109,7 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
                 itemBuilder: (_, __) => const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: NeuShimmer(
-                      width: double.infinity,
-                      height: 110,
-                      borderRadius: 16),
+                      width: double.infinity, height: 110, borderRadius: 16),
                 ),
               ),
               error: (error, _) => _buildError(error),
@@ -133,7 +131,7 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
                 ref.read(followupTasksProvider.notifier).refresh();
               }
             },
-            child: const Icon(Icons.local_hospital_rounded,
+            child: const Icon(AppIcons.local_hospital_rounded,
                 color: Colors.white, size: 18),
           ),
           const SizedBox(height: 12),
@@ -141,7 +139,7 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
             heroTag: 'view-outside-visits',
             backgroundColor: AppTheme.primaryTeal,
             onPressed: () => context.push('/agent-visits'),
-            icon: const Icon(Icons.history_rounded,
+            icon: const Icon(AppIcons.history_rounded,
                 color: Colors.white, size: 18),
             label: const Text(
               'My Outside Visits',
@@ -161,7 +159,7 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.add_task_rounded,
+          const Icon(AppIcons.add_task_rounded,
               size: 64, color: AppTheme.textMuted),
           const SizedBox(height: 12),
           Text(
@@ -193,29 +191,27 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded,
+              const Icon(AppIcons.error_outline_rounded,
                   size: 40, color: AppTheme.errorColor),
               const SizedBox(height: 12),
               const Text(
                 'Failed to load follow-ups',
-                style:
-                    TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString().length > 120
                     ? '${error.toString().substring(0, 120)}...'
                     : error.toString(),
-                style: const TextStyle(
-                    color: AppTheme.textMuted, fontSize: 12),
+                style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               NeuButton(
                 onPressed: () =>
                     ref.read(followupTasksProvider.notifier).refresh(),
-                padding: const EdgeInsets.symmetric(
-                    vertical: 12, horizontal: 24),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                 child: const Text(
                   'Try Again',
                   style: TextStyle(

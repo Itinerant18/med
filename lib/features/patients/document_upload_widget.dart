@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -16,7 +17,8 @@ class DocumentUploadWidget extends ConsumerStatefulWidget {
   const DocumentUploadWidget({super.key, required this.patientId});
 
   @override
-  ConsumerState<DocumentUploadWidget> createState() => _DocumentUploadWidgetState();
+  ConsumerState<DocumentUploadWidget> createState() =>
+      _DocumentUploadWidgetState();
 }
 
 class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
@@ -30,7 +32,8 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
         final status = await Permission.camera.request();
         if (status.isPermanentlyDenied) {
           if (mounted) {
-            AppSnackbar.showWarning(context, 'Camera permission required. Please enable in settings.');
+            AppSnackbar.showWarning(context,
+                'Camera permission required. Please enable in settings.');
             openAppSettings();
           }
           return;
@@ -38,12 +41,15 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
         if (!status.isGranted) return;
       }
 
-      final XFile? image = await _picker.pickImage(source: source, imageQuality: 80);
+      final XFile? image =
+          await _picker.pickImage(source: source, imageQuality: 80);
       if (image == null) return;
 
       setState(() => _isUploading = true);
 
-      await ref.read(documentNotifierProvider(widget.patientId).notifier).uploadDocument(image);
+      await ref
+          .read(documentNotifierProvider(widget.patientId).notifier)
+          .uploadDocument(image);
 
       if (mounted) {
         AppSnackbar.showSuccess(context, 'Document uploaded successfully');
@@ -61,7 +67,8 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.bgColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -69,7 +76,8 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
+                leading: const Icon(AppIcons.camera_alt,
+                    color: AppTheme.primaryTeal),
                 title: const Text('Take Photo'),
                 onTap: () {
                   Navigator.pop(context);
@@ -77,7 +85,8 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                leading: const Icon(AppIcons.photo_library,
+                    color: AppTheme.primaryTeal),
                 title: const Text('Choose from Gallery'),
                 onTap: () {
                   Navigator.pop(context);
@@ -103,10 +112,14 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
           children: [
             const Text(
               'Patient Documents',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryTeal),
             ),
             IconButton(
-              icon: const Icon(Icons.add_a_photo, color: AppTheme.primaryTeal),
+              icon:
+                  const Icon(AppIcons.add_a_photo, color: AppTheme.primaryTeal),
               onPressed: _isUploading ? null : _showSourcePicker,
             ),
           ],
@@ -122,16 +135,19 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400, style: BorderStyle.none),
+                      border: Border.all(
+                          color: Colors.grey.shade400, style: BorderStyle.none),
                       borderRadius: BorderRadius.circular(16),
                       color: Colors.grey.shade200.withValues(alpha: 0.5),
                     ),
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_photo_alternate_outlined, color: Colors.grey, size: 32),
+                        Icon(AppIcons.add_photo_alternate_outlined,
+                            color: Colors.grey, size: 32),
                         SizedBox(height: 4),
-                        Text('Tap + to add documents', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text('Tap + to add documents',
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -162,8 +178,11 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,
-                            placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                            placeholder: (context, url) => const Center(
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2)),
+                            errorWidget: (context, url, error) =>
+                                const Icon(AppIcons.error),
                           ),
                         ),
                       ),
@@ -191,7 +210,8 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
-          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal),
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: AppTheme.primaryTeal),
         ),
       ),
     );
@@ -202,14 +222,19 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Document'),
-        content: const Text('Are you sure you want to permanently remove this document?'),
+        content: const Text(
+            'Are you sure you want to permanently remove this document?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
-                await ref.read(documentNotifierProvider(widget.patientId).notifier).deleteDocument(url);
+                await ref
+                    .read(documentNotifierProvider(widget.patientId).notifier)
+                    .deleteDocument(url);
                 if (mounted) {
                   AppSnackbar.showSuccess(context, 'Document deleted');
                 }
@@ -243,7 +268,8 @@ class FullScreenImageViewer extends StatelessWidget {
   final String url;
   final VoidCallback onDelete;
 
-  const FullScreenImageViewer({super.key, required this.url, required this.onDelete});
+  const FullScreenImageViewer(
+      {super.key, required this.url, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -254,14 +280,14 @@ class FullScreenImageViewer extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
+            icon: const Icon(AppIcons.share),
             onPressed: () async {
               // Using SharePlus as per linter suggestion
               await SharePlus.instance.share(ShareParams(text: url));
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete),
+            icon: const Icon(AppIcons.delete),
             onPressed: () {
               Navigator.pop(context);
               onDelete();
@@ -276,7 +302,8 @@ class FullScreenImageViewer extends StatelessWidget {
           child: CachedNetworkImage(
             imageUrl: url,
             fit: BoxFit.contain,
-            placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+            placeholder: (context, url) =>
+                const Center(child: CircularProgressIndicator()),
           ),
         ),
       ),

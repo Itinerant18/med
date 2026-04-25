@@ -1,8 +1,10 @@
 // lib/features/dashboard/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; import 'package:mediflow/core/parse_utils.dart';
+import 'package:intl/intl.dart';
+import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
@@ -129,7 +131,7 @@ class DashboardScreen extends ConsumerWidget {
           ],
           IconButton(
             icon: const Icon(
-              Icons.refresh_rounded,
+              AppIcons.refresh_rounded,
               color: AppTheme.primaryTeal,
               size: 22,
             ),
@@ -210,21 +212,21 @@ class DashboardScreen extends ConsumerWidget {
           _StatCard(
             label: 'Today\'s Visits',
             value: data.stats.todayVisitsCount.toString(),
-            icon: Icons.calendar_today_rounded,
+            icon: AppIcons.calendar_today_rounded,
             color: AppTheme.primaryTeal,
           ),
           const SizedBox(width: 12),
           _StatCard(
             label: 'Pending Labs',
             value: data.stats.pendingLabsCount.toString(),
-            icon: Icons.biotech_rounded,
+            icon: AppIcons.biotech_rounded,
             color: const Color(0xFFD97706),
           ),
           const SizedBox(width: 12),
           _StatCard(
             label: 'OT Scheduled',
             value: data.stats.upcomingOTCount.toString(),
-            icon: Icons.medical_services_rounded,
+            icon: AppIcons.medical_services_rounded,
             color: const Color(0xFFDC2626),
           ),
           if (isAdmin) ...[
@@ -232,7 +234,7 @@ class DashboardScreen extends ConsumerWidget {
             _StatCard(
               label: 'High Priority',
               value: data.stats.highPriorityCount.toString(),
-              icon: Icons.priority_high_rounded,
+              icon: AppIcons.priority_high_rounded,
               color: Colors.deepPurple,
             ),
           ],
@@ -319,7 +321,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             children: [
               Icon(
-                Icons.event_available_rounded,
+                AppIcons.event_available_rounded,
                 size: 52,
                 color: Colors.grey.shade400,
               ),
@@ -351,7 +353,7 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           children: [
             const Icon(
-              Icons.cloud_off_rounded,
+              AppIcons.cloud_off_rounded,
               size: 48,
               color: AppTheme.textMuted,
             ),
@@ -506,7 +508,7 @@ class _PriorityCard extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.warning_amber_rounded,
+                AppIcons.warning_amber_rounded,
                 size: 13,
                 color: Colors.red,
               ),
@@ -536,7 +538,7 @@ class _PriorityCard extends StatelessWidget {
               child: Row(
                 children: [
                   const Icon(
-                    Icons.person_outline_rounded,
+                    AppIcons.person_outline_rounded,
                     size: 11,
                     color: Colors.blueGrey,
                   ),
@@ -572,7 +574,8 @@ class _AssignedVisitCard extends StatelessWidget {
     final patientInfo = visit['patients'] as Map<String, dynamic>?;
     final patientName = patientInfo?['full_name'] ?? 'Unknown';
     final visitTime = visit['visit_date'] != null
-        ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+        ? DateFormat.jm()
+            .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
         : '--:--';
     final followupStatus = visit['followup_status'] ?? 'pending';
 
@@ -658,7 +661,8 @@ class _VisitCard extends StatelessWidget {
     final isHighPriority = patientInfo?['is_high_priority'] ?? false;
     final patientId = visit['patient_id'] as String?;
     final visitTime = visit['visit_date'] != null
-        ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+        ? DateFormat.jm()
+            .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
         : '--:--';
     final status =
         (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
@@ -721,20 +725,20 @@ class _VisitCard extends StatelessWidget {
                 runSpacing: 4,
                 children: [
                   _MiniChip(
-                    icon: Icons.access_time_rounded,
+                    icon: AppIcons.access_time_rounded,
                     label: visitTime,
                     color: AppTheme.textMuted,
                   ),
                   _MiniChip(
-                    icon: Icons.category_rounded,
+                    icon: AppIcons.category_rounded,
                     label: visit['visit_type'] ?? 'OPD',
                     color: AppTheme.primaryTeal,
                   ),
                   if (visit['tests_performed'] != null)
                     _MiniChip(
                       icon: visit['tests_performed'] == true
-                          ? Icons.check_circle_rounded
-                          : Icons.pending_rounded,
+                          ? AppIcons.check_circle_rounded
+                          : AppIcons.pending_rounded,
                       label: visit['tests_performed'] == true
                           ? 'Labs Done'
                           : 'Labs Pending',
@@ -749,7 +753,7 @@ class _VisitCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      Icons.person_outline_rounded,
+                      AppIcons.person_outline_rounded,
                       size: 12,
                       color: Colors.grey.shade500,
                     ),

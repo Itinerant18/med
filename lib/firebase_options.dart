@@ -85,5 +85,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'mediflow-f1b78.firebasestorage.app',
     measurementId: 'G-BG772BE7BS',
   );
-
 }

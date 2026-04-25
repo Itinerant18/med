@@ -1,11 +1,14 @@
 // lib/features/patients/patient_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; import 'package:mediflow/core/parse_utils.dart';
+import 'package:intl/intl.dart';
+import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
-import 'package:mediflow/features/patients/patient_provider.dart'; import 'package:mediflow/features/patients/patient_permissions.dart';
+import 'package:mediflow/features/patients/patient_provider.dart';
+import 'package:mediflow/features/patients/patient_permissions.dart';
 import 'package:mediflow/features/patients/visit_history_provider.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
@@ -55,7 +58,7 @@ class PatientDetailScreen extends ConsumerWidget {
                 children: [
                   if (canFollowup)
                     IconButton(
-                      icon: const Icon(Icons.add_task_rounded,
+                      icon: const Icon(AppIcons.add_task_rounded,
                           color: AppTheme.primaryTeal),
                       tooltip: 'Add Follow-up',
                       onPressed: () => showModalBottomSheet(
@@ -72,7 +75,7 @@ class PatientDetailScreen extends ConsumerWidget {
                     ),
                   if (canEdit)
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined,
+                      icon: const Icon(AppIcons.edit_outlined,
                           color: AppTheme.primaryTeal),
                       onPressed: () =>
                           context.push('/patients/edit/$patientId'),
@@ -80,7 +83,7 @@ class PatientDetailScreen extends ConsumerWidget {
                     ),
                   if (canDelete)
                     IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded,
+                      icon: const Icon(AppIcons.delete_outline_rounded,
                           color: Colors.red),
                       onPressed: () => _confirmDelete(context, ref),
                       tooltip: 'Delete patient',
@@ -96,7 +99,8 @@ class PatientDetailScreen extends ConsumerWidget {
         elevation: 0,
       ),
       body: patientAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
         error: (err, _) => _buildError(context, err),
         data: (patient) {
           if (patient == null) {
@@ -104,9 +108,12 @@ class PatientDetailScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.person_off_rounded, size: 64, color: AppTheme.textMuted),
+                  Icon(AppIcons.person_off_rounded,
+                      size: 64, color: AppTheme.textMuted),
                   SizedBox(height: 12),
-                  Text('Patient not found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('Patient not found',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ],
               ),
             );
@@ -125,8 +132,9 @@ class PatientDetailScreen extends ConsumerWidget {
                   'patientName': patientAsync.value?['full_name'] ?? 'Unknown',
                 });
               },
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('New Visit', style: TextStyle(fontWeight: FontWeight.w700)),
+              icon: const Icon(AppIcons.add_rounded, size: 20),
+              label: const Text('New Visit',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
             )
           : null,
     );
@@ -139,7 +147,8 @@ class PatientDetailScreen extends ConsumerWidget {
     AsyncValue<List<Map<String, dynamic>>> visitsAsync,
   ) {
     final int age = patient['date_of_birth'] != null
-        ? DateTime.now().year - (parseDbDate(patient['date_of_birth']) ?? DateTime.now()).year
+        ? DateTime.now().year -
+            (parseDbDate(patient['date_of_birth']) ?? DateTime.now()).year
         : 0;
 
     return SingleChildScrollView(
@@ -167,8 +176,8 @@ class PatientDetailScreen extends ConsumerWidget {
                       ),
                       child: Icon(
                         patient['is_high_priority'] == true
-                            ? Icons.priority_high_rounded
-                            : Icons.person_rounded,
+                            ? AppIcons.priority_high_rounded
+                            : AppIcons.person_rounded,
                         color: patient['is_high_priority'] == true
                             ? Colors.red
                             : AppTheme.primaryTeal,
@@ -193,9 +202,11 @@ class PatientDetailScreen extends ConsumerWidget {
                             [
                               if (age > 0) '$age yrs',
                               if (patient['gender'] != null) patient['gender'],
-                              if (patient['blood_group'] != null) patient['blood_group'],
+                              if (patient['blood_group'] != null)
+                                patient['blood_group'],
                             ].join(' • '),
-                            style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.textMuted),
                           ),
                         ],
                       ),
@@ -204,11 +215,11 @@ class PatientDetailScreen extends ConsumerWidget {
                       _SchemeBadge(scheme: patient['health_scheme']),
                   ],
                 ),
-
                 if (patient['is_high_priority'] == true) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
@@ -217,35 +228,41 @@ class PatientDetailScreen extends ConsumerWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                        Icon(AppIcons.warning_amber_rounded,
+                            size: 14, color: Colors.red),
                         SizedBox(width: 6),
                         Text('HIGH PRIORITY',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.red)),
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.red)),
                       ],
                     ),
                   ),
                 ],
-
                 const Divider(height: 24),
-
-                _infoRow(Icons.phone_rounded, 'Phone', patient['phone']),
-                _infoRow(Icons.emergency_rounded, 'Emergency', patient['emergency_contact_number']),
+                _infoRow(AppIcons.phone_rounded, 'Phone', patient['phone']),
+                _infoRow(AppIcons.emergency_rounded, 'Emergency',
+                    patient['emergency_contact_number']),
                 if (patient['email']?.isNotEmpty == true)
-                  _infoRow(Icons.email_outlined, 'Email', patient['email']),
-
+                  _infoRow(AppIcons.email_outlined, 'Email', patient['email']),
                 if (patient['staff_comments']?.isNotEmpty == true) ...[
                   const Divider(height: 20),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.comment_outlined, size: 16, color: AppTheme.textMuted),
+                      const Icon(AppIcons.comment_outlined,
+                          size: 16, color: AppTheme.textMuted),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('Staff Comments',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted)),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted)),
                             const SizedBox(height: 3),
                             Text(patient['staff_comments'],
                                 style: const TextStyle(fontSize: 13)),
@@ -265,7 +282,9 @@ class PatientDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle(title: 'Clinical Information', icon: Icons.medical_services_outlined),
+                const SectionTitle(
+                    title: 'Clinical Information',
+                    icon: AppIcons.medical_services_outlined),
                 if (patient['symptoms']?.isNotEmpty == true)
                   _clinicalRow('Symptoms', patient['symptoms']),
                 if (patient['area_affected']?.isNotEmpty == true)
@@ -275,15 +294,20 @@ class PatientDetailScreen extends ConsumerWidget {
                 if (patient['allergies']?.isNotEmpty == true)
                   _clinicalRow('Allergies', patient['allergies']),
                 if (patient['existing_conditions']?.isNotEmpty == true)
-                  _clinicalRow('Existing Conditions', patient['existing_conditions']),
+                  _clinicalRow(
+                      'Existing Conditions', patient['existing_conditions']),
                 if (patient['current_medications']?.isNotEmpty == true)
-                  _clinicalRow('Current Medications', patient['current_medications']),
+                  _clinicalRow(
+                      'Current Medications', patient['current_medications']),
                 if (patient['last_updated_by'] != null) ...[
                   const Divider(height: 16),
                   Text(
                     'Last updated by Dr. ${patient['last_updated_by']}'
                     '${patient['last_updated_at'] != null ? ' on ${DateFormat('MMM d, yyyy HH:mm').format(parseDbDateOr(patient['last_updated_at'], DateTime.now()))}' : ''}',
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                        fontStyle: FontStyle.italic),
                   ),
                 ],
               ],
@@ -298,7 +322,10 @@ class PatientDetailScreen extends ConsumerWidget {
           // ── Visit Timeline ──
           const Text(
             'Visit Timeline',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.primaryTeal),
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryTeal),
           ),
           const SizedBox(height: 12),
 
@@ -319,7 +346,8 @@ class PatientDetailScreen extends ConsumerWidget {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.history_rounded, size: 40, color: Colors.grey.shade400),
+                        Icon(AppIcons.history_rounded,
+                            size: 40, color: Colors.grey.shade400),
                         const SizedBox(height: 8),
                         const Text('No visits recorded yet',
                             style: TextStyle(color: AppTheme.textMuted)),
@@ -332,8 +360,8 @@ class PatientDetailScreen extends ConsumerWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: visits.length,
-                itemBuilder: (ctx, i) =>
-                    _TimelineItem(visit: visits[i], isLast: i == visits.length - 1),
+                itemBuilder: (ctx, i) => _TimelineItem(
+                    visit: visits[i], isLast: i == visits.length - 1),
               );
             },
           ),
@@ -350,9 +378,12 @@ class PatientDetailScreen extends ConsumerWidget {
         children: [
           Icon(icon, size: 15, color: AppTheme.textMuted),
           const SizedBox(width: 10),
-          Text('$label: ', style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+          Text('$label: ',
+              style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(value,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -370,7 +401,10 @@ class PatientDetailScreen extends ConsumerWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textMuted),
             ),
           ),
           Expanded(
@@ -389,13 +423,18 @@ class PatientDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: AppTheme.textMuted),
+              const Icon(AppIcons.error_outline_rounded,
+                  size: 48, color: AppTheme.textMuted),
               const SizedBox(height: 12),
-              const Text('Failed to load patient', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              const Text('Failed to load patient',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 6),
-              Text(error.toString(), style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+              Text(error.toString(),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
               const SizedBox(height: 16),
-              TextButton(onPressed: () => context.pop(), child: const Text('Go Back')),
+              TextButton(
+                  onPressed: () => context.pop(), child: const Text('Go Back')),
             ],
           ),
         ),
@@ -420,7 +459,9 @@ class PatientDetailScreen extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
+            child: const Text('Delete',
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -459,7 +500,10 @@ class _SchemeBadge extends StatelessWidget {
       ),
       child: Text(
         scheme.replaceAll('_', ' ').toUpperCase(),
-        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.primaryTeal),
+        style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.primaryTeal),
       ),
     );
   }
@@ -479,7 +523,8 @@ class _TimelineItem extends StatelessWidget {
     final dotColor = _dotColor(status, visit['visit_type']);
 
     final dateStr = visit['visit_date'] != null
-        ? DateFormat('MMM d, yyyy • HH:mm').format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+        ? DateFormat('MMM d, yyyy • HH:mm')
+            .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
         : 'Unknown Date';
 
     return IntrinsicHeight(
@@ -529,16 +574,20 @@ class _TimelineItem extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(dateStr, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        Text(dateStr,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 12)),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             visit['visit_type'] ?? 'OPD',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                                fontSize: 10, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ],
@@ -558,10 +607,22 @@ class _TimelineItem extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        _statusChip('Tests', visit['tests_performed'] == true ? 'Done' : 'Pending',
-                            visit['tests_performed'] == true ? Colors.blue : Colors.grey),
-                        _statusChip('OT', visit['ot_required'] == true ? 'Required' : 'Not needed',
-                            visit['ot_required'] == true ? Colors.red : Colors.grey),
+                        _statusChip(
+                            'Tests',
+                            visit['tests_performed'] == true
+                                ? 'Done'
+                                : 'Pending',
+                            visit['tests_performed'] == true
+                                ? Colors.blue
+                                : Colors.grey),
+                        _statusChip(
+                            'OT',
+                            visit['ot_required'] == true
+                                ? 'Required'
+                                : 'Not needed',
+                            visit['ot_required'] == true
+                                ? Colors.red
+                                : Colors.grey),
                         if (status.isNotEmpty)
                           _statusChip('Status', status, AppTheme.primaryTeal),
                       ],
@@ -571,14 +632,16 @@ class _TimelineItem extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Dx: ${visit['final_diagnosis']}',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ],
                     if (visit['prescriptions']?.isNotEmpty == true) ...[
                       const SizedBox(height: 4),
                       Text(
                         'Rx: ${visit['prescriptions']}',
-                        style: const TextStyle(color: AppTheme.primaryTeal, fontSize: 12),
+                        style: const TextStyle(
+                            color: AppTheme.primaryTeal, fontSize: 12),
                       ),
                     ],
 
@@ -587,7 +650,10 @@ class _TimelineItem extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: Text(
                         'by Dr. ${visit['last_updated_by'] ?? 'Unknown'}',
-                        style: const TextStyle(fontSize: 10, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+                        style: const TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.textMuted,
+                            fontStyle: FontStyle.italic),
                       ),
                     ),
                   ],
@@ -605,10 +671,18 @@ class _TimelineItem extends StatelessWidget {
     if (visit['bp_systolic'] != null && visit['bp_diastolic'] != null) {
       vitals.add('BP: ${visit['bp_systolic']}/${visit['bp_diastolic']}');
     }
-    if (visit['pulse'] != null) vitals.add('P: ${visit['pulse']}');
-    if (visit['temperature'] != null) vitals.add('T: ${visit['temperature']}°C');
-    if (visit['spo2'] != null) vitals.add('SpO₂: ${visit['spo2']}%');
-    if (visit['respiratory_rate'] != null) vitals.add('RR: ${visit['respiratory_rate']}');
+    if (visit['pulse'] != null) {
+      vitals.add('P: ${visit['pulse']}');
+    }
+    if (visit['temperature'] != null) {
+      vitals.add('T: ${visit['temperature']}°C');
+    }
+    if (visit['spo2'] != null) {
+      vitals.add('SpO₂: ${visit['spo2']}%');
+    }
+    if (visit['respiratory_rate'] != null) {
+      vitals.add('RR: ${visit['respiratory_rate']}');
+    }
 
     if (vitals.isEmpty) return const SizedBox.shrink();
 
@@ -622,10 +696,15 @@ class _TimelineItem extends StatelessWidget {
       child: Wrap(
         spacing: 12,
         runSpacing: 4,
-        children: vitals.map((v) => Text(
-          v,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryTeal),
-        )).toList(),
+        children: vitals
+            .map((v) => Text(
+                  v,
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryTeal),
+                ))
+            .toList(),
       ),
     );
   }
@@ -640,7 +719,8 @@ class _TimelineItem extends StatelessWidget {
       ),
       child: Text(
         '$label: $value',
-        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w700),
+        style:
+            TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w700),
       ),
     );
   }

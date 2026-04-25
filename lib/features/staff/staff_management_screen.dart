@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -84,7 +85,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           IconButton(
             tooltip: 'Refresh',
             onPressed: _refresh,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(AppIcons.refresh_rounded),
           ),
         ],
       ),
@@ -110,7 +111,8 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                       child: Consumer(
                         builder: (context, ref, child) {
                           final staffAsync = ref.watch(staffListProvider);
-                          final filtered = ref.watch(filteredStaffProvider(_filter));
+                          final filtered =
+                              ref.watch(filteredStaffProvider(_filter));
 
                           return staffAsync.when(
                             loading: () => ListView.separated(
@@ -132,7 +134,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                                   child: Column(
                                     children: [
                                       const Icon(
-                                        Icons.error_outline_rounded,
+                                        AppIcons.error_outline_rounded,
                                         color: AppTheme.errorColor,
                                         size: 28,
                                       ),
@@ -171,16 +173,14 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                               }
 
                               return ListView.builder(
-                                physics:
-                                    const AlwaysScrollableScrollPhysics(),
+                                physics: const AlwaysScrollableScrollPhysics(),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
                                   final member = filtered[index];
                                   return Padding(
                                     padding: EdgeInsets.only(
-                                      bottom: index == filtered.length - 1
-                                          ? 0
-                                          : 12,
+                                      bottom:
+                                          index == filtered.length - 1 ? 0 : 12,
                                     ),
                                     child: _StaffCard(member: member),
                                   );
@@ -230,7 +230,7 @@ class _TopBar extends StatelessWidget {
             label: 'Search staff',
             hint: 'Name, email, or phone',
             prefixIcon: const Icon(
-              Icons.search_rounded,
+              AppIcons.search_rounded,
               color: AppTheme.textMuted,
               size: 20,
             ),
@@ -241,7 +241,8 @@ class _TopBar extends StatelessWidget {
         PopupMenuButton<_FilterAction>(
           tooltip: 'Filters',
           color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onSelected: (selection) {
             switch (selection.kind) {
               case _FilterKind.role:
@@ -311,7 +312,7 @@ class _TopBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.tune_rounded,
+                  AppIcons.tune_rounded,
                   size: 18,
                   color: AppTheme.primaryTeal,
                 ),
@@ -559,8 +560,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   Widget build(BuildContext context) {
     final isHeadDoctor = ref.watch(isHeadDoctorProvider);
     final targetRole = UserRole.fromString(widget.member.role);
-    final canChangeRole =
-        isHeadDoctor && targetRole != UserRole.headDoctor;
+    final canChangeRole = isHeadDoctor && targetRole != UserRole.headDoctor;
     final joinedAt = widget.member.createdAt != null
         ? DateFormat('MMM d, yyyy').format(widget.member.createdAt!)
         : 'Unknown';
@@ -595,8 +595,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                         children: [
                           CircleAvatar(
                             radius: 28,
-                            backgroundColor:
-                                _roleColor(widget.member.role).withValues(alpha: 0.14),
+                            backgroundColor: _roleColor(widget.member.role)
+                                .withValues(alpha: 0.14),
                             child: Text(
                               _StaffCard._initials(widget.member.fullName),
                               style: TextStyle(
@@ -628,19 +628,19 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                       ),
                       const SizedBox(height: 20),
                       _InfoRow(
-                        icon: Icons.mail_outline_rounded,
+                        icon: AppIcons.mail_outline_rounded,
                         label: 'Email',
                         value: widget.member.email,
                       ),
                       _InfoRow(
-                        icon: Icons.call_outlined,
+                        icon: AppIcons.call_outlined,
                         label: 'Phone',
                         value: widget.member.phone.trim().isEmpty
                             ? 'Not provided'
                             : widget.member.phone,
                       ),
                       _InfoRow(
-                        icon: Icons.calendar_today_rounded,
+                        icon: AppIcons.calendar_today_rounded,
                         label: 'Joined',
                         value: joinedAt,
                       ),
@@ -663,8 +663,10 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                             ),
                             decoration: BoxDecoration(
                               color: widget.member.phoneVerified
-                                  ? AppTheme.successColor.withValues(alpha: 0.12)
-                                  : AppTheme.warningColor.withValues(alpha: 0.12),
+                                  ? AppTheme.successColor
+                                      .withValues(alpha: 0.12)
+                                  : AppTheme.warningColor
+                                      .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -725,7 +727,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                                             widget.member.id,
                                             _selectedRole,
                                           ),
-                                      successMessage: 'Role updated successfully.',
+                                      successMessage:
+                                          'Role updated successfully.',
                                     ),
                             child: const Text(
                               'Update Role',
@@ -742,7 +745,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                           if (widget.member.approvalStatus == 'approved')
                             _ActionButton(
                               label: 'Suspend Account',
-                              icon: Icons.block_rounded,
+                              icon: AppIcons.block_rounded,
                               color: AppTheme.errorColor,
                               busy: _busy,
                               onPressed: () => _runAction(
@@ -757,7 +760,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                           if (widget.member.approvalStatus == 'rejected')
                             _ActionButton(
                               label: 'Reinstate Account',
-                              icon: Icons.refresh_rounded,
+                              icon: AppIcons.refresh_rounded,
                               color: AppTheme.successColor,
                               busy: _busy,
                               onPressed: () => _runAction(
@@ -771,7 +774,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                             ),
                           _ActionButton(
                             label: 'Delete Account',
-                            icon: Icons.delete_outline_rounded,
+                            icon: AppIcons.delete_outline_rounded,
                             color: AppTheme.errorColor,
                             busy: _busy,
                             onPressed: () => _runAction(
@@ -780,7 +783,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                               operation: () => ref
                                   .read(staffListProvider.notifier)
                                   .deleteAccount(widget.member.id),
-                              successMessage: 'Account deleted from staff list.',
+                              successMessage:
+                                  'Account deleted from staff list.',
                             ),
                           ),
                         ],
@@ -966,7 +970,7 @@ class _RestrictedView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.lock_outline_rounded,
+              AppIcons.lock_outline_rounded,
               color: AppTheme.warningColor,
               size: 28,
             ),
@@ -996,7 +1000,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         children: [
           Icon(
-            Icons.group_off_rounded,
+            AppIcons.group_off_rounded,
             size: 48,
             color: AppTheme.textMuted,
           ),

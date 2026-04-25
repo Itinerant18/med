@@ -2,7 +2,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mediflow/core/fcm_service.dart'; import 'package:mediflow/core/notification_provider.dart';
+import 'package:mediflow/core/fcm_service.dart';
+import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/google_auth_config.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/models/user_role.dart';
@@ -80,7 +81,8 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     serverClientId:
         GoogleAuthConfig.hasWebClientId ? GoogleAuthConfig.webClientId : null,
     clientId: switch (defaultTargetPlatform) {
-      TargetPlatform.iOS || TargetPlatform.macOS =>
+      TargetPlatform.iOS ||
+      TargetPlatform.macOS =>
         GoogleAuthConfig.hasIosClientId ? GoogleAuthConfig.iosClientId : null,
       _ => null,
     },
@@ -126,9 +128,8 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }
 
   Future<Map<String, dynamic>?> _lookupAccountByPhone(String phone) async {
-    final response = await _supabase
-        .rpc('lookup_account_by_phone', params: {'p_phone': phone})
-        .maybeSingle();
+    final response = await _supabase.rpc('lookup_account_by_phone',
+        params: {'p_phone': phone}).maybeSingle();
     return response;
   }
 
@@ -213,8 +214,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         'email': email.trim(),
         'phone': normalizedPhone,
         'phone_verified': true, // ← Phone was verified via Firebase OTP
-        'role':
-            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.databaseValue,
+        'role': selectedRole == UserRole.headDoctor
+            ? 'doctor'
+            : selectedRole.databaseValue,
         'approval_status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
@@ -310,8 +312,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         'email': session.user.email?.trim() ?? googleUser.email.trim(),
         'phone': normalizedPhone,
         'phone_verified': true,
-        'role':
-            selectedRole == UserRole.headDoctor ? 'doctor' : selectedRole.databaseValue,
+        'role': selectedRole == UserRole.headDoctor
+            ? 'doctor'
+            : selectedRole.databaseValue,
         'approval_status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
@@ -357,7 +360,8 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 
       final session = response.session ?? _supabase.auth.currentSession;
       if (session == null) {
-        throw Exception('Google was linked but the session could not be refreshed.');
+        throw Exception(
+            'Google was linked but the session could not be refreshed.');
       }
 
       return _resolveAuthUserState(session);
@@ -365,7 +369,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }
 
   Future<void> signOut() async {
-    try { ref.read(notificationProvider.notifier).clearAll(); } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
+    try {
+      ref.read(notificationProvider.notifier).clearAll();
+    } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
     await FcmService.instance.clearToken();
     await _googleSignIn.signOut();
 

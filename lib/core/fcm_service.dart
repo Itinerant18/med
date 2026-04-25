@@ -33,6 +33,9 @@ class FcmService {
   StreamSubscription<RemoteMessage>? _openedAppSub;
   StreamSubscription<String>? _tokenRefreshSub;
   bool _initialized = false;
+  bool _quietHoursEnabled = false;
+  int _quietStartHour = 22;
+  int _quietEndHour = 7;
 
   // ── Initialization ────────────────────────────────────────────────────────
 
@@ -158,6 +161,16 @@ class FcmService {
     _initialized = false;
   }
 
+  void configureQuietHours({
+    required bool enabled,
+    int startHour = 22,
+    int endHour = 7,
+  }) {
+    _quietHoursEnabled = enabled;
+    _quietStartHour = startHour.clamp(0, 23);
+    _quietEndHour = endHour.clamp(0, 23);
+  }
+
   // ── Send notifications (app-side) ─────────────────────────────────────────
 
   /// Sends a push notification to a specific doctor via the Supabase Edge Function.
@@ -250,20 +263,29 @@ class FcmService {
     debugPrint('[FCM Foreground] ${message.notification?.title}');
     final notification = message.notification;
     if (notification == null) return;
+    if (_isQuietHoursNow()) {
+      debugPrint(
+          '[FCM Foreground] Quiet hours active, suppressing local notification.');
+      return;
+    }
+
+    final category = message.data['category']?.toString() ??
+        _categoryForType(message.data['type']?.toString());
 
     _localPlugin.show(
       message.hashCode,
       notification.title,
       notification.body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           AppConfig.notificationChannelId,
           AppConfig.notificationChannelName,
           importance: Importance.max,
           priority: Priority.high,
-          largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+          groupKey: 'mediflow.$category',
+          largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -275,9 +297,29 @@ class FcmService {
   void _onMessageOpenedApp(RemoteMessage message) {
     debugPrint('[FCM Tap] ${message.data}');
     final type = message.data['type']?.toString();
-    final patientId = message.data['patientId']?.toString();
-    if (type == 'stale_patient' && patientId != null) {
+    final patientId = message.data['patientId']?.toString() ??
+        message.data['patient_id']?.toString();
+    if ((type == 'stale_patient' || type == 'patient_update') &&
+        patientId != null) {
       openPatientDetailFromNotification(patientId);
     }
+  }
+
+  bool _isQuietHoursNow() {
+    if (!_quietHoursEnabled) return false;
+    final hour = DateTime.now().hour;
+    if (_quietStartHour == _quietEndHour) return true;
+    if (_quietStartHour < _quietEndHour) {
+      return hour >= _quietStartHour && hour < _quietEndHour;
+    }
+    return hour >= _quietStartHour || hour < _quietEndHour;
+  }
+
+  String _categoryForType(String? type) {
+    if (type == null) return 'system';
+    if (type.contains('followup')) return 'followup';
+    if (type.contains('visit')) return 'visit';
+    if (type.contains('patient') || type.contains('status')) return 'patient';
+    return 'system';
   }
 }

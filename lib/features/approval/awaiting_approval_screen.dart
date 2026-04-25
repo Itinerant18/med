@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -20,7 +21,7 @@ class AwaitingApprovalScreen extends ConsumerWidget {
                 padding: EdgeInsets.all(32),
                 borderRadius: 100,
                 child: Icon(
-                  Icons.hourglass_empty_rounded,
+                  AppIcons.hourglass_empty_rounded,
                   size: 64,
                   color: AppTheme.primaryTeal,
                 ),
@@ -46,7 +47,8 @@ class AwaitingApprovalScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 48),
               NeuButton(
-                onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+                onPressed: () =>
+                    ref.read(authNotifierProvider.notifier).signOut(),
                 child: const Text(
                   'Sign Out',
                   style: TextStyle(color: Colors.white),

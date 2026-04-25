@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -22,7 +23,7 @@ class RejectedScreen extends ConsumerWidget {
                 padding: EdgeInsets.all(32),
                 borderRadius: 100,
                 child: Icon(
-                  Icons.error_outline_rounded,
+                  AppIcons.error_outline_rounded,
                   size: 64,
                   color: AppTheme.errorColor,
                 ),
@@ -38,7 +39,8 @@ class RejectedScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                reason ?? 'Your registration could not be approved at this time.',
+                reason ??
+                    'Your registration could not be approved at this time.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
@@ -48,7 +50,8 @@ class RejectedScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 48),
               NeuButton(
-                onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+                onPressed: () =>
+                    ref.read(authNotifierProvider.notifier).signOut(),
                 child: const Text(
                   'Back to Login',
                   style: TextStyle(color: Colors.white),

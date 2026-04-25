@@ -1,86 +1,129 @@
-// lib/core/theme.dart
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:mediflow/core/organic_tokens.dart';
 
 class AppTheme {
-  // ── Neumorphic Design Tokens ──
-  static const Color bgColor = Color(0xFFE8EDF2);
-  static const Color lightShadow = Colors.white;
-  static const Color darkShadow = Color(0xFFA3B1C6);
-  static const Color primaryTeal = Color(0xFF1A6B5A);
-  static const Color primaryTealLight = Color(0xFF2D9B87);
-  static const Color textColor = Color(0xFF2D3748);
-  static const Color textMuted = Color(0xFF718096);
-  static const Color errorColor = Color(0xFFE53E3E);
-  static const Color successColor = Color(0xFF38A169);
-  static const Color warningColor = Color(0xFFD69E2E);
-  static const Color infoColor = Color(0xFF3182CE);
-  static const Color cardBg = Color(0xFFF0F4F8);
+  // ── Organic Design Tokens ──
+  static const Color bgColor = Color(0xFFFDFCF8); // Rice Paper
+  static const Color foreground = Color(0xFF2C2C24); // Deep Loam
+  static const Color primaryTeal = Color(0xFF5D7052); // Moss Green
+  static const Color primaryTealLight = Color(0xFF7A9169); // Lighter Moss
+  static const Color primaryForeground = Color(0xFFF3F4F1); // Pale Mist
+  static const Color secondary = Color(0xFFC18C5D); // Terracotta
+  static const Color secondaryForeground = Color(0xFFFFFFFF);
+  static const Color accent = Color(0xFFE6DCCD); // Sand
+  static const Color accentForeground = Color(0xFF4A4A40); // Bark
+  static const Color textMuted = Color(0xFF78786C); // Dried Grass
+  static const Color textColor = Color(0xFF2C2C24); // Same as foreground
+  static const Color border = Color(0xFFDED8CF); // Raw Timber
+  static const Color errorColor = Color(0xFFA85448); // Burnt Sienna
+  static const Color successColor = Color(0xFF5D7052); // Moss
+  static const Color warningColor = Color(0xFFC18C5D); // Terracotta
+  static const Color infoColor = Color(0xFF7A9169); // Lighter Moss
+  static const Color cardBg = Color(0xFFFEFEFA); // Slightly warmer than page bg
+  static TextStyle headingFont({
+    double size = 24,
+    FontWeight weight = FontWeight.w700,
+    Color color = foreground,
+  }) =>
+      OrganicTokens.heading(size: size, weight: weight, color: color);
 
-  static ThemeData get neumorphicTheme {
+  static TextStyle bodyFont({
+    double size = 14,
+    FontWeight weight = FontWeight.w600,
+    Color color = foreground,
+  }) =>
+      OrganicTokens.body(size: size, weight: weight, color: color);
+
+  static const BoxShadow shadowSoft = OrganicTokens.shadowSoft;
+  static const BoxShadow shadowFloat = OrganicTokens.shadowFloat;
+  static const BoxShadow shadowHover = OrganicTokens.shadowHover;
+  static const double radiusStandard = OrganicTokens.radiusStandard;
+  static const double radiusLarge = OrganicTokens.radiusLarge;
+  static const double radiusPill = OrganicTokens.radiusPill;
+  static const List<BorderRadius> radiusOrganic = OrganicTokens.radiusOrganic;
+  static const Duration durationGentle = OrganicTokens.durationGentle;
+  static const Duration durationFloat = OrganicTokens.durationFloat;
+  static const Curve curveOrganic = OrganicTokens.curveOrganic;
+
+  static ThemeData get neumorphicTheme =>
+      organicTheme; // Backward compatibility
+
+  static ThemeData get organicTheme {
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: bgColor,
-      fontFamily: 'Poppins',
+      fontFamily: GoogleFonts.nunito().fontFamily,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryTeal,
         primary: primaryTeal,
+        onPrimary: primaryForeground,
+        secondary: secondary,
+        onSecondary: secondaryForeground,
         surface: bgColor,
+        onSurface: foreground,
         error: errorColor,
+        onError: Colors.white,
       ),
 
       // AppBar Theme
-      appBarTheme: const AppBarTheme(
-        backgroundColor: bgColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: textColor,
+        foregroundColor: foreground,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: textColor,
+        titleTextStyle: GoogleFonts.fraunces(
+          color: foreground,
           fontSize: 20,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.3,
         ),
-        iconTheme: IconThemeData(color: textColor),
+        iconTheme: const IconThemeData(color: foreground),
       ),
 
       // Card Theme
       cardTheme: CardThemeData(
-        color: bgColor,
+        color: cardBg,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0x80DED8CF), width: 1),
         ),
       ),
 
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: bgColor,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: const Color(0x80FFFFFF),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: border, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryTeal, width: 1.5),
+          borderRadius: BorderRadius.circular(100),
+          borderSide:
+              BorderSide(color: primaryTeal.withValues(alpha: 0.3), width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(100),
           borderSide: const BorderSide(color: errorColor, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(100),
           borderSide: const BorderSide(color: errorColor, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: textMuted, fontSize: 14),
-        hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.5), fontSize: 14),
+        labelStyle: const TextStyle(
+            color: textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+        hintStyle:
+            TextStyle(color: textMuted.withValues(alpha: 0.5), fontSize: 14),
         errorStyle: const TextStyle(color: errorColor, fontSize: 12),
       ),
 
@@ -88,15 +131,15 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryTeal,
-          foregroundColor: Colors.white,
+          foregroundColor: primaryForeground,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(100),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
           ),
         ),
@@ -107,7 +150,7 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryTeal,
           textStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
         ),
@@ -115,7 +158,7 @@ class AppTheme {
 
       // Divider Theme
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFD1D9E6),
+        color: border,
         thickness: 1,
         space: 1,
       ),
@@ -124,42 +167,59 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: bgColor,
         selectedColor: primaryTeal.withValues(alpha: 0.12),
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        side: const BorderSide(color: Color(0xFFD1D9E6)),
+        labelStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w600, color: foreground),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        side: const BorderSide(color: border),
       ),
 
       // NavigationBar Theme
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: bgColor,
+        backgroundColor: const Color(0xB3FFFFFF), // with opacity for blur
         elevation: 0,
-        indicatorColor: primaryTeal.withValues(alpha: 0.12),
+        indicatorColor: primaryTeal,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700, color: primaryTeal);
+                fontSize: 11, fontWeight: FontWeight.w700, color: primaryTeal);
           }
-          return const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: textMuted);
+          return const TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w600, color: textMuted);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: primaryTeal, size: 22);
+            return const IconThemeData(color: primaryForeground, size: 22);
           }
           return const IconThemeData(color: textMuted, size: 22);
         }),
+      ),
+
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: Colors.white.withValues(alpha: 0.72),
+        selectedItemColor: primaryTeal,
+        unselectedItemColor: textMuted,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedLabelStyle:
+            OrganicTokens.body(size: 11, weight: FontWeight.w800),
+        unselectedLabelStyle: OrganicTokens.body(
+          size: 11,
+          weight: FontWeight.w600,
+          color: textMuted,
+        ),
       ),
 
       // Switch Theme
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return primaryTeal;
-          return Colors.grey.shade400;
+          return const Color(0xFFDED8CF);
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return primaryTeal.withValues(alpha: 0.3);
           }
-          return Colors.grey.shade200;
+          return const Color(0xFFF0EBE5);
         }),
       ),
     );

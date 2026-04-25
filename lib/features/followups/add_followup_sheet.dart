@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/app_snackbar.dart';
@@ -76,8 +77,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
 
     final authState = ref.read(authNotifierProvider).valueOrNull;
     final isAdmin = ref.read(isAdminProvider);
-    final assignedTo =
-        isAdmin ? _selectedAgentId : authState?.session.user.id;
+    final assignedTo = isAdmin ? _selectedAgentId : authState?.session.user.id;
 
     if (assignedTo == null || assignedTo.isEmpty) {
       AppSnackbar.showError(context, 'Please select an agent');
@@ -195,17 +195,17 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               // ── Patient ──
               const SectionTitle(
                 title: 'Patient',
-                icon: Icons.person_search_rounded,
+                icon: AppIcons.person_search_rounded,
               ),
               GestureDetector(
                 onTap: _showPatientPicker,
                 child: NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       Icon(
-                        Icons.person_rounded,
+                        AppIcons.person_rounded,
                         color: _selectedPatientId == null
                             ? AppTheme.textMuted
                             : AppTheme.primaryTeal,
@@ -229,7 +229,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                         ),
                       ),
                       const Icon(
-                        Icons.arrow_drop_down_rounded,
+                        AppIcons.arrow_drop_down_rounded,
                         color: AppTheme.textMuted,
                       ),
                     ],
@@ -241,13 +241,13 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               // ── Assignment ──
               const SectionTitle(
                 title: 'Assignment',
-                icon: Icons.assignment_ind_outlined,
+                icon: AppIcons.assignment_ind_outlined,
               ),
               if (isAdmin)
                 agentsAsync.when(
                   data: (agents) => NeuCard(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedAgentId,
                       decoration: const InputDecoration(
@@ -268,15 +268,14 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                   ),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (error, _) =>
-                      Text('Error loading assistants: $error'),
+                  error: (error, _) => Text('Error loading assistants: $error'),
                 )
               else
                 NeuCard(
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.person_outline_rounded,
+                        AppIcons.person_outline_rounded,
                         color: AppTheme.primaryTeal,
                       ),
                       const SizedBox(width: 10),
@@ -298,7 +297,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               // ── Task Details ──
               const SectionTitle(
                 title: 'Task Details',
-                icon: Icons.add_task_rounded,
+                icon: AppIcons.add_task_rounded,
               ),
               NeuTextField(
                 controller: _titleCtrl,
@@ -309,12 +308,12 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               GestureDetector(
                 onTap: _pickDueDate,
                 child: NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.calendar_today_rounded,
+                        AppIcons.calendar_today_rounded,
                         color: AppTheme.primaryTeal,
                         size: 20,
                       ),
@@ -390,7 +389,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.info_outline_rounded,
+                    Icon(AppIcons.info_outline_rounded,
                         color: AppTheme.primaryTeal, size: 18),
                     SizedBox(width: 10),
                     Expanded(
@@ -448,12 +447,12 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               GestureDetector(
                 onTap: _pickScheduledDate,
                 child: NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.event_rounded,
+                        AppIcons.event_rounded,
                         color: AppTheme.primaryTeal,
                         size: 20,
                       ),
@@ -476,10 +475,10 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                       ),
                       if (_scheduledVisitDate != null)
                         IconButton(
-                          icon: const Icon(Icons.clear_rounded,
+                          icon: const Icon(AppIcons.clear_rounded,
                               size: 18, color: AppTheme.textMuted),
-                          onPressed: () => setState(
-                              () => _scheduledVisitDate = null),
+                          onPressed: () =>
+                              setState(() => _scheduledVisitDate = null),
                         ),
                     ],
                   ),
@@ -591,7 +590,7 @@ class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
           const SizedBox(height: 16),
           NeuTextField(
             label: 'Search Patient',
-            prefixIcon: const Icon(Icons.search),
+            prefixIcon: const Icon(AppIcons.search),
             onChanged: (value) => setState(() => _query = value),
           ),
           const SizedBox(height: 16),

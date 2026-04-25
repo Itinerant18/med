@@ -1,5 +1,6 @@
 // lib/features/clinical/clinical_entry_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,7 +9,8 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/features/clinical/clinical_provider.dart';
-import 'package:mediflow/features/patients/patient_provider.dart'; import 'package:mediflow/core/parse_utils.dart';
+import 'package:mediflow/features/patients/patient_provider.dart';
+import 'package:mediflow/core/parse_utils.dart';
 
 class ClinicalEntryScreen extends ConsumerStatefulWidget {
   final String? patientId;
@@ -114,7 +116,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         setState(() {
           _selectedPatientName = patient['full_name'];
           if (patient['date_of_birth'] != null) {
-            final dob = parseDbDate(patient['date_of_birth']); if (dob == null) return;
+            final dob = parseDbDate(patient['date_of_birth']);
+            if (dob == null) return;
             _selectedPatientAge = (DateTime.now().year - dob.year).toString();
           }
         });
@@ -304,7 +307,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 color: AppTheme.primaryTeal.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person_rounded,
+              child: const Icon(AppIcons.person_rounded,
                   color: AppTheme.primaryTeal, size: 22),
             ),
             const SizedBox(width: 14),
@@ -327,7 +330,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
             ),
             if (widget.patientId == null)
               IconButton(
-                icon: const Icon(Icons.close_rounded,
+                icon: const Icon(AppIcons.close_rounded,
                     color: Colors.red, size: 20),
                 onPressed: () => setState(() {
                   _selectedPatientId = null;
@@ -349,7 +352,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           controller: _searchController,
           label: 'Search Patient',
           hint: 'Type at least 2 characters...',
-          prefixIcon: const Icon(Icons.search_rounded,
+          prefixIcon: const Icon(AppIcons.search_rounded,
               color: AppTheme.primaryTeal, size: 18),
           onChanged: (val) =>
               ref.read(patientSearchQueryProvider.notifier).state = val,
@@ -388,7 +391,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                       leading: const CircleAvatar(
                         radius: 16,
                         backgroundColor: AppTheme.primaryTeal,
-                        child: Icon(Icons.person_rounded,
+                        child: Icon(AppIcons.person_rounded,
                             size: 16, color: Colors.white),
                       ),
                       title: Text(p['full_name'],
@@ -415,8 +418,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           loading: () => const Padding(
             padding: EdgeInsets.only(top: 8),
             child: LinearProgressIndicator(
-                color: AppTheme.primaryTeal,
-                backgroundColor: AppTheme.bgColor),
+                color: AppTheme.primaryTeal, backgroundColor: AppTheme.bgColor),
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),
@@ -430,7 +432,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle(
-              title: 'Visit Details', icon: Icons.calendar_today_rounded),
+              title: 'Visit Details', icon: AppIcons.calendar_today_rounded),
           DropdownButtonFormField<String>(
             initialValue: _visitType,
             decoration: const InputDecoration(labelText: 'Visit Type'),
@@ -488,7 +490,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle(
-              title: 'Vitals', icon: Icons.monitor_heart_rounded),
+              title: 'Vitals', icon: AppIcons.monitor_heart_rounded),
           Row(
             children: [
               Expanded(
@@ -566,7 +568,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle(
-              title: 'Operational Tracking', icon: Icons.track_changes_rounded),
+              title: 'Operational Tracking',
+              icon: AppIcons.track_changes_rounded),
           _buildSwitchRow(
             label: 'Tests Performed',
             value: _testsPerformed,
@@ -602,7 +605,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle(
-              title: 'Clinical Notes', icon: Icons.note_alt_rounded),
+              title: 'Clinical Notes', icon: AppIcons.note_alt_rounded),
           NeuTextField(
             controller: _diagnosisController,
             label: 'Final Diagnosis',

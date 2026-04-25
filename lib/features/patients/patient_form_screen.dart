@@ -1,5 +1,6 @@
 // lib/features/patients/patient_form_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -252,7 +253,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                 child: Column(
                   children: [
                     _buildSection(
-                        'Personal Details', Icons.person_outline_rounded, [
+                        'Personal Details', AppIcons.person_outline_rounded, [
                       _textField(_nameController, 'Full Name *',
                           required: true, capitalize: TextCapitalization.words),
                       _datePicker(),
@@ -279,7 +280,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     ]),
                     const SizedBox(height: 16),
 
-                    _buildSection('Address', Icons.location_on_outlined, [
+                    _buildSection('Address', AppIcons.location_on_outlined, [
                       _textField(_addressController, 'Residential Address *',
                           required: true, multiLine: true),
                       _textField(_cityController, 'City *',
@@ -299,7 +300,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     const SizedBox(height: 16),
 
                     _buildSection(
-                        'Emergency Contact', Icons.emergency_outlined, [
+                        'Emergency Contact', AppIcons.emergency_outlined, [
                       _textField(_emergencyNameController, 'Contact Name *',
                           required: true, capitalize: TextCapitalization.words),
                       _dropdown(
@@ -323,7 +324,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     const SizedBox(height: 16),
 
                     _buildSection('Health & Insurance',
-                        Icons.health_and_safety_outlined, [
+                        AppIcons.health_and_safety_outlined, [
                       _dropdown(
                           'Health Scheme',
                           ['insurance', 'cash', 'sastho_sathi', 'other'],
@@ -339,7 +340,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     const SizedBox(height: 16),
 
                     _buildSection('Medical Information',
-                        Icons.medical_information_outlined, [
+                        AppIcons.medical_information_outlined, [
                       _dropdown(
                           'Chief Complaint',
                           [
@@ -377,7 +378,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                     ]),
                     const SizedBox(height: 16),
 
-                    _buildSection('Flags & Notes', Icons.flag_outlined, [
+                    _buildSection('Flags & Notes', AppIcons.flag_outlined, [
                       _priorityToggle(),
                       _textField(_commentsController, 'Staff Comments',
                           multiLine: true, hint: 'Any additional notes...'),
@@ -392,7 +393,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                           children: [
                             const SectionTitle(
                                 title: 'Patient Consent',
-                                icon: Icons.verified_user_outlined),
+                                icon: AppIcons.verified_user_outlined),
                             _consentCheckbox(
                               value: _consentDataStorage,
                               label:
@@ -549,7 +550,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_rounded,
+            const Icon(AppIcons.calendar_today_rounded,
                 color: AppTheme.primaryTeal, size: 18),
             const SizedBox(width: 12),
             Expanded(
@@ -575,7 +576,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded,
+            const Icon(AppIcons.arrow_forward_ios_rounded,
                 size: 14, color: AppTheme.textMuted),
           ],
         ),
@@ -600,7 +601,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
       child: Row(
         children: [
           Icon(
-            Icons.priority_high_rounded,
+            AppIcons.priority_high_rounded,
             color: _isHighPriority ? Colors.red : AppTheme.textMuted,
             size: 20,
           ),

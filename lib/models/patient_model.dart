@@ -38,16 +38,18 @@ class PatientModel {
             ? rawDate
             : null;
 
-    final rawStatus = (map['service_status'] ?? map['status'] ?? 'Test Pending')
-        .toString();
+    final rawStatus =
+        (map['service_status'] ?? map['status'] ?? 'Test Pending').toString();
     final normalizedStatus = _normalizeServiceStatus(rawStatus);
 
     return PatientModel(
       id: (map['id'] ?? '').toString(),
-      fullName: (map['full_name'] ?? map['name'] ?? 'Unknown Patient').toString(),
+      fullName:
+          (map['full_name'] ?? map['name'] ?? 'Unknown Patient').toString(),
       lastVisitDate: parsedDate,
       serviceStatus: normalizedStatus,
-      isHighPriority: (map['is_priority'] ?? map['high_priority'] ?? false) == true,
+      isHighPriority:
+          (map['is_priority'] ?? map['high_priority'] ?? false) == true,
       lastUpdatedBy:
           (map['last_updated_by'] ?? map['updated_by_name'])?.toString(),
       visitType: (map['visit_type'])?.toString(),

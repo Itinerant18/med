@@ -1,5 +1,6 @@
 // lib/features/agent_visits/agent_outside_visit_list_screen.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -25,7 +26,7 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(AppIcons.refresh_rounded),
             onPressed: () =>
                 ref.read(agentOutsideVisitsProvider.notifier).refresh(),
           ),
@@ -46,7 +47,7 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded,
+                const Icon(AppIcons.error_outline_rounded,
                     color: AppTheme.errorColor, size: 32),
                 const SizedBox(height: 12),
                 Text(
@@ -63,7 +64,7 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.local_hospital_outlined,
+                  Icon(AppIcons.local_hospital_outlined,
                       size: 64, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
                   const Text(
@@ -105,7 +106,7 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
             ref.read(agentOutsideVisitsProvider.notifier).refresh();
           }
         },
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        icon: const Icon(AppIcons.add_rounded, color: Colors.white),
         label: const Text(
           'Record Visit',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -136,7 +137,7 @@ class _VisitCard extends StatelessWidget {
                     color: AppTheme.primaryTeal.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.person_rounded,
+                  child: const Icon(AppIcons.person_rounded,
                       color: AppTheme.primaryTeal, size: 22),
                 ),
                 const SizedBox(width: 12),
@@ -162,8 +163,8 @@ class _VisitCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppTheme.successColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -184,7 +185,7 @@ class _VisitCard extends StatelessWidget {
             const Divider(height: 20),
             Row(
               children: [
-                const Icon(Icons.local_hospital_outlined,
+                const Icon(AppIcons.local_hospital_outlined,
                     size: 15, color: AppTheme.textMuted),
                 const SizedBox(width: 6),
                 Expanded(
@@ -210,8 +211,7 @@ class _VisitCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 'Dx: ${visit.diagnosis}',
-                style: const TextStyle(
-                    fontSize: 12, color: AppTheme.textMuted),
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

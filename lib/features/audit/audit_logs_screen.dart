@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -73,12 +74,12 @@ class _AuditLogsScreenState extends ConsumerState<AuditLogsScreen> {
           IconButton(
             tooltip: 'Filter',
             onPressed: _showAdvancedFilters,
-            icon: const Icon(Icons.filter_list_rounded),
+            icon: const Icon(AppIcons.filter_list_rounded),
           ),
           IconButton(
             tooltip: 'Refresh',
             onPressed: _refresh,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(AppIcons.refresh_rounded),
           ),
         ],
       ),
@@ -271,7 +272,7 @@ class _AuditErrorView extends StatelessWidget {
           child: Column(
             children: [
               const Icon(
-                Icons.error_outline_rounded,
+                AppIcons.error_outline_rounded,
                 size: 32,
                 color: AppTheme.errorColor,
               ),
@@ -581,7 +582,7 @@ class _AuditDetailSheet extends StatelessWidget {
                         const SizedBox(height: 20),
                         const SectionTitle(
                           title: 'Changed Fields',
-                          icon: Icons.compare_arrows_rounded,
+                          icon: AppIcons.compare_arrows_rounded,
                         ),
                         _DiffView(
                           oldData: entry.oldData!,
@@ -593,7 +594,7 @@ class _AuditDetailSheet extends StatelessWidget {
                         const SizedBox(height: 20),
                         const SectionTitle(
                           title: 'Payload',
-                          icon: Icons.data_object_rounded,
+                          icon: AppIcons.data_object_rounded,
                         ),
                         _PayloadCard(
                           data: entry.newData ?? entry.oldData!,
@@ -850,7 +851,7 @@ class _AuditFilterSheetState extends ConsumerState<_AuditFilterSheet> {
                 const SizedBox(height: 20),
                 const SectionTitle(
                   title: 'Advanced Filters',
-                  icon: Icons.filter_alt_outlined,
+                  icon: AppIcons.filter_alt_outlined,
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: _selectedTable,
@@ -1057,7 +1058,7 @@ class _NoAccessCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.lock_outline_rounded,
+              AppIcons.lock_outline_rounded,
               size: 32,
               color: AppTheme.textMuted,
             ),
@@ -1095,7 +1096,7 @@ class _EmptyAuditView extends StatelessWidget {
       child: Column(
         children: [
           Icon(
-            Icons.history_toggle_off_rounded,
+            AppIcons.history_toggle_off_rounded,
             size: 44,
             color: AppTheme.textMuted,
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
@@ -56,7 +57,7 @@ class _PendingApprovalsScreenState
                           CircleAvatar(
                             backgroundColor:
                                 AppTheme.primaryTeal.withValues(alpha: 0.1),
-                            child: const Icon(Icons.person,
+                            child: const Icon(AppIcons.person,
                                 color: AppTheme.primaryTeal),
                           ),
                           const SizedBox(width: 12),

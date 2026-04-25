@@ -1,5 +1,6 @@
 // lib/features/profile/change_password_sheet.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
@@ -44,7 +45,8 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
     final newPassword = _newCtrl.text;
     final confirm = _confirmCtrl.text;
     if (newPassword != confirm) {
-      AppSnackbar.showError(context, 'New password and confirmation do not match.');
+      AppSnackbar.showError(
+          context, 'New password and confirmation do not match.');
       return;
     }
 
@@ -117,8 +119,8 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                 obscureText: _obscureCurrent,
                 suffixIcon: IconButton(
                   icon: Icon(_obscureCurrent
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined),
+                      ? AppIcons.visibility_outlined
+                      : AppIcons.visibility_off_outlined),
                   onPressed: () =>
                       setState(() => _obscureCurrent = !_obscureCurrent),
                 ),
@@ -132,8 +134,8 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                 obscureText: _obscureNew,
                 suffixIcon: IconButton(
                   icon: Icon(_obscureNew
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined),
+                      ? AppIcons.visibility_outlined
+                      : AppIcons.visibility_off_outlined),
                   onPressed: () => setState(() => _obscureNew = !_obscureNew),
                 ),
                 validator: _passwordValidator,
@@ -144,7 +146,9 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                 label: 'Confirm new password',
                 obscureText: _obscureNew,
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Confirm your new password';
+                  if (v == null || v.isEmpty) {
+                    return 'Confirm your new password';
+                  }
                   if (v != _newCtrl.text) return 'Passwords do not match';
                   return null;
                 },

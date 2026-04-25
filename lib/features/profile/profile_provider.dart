@@ -14,11 +14,8 @@ class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
 
     // Use maybeSingle() instead of single() to avoid throwing
     // when no doctor row exists yet
-    final existing = await supabase
-        .from('doctors')
-        .select()
-        .eq('id', user.id)
-        .maybeSingle();
+    final existing =
+        await supabase.from('doctors').select().eq('id', user.id).maybeSingle();
 
     if (existing != null) {
       return Map<String, dynamic>.from(existing);
@@ -55,7 +52,8 @@ class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
           .select()
           .eq('id', user.id)
           .maybeSingle();
-      if (updated == null) throw Exception('Profile row missing after update.'); return Map<String, dynamic>.from(updated);
+      if (updated == null) throw Exception('Profile row missing after update.');
+      return Map<String, dynamic>.from(updated);
     });
   }
 }
@@ -84,10 +82,8 @@ final profileStatsProvider =
 
   final supabase = ref.watch(supabaseClientProvider);
 
-  final visitsRes = await supabase
-      .from('visits')
-      .select('id')
-      .eq('doctor_id', user.id);
+  final visitsRes =
+      await supabase.from('visits').select('id').eq('doctor_id', user.id);
 
   final patientsRes = await supabase
       .from('patients')

@@ -1,8 +1,9 @@
-// lib/core/auth_gate.dart
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/core/neu_widgets.dart';
 import '../features/auth/login_screen.dart';
 import '../features/dashboard/main_screen.dart';
 import '../features/auth/auth_provider.dart';
@@ -48,7 +49,8 @@ class AuthGate extends ConsumerWidget {
 
           final doctorName = userState.doctorName ?? 'Staff';
 
-          final container = ProviderScope.containerOf(context, listen: false); /* capture up-front */
+          final container = ProviderScope.containerOf(context,
+              listen: false); /* capture up-front */
           WidgetsBinding.instance.addPostFrameCallback((_) {
             try {
               RealtimeService.instance
@@ -56,7 +58,10 @@ class AuthGate extends ConsumerWidget {
               if (userState.isHeadDoctor) {
                 container
                     .read(pendingApprovalsProvider.notifier)
-                    .listenForNewRegistrations(); container.read(pendingApprovalsProvider.notifier).listenForChanges();
+                    .listenForNewRegistrations();
+                container
+                    .read(pendingApprovalsProvider.notifier)
+                    .listenForChanges();
               }
             } catch (e) {
               debugPrint('RealtimeService error: $e');
@@ -81,17 +86,19 @@ class _SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: AppTheme.bgColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _AnimatedLogo(),
-            SizedBox(height: 24),
-            CircularProgressIndicator(
-              color: AppTheme.primaryTeal,
-              strokeWidth: 2.5,
-            ),
-          ],
+      body: OrganicBackground(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _AnimatedLogo(),
+              SizedBox(height: 32),
+              CircularProgressIndicator(
+                color: AppTheme.primaryTeal,
+                strokeWidth: 2.5,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -115,7 +122,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -133,11 +140,16 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        width: 72,
-        height: 72,
+        width: 80,
+        height: 80,
         decoration: BoxDecoration(
           color: AppTheme.primaryTeal,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(40),
+          ),
           boxShadow: [
             BoxShadow(
               color: AppTheme.primaryTeal.withValues(alpha: 0.3),
@@ -147,8 +159,8 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
           ],
         ),
         child: const Icon(
-          Icons.local_hospital_rounded,
-          color: Colors.white,
+          AppIcons.local_hospital_rounded,
+          color: AppTheme.primaryForeground,
           size: 40,
         ),
       ),

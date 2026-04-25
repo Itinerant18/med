@@ -27,6 +27,8 @@ dependencies:
   google_sign_in: ^6.2.1
   http: ^1.2.0 # for Edge Function calls
   fl_chart: ^0.69.0
+  google_fonts: ^6.2.1
+  font_awesome_flutter: ^10.7.0
 
 dev_dependencies:
   flutter_test:

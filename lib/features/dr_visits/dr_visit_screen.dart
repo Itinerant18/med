@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -55,8 +56,8 @@ class DrVisitScreen extends ConsumerWidget {
                 else
                   for (final dateStr in sortedDates) ...[
                     Padding(
-                      padding: const EdgeInsets.only(
-                          left: 8, bottom: 12, top: 8),
+                      padding:
+                          const EdgeInsets.only(left: 8, bottom: 12, top: 8),
                       child: Text(
                         _getFormattedDate(DateTime.parse(dateStr))
                             .toUpperCase(),
@@ -99,7 +100,7 @@ class DrVisitScreen extends ConsumerWidget {
                     builder: (_) => const AddFollowupSheet(),
                   ),
                   child: const Icon(
-                    Icons.add_task_rounded,
+                    AppIcons.add_task_rounded,
                     color: Colors.white,
                   ),
                 ),
@@ -108,7 +109,7 @@ class DrVisitScreen extends ConsumerWidget {
                   heroTag: 'new-dr-visit',
                   backgroundColor: AppTheme.primaryTeal,
                   onPressed: () => context.push('/dr-visits/new'),
-                  icon: const Icon(Icons.add_rounded, color: Colors.white),
+                  icon: const Icon(AppIcons.add_rounded, color: Colors.white),
                   label: const Text(
                     'New Visit',
                     style: TextStyle(
@@ -140,7 +141,7 @@ class DrVisitScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.health_and_safety_rounded,
+          Icon(AppIcons.health_and_safety_rounded,
               size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           const Text(
@@ -186,7 +187,7 @@ class _VisitCard extends StatelessWidget {
                   CircleAvatar(
                     backgroundColor:
                         AppTheme.primaryTeal.withValues(alpha: 0.1),
-                    child: const Icon(Icons.person_rounded,
+                    child: const Icon(AppIcons.person_rounded,
                         color: AppTheme.primaryTeal, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -218,7 +219,7 @@ class _VisitCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.assignment_ind_outlined,
+                    const Icon(AppIcons.assignment_ind_outlined,
                         size: 14, color: AppTheme.textMuted),
                     const SizedBox(width: 4),
                     Text(
@@ -326,7 +327,7 @@ class _AgentVisitSummaryCard extends StatelessWidget {
                 color: const Color(0xFF3182CE).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.local_hospital_outlined,
+              child: const Icon(AppIcons.local_hospital_outlined,
                   color: Color(0xFF3182CE), size: 20),
             ),
             const SizedBox(width: 12),
@@ -387,7 +388,7 @@ class _PendingReviewsBanner extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.fact_check_outlined,
+              const Icon(AppIcons.fact_check_outlined,
                   color: AppTheme.warningColor),
               const SizedBox(width: 10),
               Expanded(
@@ -412,7 +413,7 @@ class _PendingReviewsBanner extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
+              const Icon(AppIcons.chevron_right_rounded,
                   color: AppTheme.warningColor),
             ],
           ),
@@ -421,4 +422,3 @@ class _PendingReviewsBanner extends ConsumerWidget {
     );
   }
 }
-

@@ -67,11 +67,8 @@ class PatientService {
 
     Map<String, dynamic>? existing;
     try {
-      existing = await _supabase
-          .from('patients')
-          .select()
-          .eq('id', id)
-          .maybeSingle();
+      existing =
+          await _supabase.from('patients').select().eq('id', id).maybeSingle();
     } catch (e) {
       throw Exception('Unable to load patient: $e');
     }
@@ -130,11 +127,8 @@ class PatientService {
 
     Map<String, dynamic>? existing;
     try {
-      existing = await _supabase
-          .from('patients')
-          .select()
-          .eq('id', id)
-          .maybeSingle();
+      existing =
+          await _supabase.from('patients').select().eq('id', id).maybeSingle();
     } catch (e) {
       throw Exception('Unable to load patient: $e');
     }
@@ -190,9 +184,8 @@ class PatientService {
       final listed =
           await _supabase.storage.from('patient-docs').list(path: patientId);
       if (listed.isNotEmpty) {
-        final toRemove = listed
-            .map((e) => '$patientId/${e.name}')
-            .toList(growable: false);
+        final toRemove =
+            listed.map((e) => '$patientId/${e.name}').toList(growable: false);
         await _supabase.storage.from('patient-docs').remove(toRemove);
       }
     } catch (e) {

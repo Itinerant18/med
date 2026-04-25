@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -70,9 +71,8 @@ class FollowupTaskWidget extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: isOverdue
-                          ? AppTheme.errorColor
-                          : AppTheme.textMuted,
+                      color:
+                          isOverdue ? AppTheme.errorColor : AppTheme.textMuted,
                     ),
                   ),
                 ],
@@ -121,7 +121,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.event_rounded,
+                    const Icon(AppIcons.event_rounded,
                         size: 14, color: AppTheme.primaryTeal),
                     const SizedBox(width: 6),
                     Text(
@@ -154,7 +154,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.assignment_outlined,
+                      const Icon(AppIcons.assignment_outlined,
                           size: 14, color: AppTheme.warningColor),
                       const SizedBox(width: 8),
                       Expanded(
@@ -200,7 +200,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.verified_outlined,
+                      const Icon(AppIcons.verified_outlined,
                           size: 14, color: AppTheme.successColor),
                       const SizedBox(width: 8),
                       Expanded(
@@ -240,7 +240,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _ActionButton(
-                        icon: Icons.local_hospital_outlined,
+                        icon: AppIcons.local_hospital_outlined,
                         label: 'Record Visit',
                         background: const Color(0xFF3182CE),
                         onTap: () =>
@@ -250,7 +250,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _ActionButton(
-                        icon: Icons.check_rounded,
+                        icon: AppIcons.check_rounded,
                         label: 'Mark Done',
                         background: AppTheme.successColor,
                         onTap: () => _openMarkDoneSheet(context, ref),
@@ -366,7 +366,7 @@ class _TargetDoctorBlock extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.local_hospital_rounded,
+          const Icon(AppIcons.local_hospital_rounded,
               size: 16, color: AppTheme.primaryTeal),
           const SizedBox(width: 8),
           Expanded(

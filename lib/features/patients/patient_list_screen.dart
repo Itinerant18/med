@@ -1,12 +1,15 @@
 // lib/features/patients/patient_list_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/role_provider.dart';
-import 'package:mediflow/features/patients/patient_list_provider.dart'; import 'package:mediflow/features/patients/patient_permissions.dart'; import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/features/patients/patient_permissions.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class PatientListScreen extends ConsumerStatefulWidget {
@@ -114,7 +117,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
     final filter = _buildFilter();
     final patientsAsync = ref.watch(roleAwarePatientsProvider(filter));
     final totalAsync = ref.watch(patientTotalCountProvider);
-    final isAdmin = ref.watch(isAdminProvider); final authState = ref.watch(authNotifierProvider).value;
+    final isAdmin = ref.watch(isAdminProvider);
+    final authState = ref.watch(authNotifierProvider).value;
 
     final totalCount = totalAsync.value ?? 0;
     final shownCount = patientsAsync.value?.length ?? 0;
@@ -129,22 +133,23 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         actions: [
           // Sort button
           PopupMenuButton<SortOption>(
-            icon: const Icon(Icons.sort_rounded, color: AppTheme.primaryTeal),
+            icon:
+                const Icon(AppIcons.sort_rounded, color: AppTheme.primaryTeal),
             tooltip: 'Sort',
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onSelected: (value) => setState(() => _sortOption = value),
             itemBuilder: (context) => [
               _sortItem(SortOption.mostRecentVisit, 'Most Recent',
-                  Icons.access_time_rounded),
-              _sortItem(
-                  SortOption.nameAsc, 'Name A→Z', Icons.sort_by_alpha_rounded),
-              _sortItem(
-                  SortOption.nameDesc, 'Name Z→A', Icons.sort_by_alpha_rounded),
+                  AppIcons.access_time_rounded),
+              _sortItem(SortOption.nameAsc, 'Name A→Z',
+                  AppIcons.sort_by_alpha_rounded),
+              _sortItem(SortOption.nameDesc, 'Name Z→A',
+                  AppIcons.sort_by_alpha_rounded),
               _sortItem(SortOption.highPriorityFirst, 'High Priority First',
-                  Icons.priority_high_rounded),
+                  AppIcons.priority_high_rounded),
               _sortItem(SortOption.newestRegistered, 'Newest Registered',
-                  Icons.person_add_rounded),
+                  AppIcons.person_add_rounded),
             ],
           ),
         ],
@@ -181,11 +186,11 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                         hintText: 'Search by name, phone, symptoms...',
                         hintStyle: const TextStyle(
                             fontSize: 13, color: AppTheme.textMuted),
-                        prefixIcon: const Icon(Icons.search_rounded,
+                        prefixIcon: const Icon(AppIcons.search_rounded,
                             color: AppTheme.primaryTeal, size: 20),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.clear_rounded,
+                                icon: const Icon(AppIcons.clear_rounded,
                                     size: 18, color: AppTheme.textMuted),
                                 onPressed: () {
                                   _searchController.clear();
@@ -227,7 +232,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                       ],
                     ),
                     child: Icon(
-                      Icons.tune_rounded,
+                      AppIcons.tune_rounded,
                       color: _hasActiveFilters
                           ? Colors.white
                           : AppTheme.primaryTeal,
@@ -298,7 +303,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                     itemBuilder: (context, index) => _PatientCard(
                       patient: patients[index],
                       searchQuery: _searchQuery,
-                      isAdmin: isAdmin, authState: authState,
+                      isAdmin: isAdmin,
+                      authState: authState,
                     ),
                   ),
                 );
@@ -307,16 +313,18 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           ),
         ],
       ),
-      floatingActionButton: !PatientPermissions.canCreatePatient(authState) ? null : FloatingActionButton.extended(
-        heroTag: 'patient-list-new-patient',
-        backgroundColor: AppTheme.primaryTeal,
-        foregroundColor: Colors.white,
-        onPressed: () => _openPatientForm('/patients/new'),
-        icon: const Icon(Icons.person_add_rounded, size: 20),
-        label: const Text('New Patient',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        elevation: 4,
-      ),
+      floatingActionButton: !PatientPermissions.canCreatePatient(authState)
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'patient-list-new-patient',
+              backgroundColor: AppTheme.primaryTeal,
+              foregroundColor: Colors.white,
+              onPressed: () => _openPatientForm('/patients/new'),
+              icon: const Icon(AppIcons.person_add_rounded, size: 20),
+              label: const Text('New Patient',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              elevation: 4,
+            ),
     );
   }
 
@@ -341,7 +349,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           ),
           if (isSelected) ...[
             const Spacer(),
-            const Icon(Icons.check_rounded,
+            const Icon(AppIcons.check_rounded,
                 size: 16, color: AppTheme.primaryTeal),
           ],
         ],
@@ -369,7 +377,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded,
+              const Icon(AppIcons.error_outline_rounded,
                   size: 48, color: AppTheme.textMuted),
               const SizedBox(height: 12),
               const Text('Failed to load patients',
@@ -394,7 +402,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.person_search_rounded,
+          Icon(AppIcons.person_search_rounded,
               size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
@@ -435,12 +443,14 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
 class _PatientCard extends StatelessWidget {
   final Map<String, dynamic> patient;
   final String searchQuery;
-  final bool isAdmin; final AuthUserState? authState;
+  final bool isAdmin;
+  final AuthUserState? authState;
 
   const _PatientCard({
     required this.patient,
     required this.searchQuery,
-    required this.isAdmin, required this.authState,
+    required this.isAdmin,
+    required this.authState,
   });
 
   @override
@@ -501,8 +511,8 @@ class _PatientCard extends StatelessWidget {
                       ),
                       child: Icon(
                         isHighPriority
-                            ? Icons.priority_high_rounded
-                            : Icons.person_rounded,
+                            ? AppIcons.priority_high_rounded
+                            : AppIcons.person_rounded,
                         color:
                             isHighPriority ? Colors.red : AppTheme.primaryTeal,
                         size: 22,
@@ -560,17 +570,19 @@ class _PatientCard extends StatelessWidget {
                       ),
                     ),
                     // Edit button
-                    if (PatientPermissions.canEditPatient(authState, patient)) IconButton(
-                      icon: const Icon(Icons.edit_outlined,
-                          size: 18, color: AppTheme.primaryTeal),
-                      onPressed: () => context
-                          .findAncestorStateOfType<_PatientListScreenState>()
-                          ?._openPatientForm('/patients/edit/${patient['id']}'),
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints(minWidth: 36, minHeight: 36),
-                      tooltip: 'Edit',
-                    ),
+                    if (PatientPermissions.canEditPatient(authState, patient))
+                      IconButton(
+                        icon: const Icon(AppIcons.edit_outlined,
+                            size: 18, color: AppTheme.primaryTeal),
+                        onPressed: () => context
+                            .findAncestorStateOfType<_PatientListScreenState>()
+                            ?._openPatientForm(
+                                '/patients/edit/${patient['id']}'),
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 36, minHeight: 36),
+                        tooltip: 'Edit',
+                      ),
                   ],
                 ),
               ),
@@ -590,8 +602,8 @@ class _PatientCard extends StatelessWidget {
                       children: [
                         Icon(
                           isAdmin && lastUpdatedBy.isNotEmpty
-                              ? Icons.person_outline_rounded
-                              : Icons.access_time_rounded,
+                              ? AppIcons.person_outline_rounded
+                              : AppIcons.access_time_rounded,
                           size: 12,
                           color: Colors.grey.shade400,
                         ),
@@ -616,7 +628,12 @@ class _PatientCard extends StatelessWidget {
   }
 }
 
-String _shortId(dynamic id) { final s = (id ?? '').toString(); return s.length <= 8 ? s : s.substring(0, 8); } class _SchemeBadge extends StatelessWidget {
+String _shortId(dynamic id) {
+  final s = (id ?? '').toString();
+  return s.length <= 8 ? s : s.substring(0, 8);
+}
+
+class _SchemeBadge extends StatelessWidget {
   final String scheme;
   const _SchemeBadge({required this.scheme});
 
