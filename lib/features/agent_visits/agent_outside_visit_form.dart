@@ -13,16 +13,31 @@ import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
 
 class AgentOutsideVisitForm extends ConsumerStatefulWidget {
-  /// Optional: pre-link to an existing followup task.
+  /// Optional: pre-link to an existing followup task. When set, the
+  /// form pre-fills external doctor info and shows the doctor's
+  /// instructions banner so the assistant has context up front.
   final String? followupTaskId;
   final String? preselectedPatientId;
   final String? preselectedPatientName;
+
+  // Doctor-supplied target external doctor info (typically passed via
+  // GoRouter `extra` from the FollowupTaskWidget's "Record Visit" button).
+  final String? prefillExtDoctorName;
+  final String? prefillExtDoctorHospital;
+  final String? prefillExtDoctorSpecialization;
+  final String? prefillExtDoctorPhone;
+  final String? prefillVisitInstructions;
 
   const AgentOutsideVisitForm({
     super.key,
     this.followupTaskId,
     this.preselectedPatientId,
     this.preselectedPatientName,
+    this.prefillExtDoctorName,
+    this.prefillExtDoctorHospital,
+    this.prefillExtDoctorSpecialization,
+    this.prefillExtDoctorPhone,
+    this.prefillVisitInstructions,
   });
 
   @override
@@ -49,11 +64,69 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   final _visitNotesCtrl = TextEditingController();
   DateTime? _nextFollowupDate;
 
+  // Resolved instructions to show on the info banner. Comes from one of:
+  //   1. widget.prefillVisitInstructions (passed via router `extra`)
+  //   2. fetched task on init (followupTaskByIdProvider)
+  String? _instructionsForBanner;
+  bool _instructionsLoading = false;
+
   @override
   void initState() {
     super.initState();
     _selectedPatientId = widget.preselectedPatientId;
     _selectedPatientName = widget.preselectedPatientName;
+    _extNameCtrl.text = widget.prefillExtDoctorName ?? '';
+    _extHospCtrl.text = widget.prefillExtDoctorHospital ?? '';
+    _extSpecCtrl.text = widget.prefillExtDoctorSpecialization ?? '';
+    _extPhoneCtrl.text = widget.prefillExtDoctorPhone ?? '';
+    _instructionsForBanner = widget.prefillVisitInstructions?.trim().isEmpty == true
+        ? null
+        : widget.prefillVisitInstructions;
+
+    // If we got a followupTaskId but no inline prefill (e.g. opened from a
+    // notification), fetch the task once and apply.
+    if (widget.followupTaskId != null &&
+        widget.prefillExtDoctorName == null &&
+        widget.prefillVisitInstructions == null) {
+      _hydrateFromTask(widget.followupTaskId!);
+    }
+  }
+
+  Future<void> _hydrateFromTask(String taskId) async {
+    setState(() => _instructionsLoading = true);
+    try {
+      final task =
+          await ref.read(followupTaskByIdProvider(taskId).future);
+      if (!mounted || task == null) return;
+      setState(() {
+        if (_extNameCtrl.text.isEmpty &&
+            (task.targetExtDoctorName?.isNotEmpty ?? false)) {
+          _extNameCtrl.text = task.targetExtDoctorName!;
+        }
+        if (_extHospCtrl.text.isEmpty &&
+            (task.targetExtDoctorHospital?.isNotEmpty ?? false)) {
+          _extHospCtrl.text = task.targetExtDoctorHospital!;
+        }
+        if (_extSpecCtrl.text.isEmpty &&
+            (task.targetExtDoctorSpecialization?.isNotEmpty ?? false)) {
+          _extSpecCtrl.text = task.targetExtDoctorSpecialization!;
+        }
+        if (_extPhoneCtrl.text.isEmpty &&
+            (task.targetExtDoctorPhone?.isNotEmpty ?? false)) {
+          _extPhoneCtrl.text = task.targetExtDoctorPhone!;
+        }
+        if (_instructionsForBanner == null &&
+            (task.visitInstructions?.isNotEmpty ?? false)) {
+          _instructionsForBanner = task.visitInstructions;
+        }
+        _selectedPatientId ??= task.patientId;
+        _selectedPatientName ??= task.patientName;
+      });
+    } catch (_) {
+      // best-effort
+    } finally {
+      if (mounted) setState(() => _instructionsLoading = false);
+    }
   }
 
   @override
@@ -133,7 +206,6 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
             nextFollowupDate: _nextFollowupDate,
           );
 
-      // Refresh dependent screens so the new visit shows everywhere.
       if (widget.followupTaskId != null) {
         ref.invalidate(followupTasksProvider);
       }
@@ -169,33 +241,47 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.primaryTeal.withValues(alpha: 0.3),
+              // Doctor's instructions banner — shown only when this form
+              // was opened from a follow-up task with instructions attached.
+              if (_instructionsLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+              if ((_instructionsForBanner?.isNotEmpty ?? false))
+                _DoctorInstructionsBanner(text: _instructionsForBanner!),
+
+              // Default informational banner (no task context).
+              if ((_instructionsForBanner?.isEmpty ?? true) &&
+                  !_instructionsLoading)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primaryTeal.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          color: AppTheme.primaryTeal, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          widget.followupTaskId != null
+                              ? 'This will complete the linked follow-up task and record the outside doctor visit.'
+                              : 'Record a visit you made with a patient to an external doctor.',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline_rounded,
-                        color: AppTheme.primaryTeal, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.followupTaskId != null
-                            ? 'This will complete the linked follow-up task and record the outside doctor visit.'
-                            : 'Record a visit you made with a patient to an external doctor.',
-                        style: const TextStyle(
-                            fontSize: 12, color: AppTheme.primaryTeal),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+
               const SectionTitle(
                   title: 'Patient', icon: Icons.person_search_rounded),
               GestureDetector(
@@ -398,6 +484,63 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DoctorInstructionsBanner extends StatelessWidget {
+  const _DoctorInstructionsBanner({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(
+            color: AppTheme.warningColor.withValues(alpha: 0.6),
+            width: 4,
+          ),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.assignment_outlined,
+              color: AppTheme.warningColor, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'INSTRUCTIONS FROM DOCTOR',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.warningColor,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textColor,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

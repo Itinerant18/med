@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,17 +14,33 @@ class FollowupTask {
   final String? title;
   final String? notes;
   final String priority;
+
+  // Doctor-supplied target external doctor info (where to take the patient).
+  final String? targetExtDoctorName;
+  final String? targetExtDoctorHospital;
+  final String? targetExtDoctorSpecialization;
+  final String? targetExtDoctorPhone;
+  final String? visitInstructions;
+  final DateTime? scheduledVisitDate;
+
+  // Assistant-supplied completion details (what actually happened).
   final bool isExternalDoctor;
   final String? extDoctorName;
   final String? extDoctorSpecialization;
   final String? extDoctorHospital;
   final String? extDoctorPhone;
   final String? completionNotes;
+
+  // Doctor review (closes the loop).
+  final String? reviewedBy;
+  final DateTime? reviewedAt;
+  final String? doctorReviewNotes;
+
   final String status;
   final DateTime? completedAt;
   final DateTime createdAt;
 
-  // Joined field
+  // Joined.
   final String? patientName;
 
   FollowupTask({
@@ -36,72 +53,81 @@ class FollowupTask {
     this.title,
     this.notes,
     this.priority = 'normal',
+    this.targetExtDoctorName,
+    this.targetExtDoctorHospital,
+    this.targetExtDoctorSpecialization,
+    this.targetExtDoctorPhone,
+    this.visitInstructions,
+    this.scheduledVisitDate,
     this.isExternalDoctor = false,
     this.extDoctorName,
     this.extDoctorSpecialization,
     this.extDoctorHospital,
     this.extDoctorPhone,
     this.completionNotes,
+    this.reviewedBy,
+    this.reviewedAt,
+    this.doctorReviewNotes,
     required this.status,
     this.completedAt,
     required this.createdAt,
     this.patientName,
   });
 
-  // Safe date parser — handles both "2025-01-15" and "2025-01-15T00:00:00Z".
-  static DateTime _parseDate(dynamic value) {
-    if (value == null) return DateTime.now();
-    final str = value.toString();
-    if (str.length == 10) {
-      final parts = str.split('-');
-      if (parts.length == 3) {
-        return DateTime(
-          int.parse(parts[0]),
-          int.parse(parts[1]),
-          int.parse(parts[2]),
-        );
-      }
-    }
-    return DateTime.tryParse(str) ?? DateTime.now();
-  }
-
   factory FollowupTask.fromJson(Map<String, dynamic> json) {
+    final patients = parseDbMap(json['patients']);
     return FollowupTask(
-      id: json['id']?.toString() ?? '',
-      patientId: json['patient_id']?.toString() ?? '',
+      id: parseDbString(json['id']),
+      patientId: parseDbString(json['patient_id']),
       drVisitId: json['dr_visit_id']?.toString(),
-      assignedTo: json['assigned_to']?.toString() ?? '',
-      createdBy: json['created_by']?.toString() ?? '',
-      dueDate: _parseDate(json['due_date']),
+      assignedTo: parseDbString(json['assigned_to']),
+      createdBy: parseDbString(json['created_by']),
+      dueDate: parseDbDateOr(json['due_date'], DateTime.now()),
       title: json['title']?.toString(),
       notes: json['notes']?.toString(),
-      priority: json['priority']?.toString() ?? 'normal',
+      priority: parseDbString(json['priority'], 'normal'),
+      targetExtDoctorName: json['target_ext_doctor_name']?.toString(),
+      targetExtDoctorHospital: json['target_ext_doctor_hospital']?.toString(),
+      targetExtDoctorSpecialization:
+          json['target_ext_doctor_specialization']?.toString(),
+      targetExtDoctorPhone: json['target_ext_doctor_phone']?.toString(),
+      visitInstructions: json['visit_instructions']?.toString(),
+      scheduledVisitDate: parseDbDate(json['scheduled_visit_date']),
       isExternalDoctor: json['is_external_doctor'] == true,
       extDoctorName: json['ext_doctor_name']?.toString(),
       extDoctorSpecialization: json['ext_doctor_specialization']?.toString(),
       extDoctorHospital: json['ext_doctor_hospital']?.toString(),
       extDoctorPhone: json['ext_doctor_phone']?.toString(),
       completionNotes: json['completion_notes']?.toString(),
-      status: json['status']?.toString() ?? 'pending',
-      completedAt: json['completed_at'] != null
-          ? DateTime.tryParse(json['completed_at'].toString())
-          : null,
-      createdAt: json['created_at'] != null
-          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
-          : DateTime.now(),
-      patientName: json['patients']?['full_name']?.toString(),
+      reviewedBy: json['reviewed_by']?.toString(),
+      reviewedAt: parseDbDate(json['reviewed_at']),
+      doctorReviewNotes: json['doctor_review_notes']?.toString(),
+      status: parseDbString(json['status'], 'pending'),
+      completedAt: parseDbDate(json['completed_at']),
+      createdAt: parseDbDateOr(json['created_at'], DateTime.now()),
+      patientName: patients?['full_name']?.toString(),
     );
   }
 
+  // ── Convenience predicates ─────────────────────────────────────────────
+
+  bool get hasTargetDoctor =>
+      (targetExtDoctorName?.isNotEmpty ?? false) ||
+      (targetExtDoctorHospital?.isNotEmpty ?? false);
+
+  bool get isReviewed => reviewedAt != null;
+
+  /// True when the assistant has finished the task but the assigning doctor
+  /// hasn't yet acknowledged the outcome.
+  bool get needsReview => status == 'completed' && !isReviewed;
+
   bool get isOverdue {
     if (status == 'overdue') return true;
-    if (status == 'pending') {
-      final today = DateTime.now();
-      final todayDate = DateTime(today.year, today.month, today.day);
-      final dueDateOnly = DateTime(dueDate.year, dueDate.month, dueDate.day);
-      return dueDateOnly.isBefore(todayDate);
-    }
-    return false;
+    if (status != 'pending' && status != 'in_progress') return false;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final dueDateOnly = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    return dueDateOnly.isBefore(todayDate);
   }
 
   bool get isDueToday {
@@ -112,9 +138,11 @@ class FollowupTask {
   }
 }
 
-// Keep-alive provider — the Follow-ups tab, dashboard and other screens can
-// read/refresh it without fear of the provider being disposed mid-fetch. Call
-// `refresh()` explicitly when you want fresh data on re-entry.
+String _dateOnly(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+// Keep-alive provider — the Follow-ups tab, dashboard, and other screens can
+// read/refresh it without fear of the provider being disposed mid-fetch.
 final followupTasksProvider =
     AsyncNotifierProvider<FollowupTasksNotifier, List<FollowupTask>>(
   FollowupTasksNotifier.new,
@@ -151,14 +179,12 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
 
   Future<void> _markOverdue(String userId) async {
     try {
-      final today = DateTime.now();
-      final todayStr =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final todayStr = _dateOnly(DateTime.now());
       await _supabase
           .from('followup_tasks')
           .update({'status': 'overdue'})
           .eq('assigned_to', userId)
-          .eq('status', 'pending')
+          .inFilter('status', const ['pending', 'in_progress'])
           .lt('due_date', todayStr);
     } catch (e) {
       // Non-fatal — continue even if overdue update fails.
@@ -169,6 +195,21 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
   Future<void> refresh() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetchTasks(markOverdue: true));
+  }
+
+  /// Move a task into the "in progress" state when the assistant has started
+  /// working on it but hasn't completed yet. Best-effort.
+  Future<void> markInProgress(String taskId) async {
+    try {
+      await _supabase
+          .from('followup_tasks')
+          .update({'status': 'in_progress'})
+          .eq('id', taskId)
+          .inFilter('status', const ['pending', 'overdue']);
+      ref.invalidateSelf();
+    } catch (e) {
+      debugPrint('followup markInProgress error: $e');
+    }
   }
 
   Future<void> completeTask(
@@ -202,24 +243,106 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
     String? notes,
     String priority = 'normal',
     String? title,
+    // Target external doctor (doctor decides where to send the patient).
+    String? targetExtDoctorName,
+    String? targetExtDoctorHospital,
+    String? targetExtDoctorSpecialization,
+    String? targetExtDoctorPhone,
+    String? visitInstructions,
+    DateTime? scheduledVisitDate,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
 
-    final dueDateStr =
-        '${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}-${dueDate.day.toString().padLeft(2, '0')}';
-
-    await _supabase.from('followup_tasks').insert({
+    final payload = <String, dynamic>{
       'patient_id': patientId,
       'assigned_to': assignedTo,
       'created_by': user.id,
-      'due_date': dueDateStr,
+      'due_date': _dateOnly(dueDate),
       'notes': notes,
       'title': title,
       'priority': priority,
       'status': 'pending',
-    });
+      if (targetExtDoctorName?.isNotEmpty == true)
+        'target_ext_doctor_name': targetExtDoctorName,
+      if (targetExtDoctorHospital?.isNotEmpty == true)
+        'target_ext_doctor_hospital': targetExtDoctorHospital,
+      if (targetExtDoctorSpecialization?.isNotEmpty == true)
+        'target_ext_doctor_specialization': targetExtDoctorSpecialization,
+      if (targetExtDoctorPhone?.isNotEmpty == true)
+        'target_ext_doctor_phone': targetExtDoctorPhone,
+      if (visitInstructions?.isNotEmpty == true)
+        'visit_instructions': visitInstructions,
+      if (scheduledVisitDate != null)
+        'scheduled_visit_date': _dateOnly(scheduledVisitDate),
+    };
+
+    await _supabase.from('followup_tasks').insert(payload);
+    ref.invalidateSelf();
+  }
+
+  /// Doctor acknowledges a completed follow-up task. Records who reviewed
+  /// it, when, and any clinical notes the doctor wants to attach.
+  Future<void> reviewTask(
+    String taskId, {
+    String? reviewNotes,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Not authenticated.');
+
+    await _supabase.from('followup_tasks').update({
+      'reviewed_by': user.id,
+      'reviewed_at': DateTime.now().toIso8601String(),
+      if (reviewNotes != null && reviewNotes.isNotEmpty)
+        'doctor_review_notes': reviewNotes,
+    }).eq('id', taskId);
 
     ref.invalidateSelf();
   }
 }
+
+// ── Doctor-side queries ──────────────────────────────────────────────────
+
+/// All follow-up tasks the current user *created* (i.e. tasks they assigned
+/// to assistants). Used by the doctor follow-ups screen.
+final doctorAssignedFollowupsProvider =
+    FutureProvider.autoDispose<List<FollowupTask>>((ref) async {
+  final supabase = ref.watch(supabaseClientProvider);
+  final user = supabase.auth.currentUser;
+  if (user == null) return const [];
+
+  final response = await supabase
+      .from('followup_tasks')
+      .select('*, patients(full_name)')
+      .eq('created_by', user.id)
+      .order('due_date', ascending: true)
+      .order('created_at', ascending: false);
+
+  return (response as List)
+      .map((json) =>
+          FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
+      .toList();
+});
+
+/// Lightweight count of completed-but-unreviewed tasks the current doctor
+/// assigned. Powers the "pending reviews" banner on the Dr Visit screen.
+final pendingFollowupReviewCountProvider =
+    FutureProvider.autoDispose<int>((ref) async {
+  final tasks = await ref.watch(doctorAssignedFollowupsProvider.future);
+  return tasks.where((t) => t.needsReview).length;
+});
+
+/// Single-task fetch for the review screen (loaded by id when the doctor
+/// taps "Review" from the dashboard banner or the doctor follow-ups list).
+final followupTaskByIdProvider =
+    FutureProvider.autoDispose.family<FollowupTask?, String>((ref, id) async {
+  if (id.isEmpty) return null;
+  final supabase = ref.watch(supabaseClientProvider);
+  final response = await supabase
+      .from('followup_tasks')
+      .select('*, patients(full_name)')
+      .eq('id', id)
+      .maybeSingle();
+  if (response == null) return null;
+  return FollowupTask.fromJson(Map<String, dynamic>.from(response));
+});

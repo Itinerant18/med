@@ -14,7 +14,7 @@ import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/performance_dashboard_screen.dart';
-import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart'; import 'package:mediflow/features/followups/doctor_followups_screen.dart'; import 'package:mediflow/features/followups/followup_review_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
 import 'package:mediflow/features/patients/patient_detail_screen.dart';
 import 'package:mediflow/features/patients/patient_form_screen.dart';
@@ -152,19 +152,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/agent-visits/new',
         builder: (context, state) {
           final extra = state.extra;
-          String? followupTaskId;
-          String? patientId;
-          String? patientName;
-          if (extra is Map) {
-            followupTaskId = extra['followupTaskId'] as String?;
-            patientId = extra['patientId'] as String?;
-            patientName = extra['patientName'] as String?;
+          String? readString(String key) {
+            if (extra is! Map) return null;
+            final v = extra[key];
+            if (v == null) return null;
+            final s = v.toString();
+            return s.isEmpty ? null : s;
           }
+
           return AgentOutsideVisitForm(
-            followupTaskId: followupTaskId,
-            preselectedPatientId: patientId,
-            preselectedPatientName: patientName,
+            followupTaskId: readString('followupTaskId'),
+            preselectedPatientId: readString('patientId'),
+            preselectedPatientName: readString('patientName'),
+            prefillExtDoctorName: readString('prefillExtDoctorName'),
+            prefillExtDoctorHospital: readString('prefillExtDoctorHospital'),
+            prefillExtDoctorSpecialization:
+                readString('prefillExtDoctorSpecialization'),
+            prefillExtDoctorPhone: readString('prefillExtDoctorPhone'),
+            prefillVisitInstructions:
+                readString('prefillVisitInstructions'),
           );
+        },
+      ),
+      GoRoute(
+        path: '/followups/doctor',
+        redirect: (context, state) {
+          // Doctor / head-doctor only.
+          final container = ProviderScope.containerOf(context);
+          return container.read(isAdminProvider) ? null : '/';
+        },
+        builder: (context, state) => const DoctorFollowupsScreen(),
+      ),
+      GoRoute(
+        path: '/followups/review/:taskId',
+        redirect: (context, state) {
+          final container = ProviderScope.containerOf(context);
+          return container.read(isAdminProvider) ? null : '/';
+        },
+        builder: (context, state) {
+          final taskId = state.pathParameters['taskId'] ?? '';
+          return FollowupReviewScreen(taskId: taskId);
         },
       ),
     ],

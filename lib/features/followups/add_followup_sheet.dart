@@ -15,9 +15,11 @@ class AddFollowupSheet extends ConsumerStatefulWidget {
   const AddFollowupSheet({
     super.key,
     this.preselectedPatientId,
+    this.preselectedPatientName,
   });
 
   final String? preselectedPatientId;
+  final String? preselectedPatientName;
 
   @override
   ConsumerState<AddFollowupSheet> createState() => _AddFollowupSheetState();
@@ -28,10 +30,18 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
   final _titleCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
+  // Target external doctor (the doctor decides where to send the patient).
+  final _targetDocNameCtrl = TextEditingController();
+  final _targetDocHospitalCtrl = TextEditingController();
+  final _targetDocSpecCtrl = TextEditingController();
+  final _targetDocPhoneCtrl = TextEditingController();
+  final _instructionsCtrl = TextEditingController();
+
   String? _selectedPatientId;
   String? _selectedPatientName;
   String? _selectedAgentId;
   DateTime? _dueDate;
+  DateTime? _scheduledVisitDate;
   String _priority = 'normal';
   bool _saving = false;
 
@@ -39,12 +49,18 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
   void initState() {
     super.initState();
     _selectedPatientId = widget.preselectedPatientId;
+    _selectedPatientName = widget.preselectedPatientName;
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _notesCtrl.dispose();
+    _targetDocNameCtrl.dispose();
+    _targetDocHospitalCtrl.dispose();
+    _targetDocSpecCtrl.dispose();
+    _targetDocPhoneCtrl.dispose();
+    _instructionsCtrl.dispose();
     super.dispose();
   }
 
@@ -72,16 +88,24 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
 
     setState(() => _saving = true);
     try {
+      String? trimmedOrNull(TextEditingController c) {
+        final value = c.text.trim();
+        return value.isEmpty ? null : value;
+      }
+
       await ref.read(followupTasksProvider.notifier).createTask(
             patientId: _selectedPatientId!,
             assignedTo: assignedTo,
             dueDate: _dueDate!,
-            notes: _notesCtrl.text.trim().isEmpty
-                ? null
-                : _notesCtrl.text.trim(),
-            title:
-                _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
+            notes: trimmedOrNull(_notesCtrl),
+            title: trimmedOrNull(_titleCtrl),
             priority: _priority,
+            targetExtDoctorName: trimmedOrNull(_targetDocNameCtrl),
+            targetExtDoctorHospital: trimmedOrNull(_targetDocHospitalCtrl),
+            targetExtDoctorSpecialization: trimmedOrNull(_targetDocSpecCtrl),
+            targetExtDoctorPhone: trimmedOrNull(_targetDocPhoneCtrl),
+            visitInstructions: trimmedOrNull(_instructionsCtrl),
+            scheduledVisitDate: _scheduledVisitDate,
           );
 
       if (!mounted) return;
@@ -115,6 +139,27 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
     });
   }
 
+  Future<void> _pickDueDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null && mounted) setState(() => _dueDate = date);
+  }
+
+  Future<void> _pickScheduledDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate:
+          _scheduledVisitDate ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null && mounted) setState(() => _scheduledVisitDate = date);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = ref.watch(isAdminProvider);
@@ -146,6 +191,8 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Patient ──
               const SectionTitle(
                 title: 'Patient',
                 icon: Icons.person_search_rounded,
@@ -153,8 +200,8 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               GestureDetector(
                 onTap: _showPatientPicker,
                 child: NeuCard(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       Icon(
@@ -190,6 +237,8 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Assignment ──
               const SectionTitle(
                 title: 'Assignment',
                 icon: Icons.assignment_ind_outlined,
@@ -197,8 +246,8 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               if (isAdmin)
                 agentsAsync.when(
                   data: (agents) => NeuCard(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 4),
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedAgentId,
                       decoration: const InputDecoration(
@@ -208,12 +257,10 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                       ),
                       hint: const Text('Select Assistant'),
                       items: agents
-                          .map(
-                            (agent) => DropdownMenuItem(
-                              value: agent.id,
-                              child: Text(agent.fullName),
-                            ),
-                          )
+                          .map((agent) => DropdownMenuItem(
+                                value: agent.id,
+                                child: Text(agent.fullName),
+                              ))
                           .toList(),
                       onChanged: (value) =>
                           setState(() => _selectedAgentId = value),
@@ -247,6 +294,8 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                   ),
                 ),
               const SizedBox(height: 20),
+
+              // ── Task Details ──
               const SectionTitle(
                 title: 'Task Details',
                 icon: Icons.add_task_rounded,
@@ -258,20 +307,10 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now().add(const Duration(days: 1)),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    setState(() => _dueDate = date);
-                  }
-                },
+                onTap: _pickDueDate,
                 child: NeuCard(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       const Icon(
@@ -283,8 +322,8 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                       Expanded(
                         child: Text(
                           _dueDate == null
-                              ? 'Set Due Date'
-                              : DateFormat('MMM d, yyyy').format(_dueDate!),
+                              ? 'Set Due Date *'
+                              : 'Due ${DateFormat('MMM d, yyyy').format(_dueDate!)}',
                           style: TextStyle(
                             fontSize: 16,
                             color: _dueDate == null
@@ -331,11 +370,133 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
               const SizedBox(height: 12),
               NeuTextField(
                 controller: _notesCtrl,
-                label: 'Notes',
-                hint: 'Instructions or follow-up details',
+                label: 'Internal notes',
+                hint: 'Anything else the assistant should know',
                 maxLines: 3,
               ),
               const SizedBox(height: 24),
+
+              // ── External Doctor (target) ──
+              const _SectionDivider(label: 'EXTERNAL DOCTOR (OPTIONAL)'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryTeal.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.primaryTeal.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded,
+                        color: AppTheme.primaryTeal, size: 18),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Tell the assistant where to take the patient and what '
+                        'to do at the visit. Skip this if no external visit is '
+                        'needed.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.primaryTeal,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              NeuCard(
+                child: Column(
+                  children: [
+                    NeuTextField(
+                      controller: _targetDocNameCtrl,
+                      label: 'Doctor Name',
+                      hint: 'Dr. Sharma',
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _targetDocHospitalCtrl,
+                      label: 'Hospital / Clinic',
+                      hint: 'Apollo Hospital',
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _targetDocSpecCtrl,
+                      label: 'Specialization',
+                      hint: 'Cardiology',
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _targetDocPhoneCtrl,
+                      label: 'Doctor Phone',
+                      hint: '+91 ...',
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Scheduled visit date ──
+              GestureDetector(
+                onTap: _pickScheduledDate,
+                child: NeuCard(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.event_rounded,
+                        color: AppTheme.primaryTeal,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _scheduledVisitDate == null
+                              ? 'Scheduled visit date (optional)'
+                              : 'Plan to visit ${DateFormat('MMM d, yyyy').format(_scheduledVisitDate!)}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: _scheduledVisitDate == null
+                                ? AppTheme.textMuted
+                                : AppTheme.textColor,
+                            fontWeight: _scheduledVisitDate == null
+                                ? FontWeight.normal
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (_scheduledVisitDate != null)
+                        IconButton(
+                          icon: const Icon(Icons.clear_rounded,
+                              size: 18, color: AppTheme.textMuted),
+                          onPressed: () => setState(
+                              () => _scheduledVisitDate = null),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Visit instructions ──
+              NeuTextField(
+                controller: _instructionsCtrl,
+                label: 'Visit Instructions',
+                hint:
+                    'Take last 3 months ECG reports. Patient has chest pain on exertion.',
+                maxLines: 4,
+              ),
+              const SizedBox(height: 24),
+
               SizedBox(
                 width: double.infinity,
                 child: NeuButton(
@@ -359,11 +520,43 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
   }
 }
 
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Divider(color: Color(0xFFD1D9E6), thickness: 0.8),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppTheme.textMuted,
+            letterSpacing: 1.4,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Divider(color: Color(0xFFD1D9E6), thickness: 0.8),
+        ),
+      ],
+    );
+  }
+}
+
 class _PatientPickerSheet extends ConsumerStatefulWidget {
   const _PatientPickerSheet();
 
   @override
-  ConsumerState<_PatientPickerSheet> createState() => _PatientPickerSheetState();
+  ConsumerState<_PatientPickerSheet> createState() =>
+      _PatientPickerSheetState();
 }
 
 class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
@@ -411,13 +604,10 @@ class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
                   return ListTile(
                     title: Text(patient['full_name'] ?? 'Unknown'),
                     subtitle: Text(patient['phone'] ?? ''),
-                    onTap: () => Navigator.pop(
-                      context,
-                      {
-                        'id': patient['id'],
-                        'name': patient['full_name'],
-                      },
-                    ),
+                    onTap: () => Navigator.pop(context, {
+                      'id': patient['id'],
+                      'name': patient['full_name'],
+                    }),
                   );
                 },
               ),

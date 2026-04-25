@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:mediflow/core/app_snackbar.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 
+/// Card the assistant sees on the Follow-ups tab.
+///
+/// Surfaces, in order of importance to the assistant:
+///   1. Patient name + status / priority badges + due date
+///   2. Target external doctor & hospital (where to take the patient)
+///   3. Doctor's instructions (what to do at the visit)
+///   4. Two explicit action buttons:
+///        • Record Outside Visit  → opens AgentOutsideVisitForm pre-filled
+///        • Mark Done             → simple completion (no external visit)
 class FollowupTaskWidget extends ConsumerWidget {
   final FollowupTask task;
 
@@ -12,8 +24,9 @@ class FollowupTaskWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isOverdue = task.status == 'overdue';
+    final isOverdue = task.isOverdue;
     final isCompleted = task.status == 'completed';
+    final isInProgress = task.status == 'in_progress';
     final isUrgent = task.priority == 'urgent';
 
     return Padding(
@@ -25,81 +38,411 @@ class FollowupTaskWidget extends ConsumerWidget {
               ? Border.all(color: AppTheme.errorColor, width: 2)
               : null,
         ),
-        child: Row(
-          children: [
-            if (isUrgent)
-              Container(
-                width: 4,
-                height: 92,
-                decoration: const BoxDecoration(
-                  color: AppTheme.errorColor,
-                  borderRadius: BorderRadius.horizontal(
-                    left: Radius.circular(16),
+        child: NeuCard(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+          borderRadius: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header: status badges + due date ──
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _StatusBadge(
+                          label: _statusLabel(task.status),
+                          color: _statusColor(task.status),
+                        ),
+                        if (isUrgent && !isCompleted)
+                          const _StatusBadge(
+                            label: 'URGENT',
+                            color: AppTheme.errorColor,
+                          ),
+                      ],
+                    ),
                   ),
+                  Text(
+                    'Due ${DateFormat('MMM d').format(task.dueDate)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isOverdue
+                          ? AppTheme.errorColor
+                          : AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // ── Patient name + optional title/notes ──
+              Text(
+                task.patientName ?? 'Unknown Patient',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppTheme.textColor,
                 ),
               ),
-            Expanded(
-              child: NeuCard(
-                padding: const EdgeInsets.all(16),
-                borderRadius: 16,
-                child: Row(
+              if ((task.title?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 2),
+                Text(
+                  task.title!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ],
+              if ((task.notes?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 4),
+                Text(
+                  task.notes!,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textMuted, height: 1.35),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              // ── Target external doctor (where to go) ──
+              if (task.hasTargetDoctor) ...[
+                const SizedBox(height: 12),
+                _TargetDoctorBlock(task: task),
+              ],
+
+              // ── Scheduled visit date ──
+              if (task.scheduledVisitDate != null) ...[
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                task.patientName ?? 'Unknown Patient',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              if (isOverdue) ...[
-                                const SizedBox(width: 8),
-                                const _Badge(
-                                    label: 'OVERDUE',
-                                    color: AppTheme.errorColor),
-                              ],
-                              if (isUrgent) ...[
-                                const SizedBox(width: 8),
-                                const _Badge(
-                                  label: 'URGENT',
-                                  color: AppTheme.errorColor,
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            task.title?.isNotEmpty == true
-                                ? '${task.title}\n${task.notes ?? 'No notes provided'}'
-                                : task.notes ?? 'No notes provided',
-                            style: const TextStyle(
-                                fontSize: 13, color: AppTheme.textMuted),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Transform.scale(
-                      scale: 1.2,
-                      child: Checkbox(
-                        value: isCompleted,
-                        activeColor: AppTheme.successColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        onChanged: isCompleted
-                            ? null
-                            : (val) => _handleCheckboxTap(context, val),
+                    const Icon(Icons.event_rounded,
+                        size: 14, color: AppTheme.primaryTeal),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Scheduled: ${DateFormat('MMM d, yyyy').format(task.scheduledVisitDate!)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryTeal,
                       ),
                     ),
                   ],
                 ),
+              ],
+
+              // ── Doctor's instructions ──
+              if ((task.visitInstructions?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border(
+                      left: BorderSide(
+                        color: AppTheme.warningColor.withValues(alpha: 0.6),
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.assignment_outlined,
+                          size: 14, color: AppTheme.warningColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'INSTRUCTIONS',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.warningColor,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              task.visitInstructions!,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppTheme.textColor,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ── Doctor review (when present) ──
+              if (task.isReviewed &&
+                  (task.doctorReviewNotes?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.verified_outlined,
+                          size: 14, color: AppTheme.successColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'DOCTOR REVIEW',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.successColor,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              task.doctorReviewNotes!,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppTheme.textColor,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ── Action buttons ──
+              if (!isCompleted) ...[
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.local_hospital_outlined,
+                        label: 'Record Visit',
+                        background: const Color(0xFF3182CE),
+                        onTap: () =>
+                            _openOutsideVisitForm(context, ref, isInProgress),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.check_rounded,
+                        label: 'Mark Done',
+                        background: AppTheme.successColor,
+                        onTap: () => _openMarkDoneSheet(context, ref),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openOutsideVisitForm(
+    BuildContext context,
+    WidgetRef ref,
+    bool isInProgress,
+  ) async {
+    // Best-effort: flag the task as in-progress when the assistant heads off
+    // to record the visit. Idempotent and skipped if it's already that.
+    if (!isInProgress) {
+      ref.read(followupTasksProvider.notifier).markInProgress(task.id);
+    }
+
+    final result = await context.push<bool>(
+      '/agent-visits/new',
+      extra: {
+        'followupTaskId': task.id,
+        'patientId': task.patientId,
+        'patientName': task.patientName,
+        // Pre-fill the assistant's form with what the doctor specified.
+        'prefillExtDoctorName': task.targetExtDoctorName,
+        'prefillExtDoctorHospital': task.targetExtDoctorHospital,
+        'prefillExtDoctorSpecialization': task.targetExtDoctorSpecialization,
+        'prefillExtDoctorPhone': task.targetExtDoctorPhone,
+        'prefillVisitInstructions': task.visitInstructions,
+      },
+    );
+
+    if (result == true) {
+      ref.read(followupTasksProvider.notifier).refresh();
+    }
+  }
+
+  Future<void> _openMarkDoneSheet(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _CompleteFollowupSheet(task: task),
+    );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'in_progress':
+        return 'IN PROGRESS';
+      case 'completed':
+        return 'COMPLETED';
+      case 'overdue':
+        return 'OVERDUE';
+      case 'cancelled':
+        return 'CANCELLED';
+      case 'pending':
+      default:
+        return 'PENDING';
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'in_progress':
+        return const Color(0xFF3182CE);
+      case 'completed':
+        return AppTheme.successColor;
+      case 'overdue':
+        return AppTheme.errorColor;
+      case 'cancelled':
+        return AppTheme.textMuted;
+      case 'pending':
+      default:
+        return AppTheme.warningColor;
+    }
+  }
+}
+
+class _TargetDoctorBlock extends StatelessWidget {
+  const _TargetDoctorBlock({required this.task});
+
+  final FollowupTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = <String>[
+      if ((task.targetExtDoctorName?.isNotEmpty ?? false))
+        task.targetExtDoctorName!,
+      if ((task.targetExtDoctorSpecialization?.isNotEmpty ?? false))
+        task.targetExtDoctorSpecialization!,
+    ];
+    final headline = parts.join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryTeal.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.local_hospital_rounded,
+              size: 16, color: AppTheme.primaryTeal),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (headline.isNotEmpty)
+                  Text(
+                    headline,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                if ((task.targetExtDoctorHospital?.isNotEmpty ?? false))
+                  Text(
+                    task.targetExtDoctorHospital!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                if ((task.targetExtDoctorPhone?.isNotEmpty ?? false))
+                  Text(
+                    task.targetExtDoctorPhone!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.primaryTeal,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.background,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color background;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -107,98 +450,31 @@ class FollowupTaskWidget extends ConsumerWidget {
       ),
     );
   }
-
-  Future<void> _handleCheckboxTap(BuildContext context, bool? val) async {
-    if (val != true) return;
-
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppTheme.bgColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _CompleteChoiceSheet(task: task),
-    );
-
-    if (!context.mounted) return;
-
-    if (choice == 'direct') {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: AppTheme.bgColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        builder: (_) => _CompleteFollowupSheet(task: task),
-      );
-    } else if (choice == 'outside') {
-      await context.push<bool>(
-        '/agent-visits/new',
-        extra: {
-          'followupTaskId': task.id,
-          'patientId': task.patientId,
-          'patientName': task.patientName,
-        },
-      );
-    }
-  }
 }
 
-class _CompleteChoiceSheet extends StatelessWidget {
-  const _CompleteChoiceSheet({required this.task});
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label, required this.color});
 
-  final FollowupTask task;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'How was the follow-up completed?',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            task.patientName ?? 'Patient',
-            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          ListTile(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            tileColor: AppTheme.primaryTeal.withValues(alpha: 0.06),
-            leading: const Icon(Icons.check_circle_outline_rounded,
-                color: AppTheme.primaryTeal),
-            title: const Text(
-              'Mark as completed',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle:
-                const Text('Simple completion without external doctor details'),
-            onTap: () => Navigator.pop(context, 'direct'),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            tileColor: const Color(0xFF3182CE).withValues(alpha: 0.06),
-            leading: const Icon(Icons.local_hospital_outlined,
-                color: Color(0xFF3182CE)),
-            title: const Text(
-              'Record outside doctor visit',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle:
-                const Text('Add details of the external doctor visited'),
-            onTap: () => Navigator.pop(context, 'outside'),
-          ),
-          const SizedBox(height: 16),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color, width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+        ),
       ),
     );
   }
@@ -241,6 +517,9 @@ class _CompleteFollowupSheetState
           );
       if (!mounted) return;
       Navigator.of(context).pop();
+      AppSnackbar.showSuccess(context, 'Follow-up marked as completed');
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -263,7 +542,7 @@ class _CompleteFollowupSheetState
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Complete Follow-up',
+                'Mark Follow-up Done',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -281,8 +560,8 @@ class _CompleteFollowupSheetState
               const SizedBox(height: 16),
               NeuTextField(
                 controller: _completionNotesCtrl,
-                label: 'Completion Notes',
-                hint: 'What happened during the follow-up?',
+                label: 'Completion notes (optional)',
+                hint: 'Anything to tell the doctor about this follow-up?',
                 maxLines: 3,
               ),
               const SizedBox(height: 18),
@@ -303,29 +582,6 @@ class _CompleteFollowupSheetState
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color, width: 0.5),
-      ),
-      child: Text(
-        label,
-        style:
-            TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.bold),
       ),
     );
   }

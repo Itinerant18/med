@@ -255,19 +255,56 @@ class RealtimeService {
       final newStatus = row['status']?.toString();
       final currentUserId = Supabase.instance.client.auth.currentUser?.id;
       final createdBy = row['created_by']?.toString();
+      final assignedTo = row['assigned_to']?.toString();
+      final taskId = row['id']?.toString() ?? '';
 
-      if (createdBy != currentUserId) return;
       if (newStatus == null || newStatus.isEmpty || oldStatus == newStatus) {
         return;
       }
 
+      // ── Assistant marked the task completed → notify the assigning doctor.
+      // Only fires on the assigning doctor's session (createdBy == me) and
+      // only when the status flips into 'completed' from something else.
+      if (newStatus == 'completed' &&
+          oldStatus != 'completed' &&
+          createdBy == currentUserId &&
+          assignedTo != currentUserId) {
+        _addInAppNotification(
+          id: 'fu-completed-$taskId',
+          title: 'Follow-up completed',
+          body: 'An assistant completed a follow-up. Tap to review.',
+          type: 'followup_review_needed',
+        );
+        NotificationService.instance.showFollowupNotification(
+          patientName: row['patient_name']?.toString() ?? 'a patient',
+          dueDate: 'completed',
+        );
+        // Best-effort FCM push for offline doctors. createdBy is the doctor's
+        // own user id, so this lights up their other devices too.
+        if (createdBy != null && createdBy.isNotEmpty) {
+          FcmService.sendToDoctor(
+            doctorId: createdBy,
+            title: 'Follow-up completed',
+            body: 'An assistant completed a follow-up. Open MediFlow to review.',
+            data: {
+              'type': 'followup_review_needed',
+              'task_id': taskId,
+            },
+          );
+        }
+        return;
+      }
+
+      // ── Doctor finished review → notify the assistant who did the work.
+      if (createdBy == currentUserId) return; // doctor's own update, ignore
+      if (assignedTo != currentUserId) return; // not for me
+
       _addInAppNotification(
-        id: 'fu-update-${row['id']}-${DateTime.now().millisecondsSinceEpoch}',
+        id: 'fu-update-$taskId-${DateTime.now().millisecondsSinceEpoch}',
         title: 'Follow-up Updated',
         body: 'A follow-up task is now: $newStatus',
         type: 'followup_update',
       );
-
       NotificationService.instance.showFollowupNotification(
         patientName: row['patient_name']?.toString() ?? 'a patient',
         dueDate: newStatus,

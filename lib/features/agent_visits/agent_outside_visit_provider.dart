@@ -108,6 +108,21 @@ class AgentOutsideVisitsNotifier
   }
 }
 
+// Fetches the AgentOutsideVisit linked to a given follow-up task (if any).
+// Used by the doctor's review screen to show what the assistant recorded.
+final agentOutsideVisitForTaskProvider = FutureProvider.autoDispose
+    .family<AgentOutsideVisit?, String>((ref, taskId) async {
+  if (taskId.isEmpty) return null;
+  final supabase = ref.read(supabaseClientProvider);
+  final response = await supabase
+      .from('agent_outside_visits')
+      .select('*, patients(full_name)')
+      .eq('followup_task_id', taskId)
+      .maybeSingle();
+  if (response == null) return null;
+  return AgentOutsideVisit.fromJson(Map<String, dynamic>.from(response));
+});
+
 // Provider for doctor / head-doctor to view all agent outside visits.
 final allAgentOutsideVisitsProvider =
     FutureProvider.autoDispose<List<AgentOutsideVisit>>((ref) async {

@@ -6,11 +6,45 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
 
-class MyFollowupsScreen extends ConsumerWidget {
+enum _FollowupFilter { all, pending, inProgress, completed, overdue }
+
+extension on _FollowupFilter {
+  String get label => switch (this) {
+        _FollowupFilter.all => 'All',
+        _FollowupFilter.pending => 'Pending',
+        _FollowupFilter.inProgress => 'In Progress',
+        _FollowupFilter.completed => 'Completed',
+        _FollowupFilter.overdue => 'Overdue',
+      };
+
+  bool matches(FollowupTask task) {
+    switch (this) {
+      case _FollowupFilter.all:
+        return true;
+      case _FollowupFilter.pending:
+        return task.status == 'pending';
+      case _FollowupFilter.inProgress:
+        return task.status == 'in_progress';
+      case _FollowupFilter.completed:
+        return task.status == 'completed';
+      case _FollowupFilter.overdue:
+        return task.isOverdue;
+    }
+  }
+}
+
+class MyFollowupsScreen extends ConsumerStatefulWidget {
   const MyFollowupsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyFollowupsScreen> createState() => _MyFollowupsScreenState();
+}
+
+class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
+  _FollowupFilter _filter = _FollowupFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final tasksAsync = ref.watch(followupTasksProvider);
 
     return Scaffold(
@@ -29,148 +63,61 @@ class MyFollowupsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: tasksAsync.when(
-        data: (tasks) {
-          if (tasks.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_task_rounded,
-                      size: 64, color: AppTheme.textMuted),
-                  SizedBox(height: 12),
-                  Text(
-                    'No follow-ups assigned',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textColor,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Follow-up tasks from doctors will appear here.',
-                    style: TextStyle(
-                        color: AppTheme.textMuted, fontSize: 13),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            color: AppTheme.primaryTeal,
-            onRefresh: () =>
-                ref.read(followupTasksProvider.notifier).refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return Column(
-                  children: [
-                    FollowupTaskWidget(task: task),
-                    if (task.status != 'completed')
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 16, left: 4, right: 4),
-                        child: GestureDetector(
-                          onTap: () async {
-                            final result = await context.push<bool>(
-                              '/agent-visits/new',
-                              extra: {
-                                'followupTaskId': task.id,
-                                'patientId': task.patientId,
-                                'patientName': task.patientName,
-                              },
-                            );
-                            if (result == true) {
-                              ref
-                                  .read(followupTasksProvider.notifier)
-                                  .refresh();
-                            }
-                          },
-                          child: const Row(
-                            children: [
-                              SizedBox(width: 8),
-                              Icon(Icons.local_hospital_outlined,
-                                  size: 14, color: AppTheme.primaryTeal),
-                              SizedBox(width: 6),
-                              Text(
-                                'Record outside doctor visit for this task',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.primaryTeal,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Spacer(),
-                              Icon(Icons.arrow_forward_ios_rounded,
-                                  size: 11, color: AppTheme.primaryTeal),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
+      body: Column(
+        children: [
+          // Filter chips
+          SizedBox(
+            height: 48,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              scrollDirection: Axis.horizontal,
+              itemCount: _FollowupFilter.values.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final f = _FollowupFilter.values[i];
+                final selected = f == _filter;
+                return ChoiceChip(
+                  label: Text(f.label),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _filter = f),
                 );
               },
             ),
-          );
-        },
-        loading: () => ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 4,
-          itemBuilder: (_, __) => const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: NeuShimmer(
-                width: double.infinity, height: 90, borderRadius: 16),
           ),
-        ),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: NeuCard(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline_rounded,
-                      size: 40, color: AppTheme.errorColor),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Failed to load follow-ups',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15),
+          Expanded(
+            child: tasksAsync.when(
+              data: (tasks) {
+                final filtered =
+                    tasks.where((t) => _filter.matches(t)).toList();
+                if (filtered.isEmpty) return _buildEmptyState();
+
+                return RefreshIndicator(
+                  color: AppTheme.primaryTeal,
+                  onRefresh: () =>
+                      ref.read(followupTasksProvider.notifier).refresh(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    itemCount: filtered.length,
+                    itemBuilder: (_, index) =>
+                        FollowupTaskWidget(task: filtered[index]),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    error.toString().length > 120
-                        ? '${error.toString().substring(0, 120)}...'
-                        : error.toString(),
-                    style: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  NeuButton(
-                    onPressed: () => ref
-                        .read(followupTasksProvider.notifier)
-                        .refresh(),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 24),
-                    child: const Text(
-                      'Try Again',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+                );
+              },
+              loading: () => ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 4,
+                itemBuilder: (_, __) => const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: NeuShimmer(
+                      width: double.infinity,
+                      height: 110,
+                      borderRadius: 16),
+                ),
               ),
+              error: (error, _) => _buildError(error),
             ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
@@ -205,6 +152,81 @@ class MyFollowupsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.add_task_rounded,
+              size: 64, color: AppTheme.textMuted),
+          const SizedBox(height: 12),
+          Text(
+            _filter == _FollowupFilter.all
+                ? 'No follow-ups assigned'
+                : 'No follow-ups in "${_filter.label}"',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Follow-up tasks from doctors will appear here.',
+            style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError(Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: NeuCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 40, color: AppTheme.errorColor),
+              const SizedBox(height: 12),
+              const Text(
+                'Failed to load follow-ups',
+                style:
+                    TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error.toString().length > 120
+                    ? '${error.toString().substring(0, 120)}...'
+                    : error.toString(),
+                style: const TextStyle(
+                    color: AppTheme.textMuted, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              NeuButton(
+                onPressed: () =>
+                    ref.read(followupTasksProvider.notifier).refresh(),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 12, horizontal: 24),
+                child: const Text(
+                  'Try Again',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

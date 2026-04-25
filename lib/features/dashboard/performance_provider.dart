@@ -11,6 +11,7 @@ class AssistantKpi {
     required this.followupsTotal,
     required this.followupsCompleted,
     required this.followupsOverdue,
+    required this.outsideVisitsTotal,
   });
 
   final String id;
@@ -22,19 +23,26 @@ class AssistantKpi {
   final int followupsCompleted;
   final int followupsOverdue;
 
+  /// External-doctor visits the assistant accompanied a patient on. Counted
+  /// separately from `followupsCompleted` because some completed follow-ups
+  /// don't involve an external visit at all.
+  final int outsideVisitsTotal;
+
   double get completionRate =>
       followupsTotal == 0 ? 0 : followupsCompleted / followupsTotal * 100;
 
   factory AssistantKpi.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) => (v as num?)?.toInt() ?? 0;
     return AssistantKpi(
       id: json['assistant_id']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? 'Unknown',
       specialization: json['specialization']?.toString() ?? '',
-      patientsRegistered: (json['patients_registered'] as num?)?.toInt() ?? 0,
-      visitsCreated: (json['visits_created'] as num?)?.toInt() ?? 0,
-      followupsTotal: (json['followups_total'] as num?)?.toInt() ?? 0,
-      followupsCompleted: (json['followups_completed'] as num?)?.toInt() ?? 0,
-      followupsOverdue: (json['followups_overdue'] as num?)?.toInt() ?? 0,
+      patientsRegistered: parseInt(json['patients_registered']),
+      visitsCreated: parseInt(json['visits_created']),
+      followupsTotal: parseInt(json['followups_total']),
+      followupsCompleted: parseInt(json['followups_completed']),
+      followupsOverdue: parseInt(json['followups_overdue']),
+      outsideVisitsTotal: parseInt(json['outside_visits_total']),
     );
   }
 }
