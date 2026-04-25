@@ -21,6 +21,24 @@ class AppTheme {
   static const Color warningColor = Color(0xFFC18C5D); // Terracotta
   static const Color infoColor = Color(0xFF7A9169); // Lighter Moss
   static const Color cardBg = Color(0xFFFEFEFA); // Slightly warmer than page bg
+
+  // ── Role-specific accents (organic palette, not Material) ──
+  // Slate Blue — replaces Colors.blue for the Doctor role.
+  static const Color doctorAccent = Color(0xFF6B8EC4);
+  // Warm Amber / clay — replaces Colors.amber.shade700 for the Assistant role.
+  static const Color assistantAccent = Color(0xFFBE8C3C);
+
+  // ── Neutral utilities (replace Colors.grey variants) ──
+  static const Color neutralLight = Color(0xFFF0EBE5); // same as OrganicTokens.muted
+  static const Color neutralDivider = Color(0xFFDED8CF); // same hue as `border`
+
+  // ── Navigation tile accents (replace Colors.deepPurple/orange/blueGrey) ──
+  static const Color analyticsAccent = Color(0xFF7B6FA0); // Muted Lavender
+  static const Color staffAccent = Color(0xFFC18C5D); // matches secondary (Terracotta)
+  static const Color auditAccent = Color(0xFF6E8898); // Slate Grey
+
+  // ── Section header label (replaces Color(0xFF718096)) ──
+  static const Color sectionLabel = textMuted;
   static TextStyle headingFont({
     double size = 24,
     FontWeight weight = FontWeight.w700,
