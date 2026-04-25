@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mediflow/core/fcm_service.dart';
+import 'package:mediflow/core/fcm_service.dart'; import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/google_auth_config.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/models/user_role.dart';
@@ -365,7 +365,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }
 
   Future<void> signOut() async {
-    // Clear FCM token before signing out
+    try { ref.read(notificationProvider.notifier).clearAll(); } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
     await FcmService.instance.clearToken();
     await _googleSignIn.signOut();
 

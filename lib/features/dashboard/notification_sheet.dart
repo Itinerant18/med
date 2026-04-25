@@ -133,7 +133,7 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
+    return Dismissible(direction: DismissDirection.endToStart,
       key: Key(notification.id),
       background: Container(
         alignment: Alignment.centerRight,

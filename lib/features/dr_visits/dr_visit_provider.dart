@@ -15,8 +15,8 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
 
   Future<List<DrVisit>> _fetchVisits() async {
     final supabase = ref.read(supabaseClientProvider);
-    final userState = ref.read(authNotifierProvider).value;
-    final role = ref.read(currentRoleProvider);
+    final userState = ref.watch(authNotifierProvider).value;
+    final role = ref.watch(currentRoleProvider);
 
     var query = supabase.from('dr_visits').select('''
       *,

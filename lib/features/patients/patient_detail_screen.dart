@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
@@ -127,7 +127,7 @@ class PatientDetailScreen extends ConsumerWidget {
     AsyncValue<List<Map<String, dynamic>>> visitsAsync,
   ) {
     final int age = patient['date_of_birth'] != null
-        ? DateTime.now().year - DateTime.parse(patient['date_of_birth']).year
+        ? DateTime.now().year - (parseDbDate(patient['date_of_birth']) ?? DateTime.now()).year
         : 0;
 
     return SingleChildScrollView(
@@ -270,7 +270,7 @@ class PatientDetailScreen extends ConsumerWidget {
                   const Divider(height: 16),
                   Text(
                     'Last updated by Dr. ${patient['last_updated_by']}'
-                    '${patient['last_updated_at'] != null ? ' on ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(patient['last_updated_at']))}' : ''}',
+                    '${patient['last_updated_at'] != null ? ' on ${DateFormat('MMM d, yyyy HH:mm').format(parseDbDateOr(patient['last_updated_at'], DateTime.now()))}' : ''}',
                     style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
                   ),
                 ],
@@ -467,7 +467,7 @@ class _TimelineItem extends StatelessWidget {
     final dotColor = _dotColor(status, visit['visit_type']);
 
     final dateStr = visit['visit_date'] != null
-        ? DateFormat('MMM d, yyyy • HH:mm').format(DateTime.parse(visit['visit_date']))
+        ? DateFormat('MMM d, yyyy • HH:mm').format(parseDbDateOr(visit['visit_date'], DateTime.now()))
         : 'Unknown Date';
 
     return IntrinsicHeight(

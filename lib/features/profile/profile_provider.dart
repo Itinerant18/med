@@ -54,8 +54,8 @@ class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
           .from('doctors')
           .select()
           .eq('id', user.id)
-          .single();
-      return Map<String, dynamic>.from(updated);
+          .maybeSingle();
+      if (updated == null) throw Exception('Profile row missing after update.'); return Map<String, dynamic>.from(updated);
     });
   }
 }

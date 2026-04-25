@@ -48,15 +48,15 @@ class AuthGate extends ConsumerWidget {
 
           final doctorName = userState.doctorName ?? 'Staff';
 
-          // Initialize real-time subscriptions after frame
+          final container = ProviderScope.containerOf(context, listen: false); /* capture up-front */
           WidgetsBinding.instance.addPostFrameCallback((_) {
             try {
               RealtimeService.instance
-                  .subscribeToPatientChanges(doctorName, ProviderScope.containerOf(context));
+                  .subscribeToPatientChanges(doctorName, container);
               if (userState.isHeadDoctor) {
-                ref
+                container
                     .read(pendingApprovalsProvider.notifier)
-                    .listenForNewRegistrations();
+                    .listenForNewRegistrations(); container.read(pendingApprovalsProvider.notifier).listenForChanges();
               }
             } catch (e) {
               debugPrint('RealtimeService error: $e');

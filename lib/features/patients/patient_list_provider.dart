@@ -1,4 +1,4 @@
-// lib/features/patients/patient_list_provider.dart
+﻿// lib/features/patients/patient_list_provider.dart
 // NOTE: Supabase RLS must enforce:
 // - Head doctors and doctors: can SELECT/INSERT/UPDATE/DELETE all rows in patients
 // - Agents: can only SELECT/INSERT/UPDATE rows where created_by_id = auth.uid()
@@ -84,7 +84,7 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
   final userState = ref.watch(authNotifierProvider).value;
   final role = ref.watch(currentRoleProvider);
 
-  var query = supabase.from('patients').select('id, full_name, phone, email, symptoms, health_scheme, service_status, is_high_priority, last_updated_by, last_updated_at, created_by_id, created_at, area_affected, last_visit_at, last_visit_date, last_visit_type, visit_type, date_of_birth');
+  var query = supabase.from('patients').select('id, full_name, phone, email, symptoms, health_scheme, service_status, is_high_priority, last_updated_by, last_updated_at, created_by_id, created_at, area_affected, date_of_birth');
 
   // Agents only see patients they created (UUID match, not name string).
   if (role == UserRole.assistant && userState != null) {
@@ -119,7 +119,7 @@ bool _matchesFilter(Map<String, dynamic> patient, SearchFilter filter) {
   if (!_matchesHealthScheme(patient, filter.healthScheme)) return false;
   if (!_matchesPriority(patient, filter.priority)) return false;
   if (!_matchesDateRange(patient, filter.dateRange)) return false;
-  if (!_matchesVisitType(patient, filter.visitType)) return false;
+  // VisitTypeFilter is intentionally a no-op now. Visit type lives on the `visits` table per the implementation plan, not on `patients`. The field stays in the SearchFilter API for compatibility with the patient picker call sites.
   return true;
 }
 
@@ -174,23 +174,6 @@ bool _matchesDateRange(Map<String, dynamic> patient, DateRangeFilter filter) {
   return date.isAfter(cutoff);
 }
 
-bool _matchesVisitType(Map<String, dynamic> patient, VisitTypeFilter filter) {
-  if (filter == VisitTypeFilter.all) return true;
-  final raw = (patient['visit_type'] ?? patient['last_visit_type'] ?? '')
-      .toString()
-      .toLowerCase();
-  switch (filter) {
-    case VisitTypeFilter.opd:
-      return raw == 'opd';
-    case VisitTypeFilter.ipd:
-      return raw == 'ipd';
-    case VisitTypeFilter.emergency:
-      return raw == 'emergency';
-    case VisitTypeFilter.all:
-      return true;
-  }
-}
-
 void _sortPatients(List<Map<String, dynamic>> patients, SortOption sortOption) {
   int compareNames(Map<String, dynamic> a, Map<String, dynamic> b,
       {bool ascending = true}) {
@@ -223,9 +206,9 @@ void _sortPatients(List<Map<String, dynamic>> patients, SortOption sortOption) {
 }
 
 DateTime? _getRelevantDate(Map<String, dynamic> patient) {
-  return _getDateFromField(patient, 'last_visit_at') ??
-      _getDateFromField(patient, 'last_visit_date') ??
-      _getDateFromField(patient, 'last_updated_at') ??
+  // Visits live on the `visits` table per the implementation plan, so we sort patients by their own audit timestamps (no last_visit_* columns exist).
+
+  return _getDateFromField(patient, 'last_updated_at') ??
       _getDateFromField(patient, 'created_at');
 }
 

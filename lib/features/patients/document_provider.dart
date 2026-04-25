@@ -12,9 +12,9 @@ class DocumentNotifier extends FamilyAsyncNotifier<List<String>, String> {
         .from('patients')
         .select('document_urls')
         .eq('id', arg)
-        .single();
+        .maybeSingle();
     
-    final List<dynamic>? urls = response['document_urls'];
+if (response == null) return const <String>[]; final urls = response['document_urls'] as List?;
     return urls?.map((e) => e.toString()).toList() ?? [];
   }
 

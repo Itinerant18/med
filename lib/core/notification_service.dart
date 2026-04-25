@@ -1,4 +1,4 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; import 'package:mediflow/core/app_config.dart';
 
 class NotificationService {
   NotificationService._();
@@ -29,8 +29,8 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'mediflow_alerts',
-        'MediFlow Alerts',
+        AppConfig.notificationChannelId,
+        AppConfig.notificationChannelName,
         importance: Importance.high,
         largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       ),
@@ -50,8 +50,8 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'mediflow_alerts',
-        'MediFlow Alerts',
+        AppConfig.notificationChannelId,
+        AppConfig.notificationChannelName,
         importance: Importance.high,
       ),
       iOS: DarwinNotificationDetails(),
@@ -70,8 +70,8 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'mediflow_alerts',
-        'MediFlow Alerts',
+        AppConfig.notificationChannelId,
+        AppConfig.notificationChannelName,
         importance: Importance.high,
       ),
       iOS: DarwinNotificationDetails(),
@@ -90,8 +90,8 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'mediflow_alerts',
-        'MediFlow Alerts',
+        AppConfig.notificationChannelId,
+        AppConfig.notificationChannelName,
         importance: Importance.high,
       ),
       iOS: DarwinNotificationDetails(),
@@ -110,8 +110,8 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'mediflow_alerts',
-        'MediFlow Alerts',
+        AppConfig.notificationChannelId,
+        AppConfig.notificationChannelName,
         importance: Importance.high,
       ),
       iOS: DarwinNotificationDetails(),
@@ -130,8 +130,8 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'mediflow_alerts',
-        'MediFlow Alerts',
+        AppConfig.notificationChannelId,
+        AppConfig.notificationChannelName,
         importance: Importance.high,
       ),
       iOS: DarwinNotificationDetails(),

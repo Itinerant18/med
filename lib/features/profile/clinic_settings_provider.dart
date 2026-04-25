@@ -36,8 +36,8 @@ class ClinicSettingsNotifier extends AsyncNotifier<Map<String, dynamic>> {
           .from('clinic_settings')
           .select()
           .limit(1)
-          .single();
-      return Map<String, dynamic>.from(updated);
+          .maybeSingle();
+      return updated == null ? <String, dynamic>{} : Map<String, dynamic>.from(updated);
     });
   }
 }

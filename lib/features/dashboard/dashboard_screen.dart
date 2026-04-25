@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
@@ -572,7 +572,7 @@ class _AssignedVisitCard extends StatelessWidget {
     final patientInfo = visit['patients'] as Map<String, dynamic>?;
     final patientName = patientInfo?['full_name'] ?? 'Unknown';
     final visitTime = visit['visit_date'] != null
-        ? DateFormat.jm().format(DateTime.parse(visit['visit_date']))
+        ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
         : '--:--';
     final followupStatus = visit['followup_status'] ?? 'pending';
 
@@ -658,7 +658,7 @@ class _VisitCard extends StatelessWidget {
     final isHighPriority = patientInfo?['is_high_priority'] ?? false;
     final patientId = visit['patient_id'] as String?;
     final visitTime = visit['visit_date'] != null
-        ? DateFormat.jm().format(DateTime.parse(visit['visit_date']))
+        ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
         : '--:--';
     final status =
         (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
