@@ -8,6 +8,7 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
 import 'package:mediflow/features/followups/add_followup_sheet.dart';
+import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:mediflow/models/visit_model.dart';
 
@@ -48,6 +49,7 @@ class DrVisitScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (isAdmin) const _PendingReviewsBanner(),
                 if (visits.isEmpty)
                   _buildEmptyState()
                 else
@@ -361,3 +363,62 @@ class _AgentVisitSummaryCard extends StatelessWidget {
     );
   }
 }
+
+class _PendingReviewsBanner extends ConsumerWidget {
+  const _PendingReviewsBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countAsync = ref.watch(pendingFollowupReviewCountProvider);
+    final count = countAsync.valueOrNull ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () => context.push('/followups/doctor'),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.warningColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppTheme.warningColor.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.fact_check_outlined,
+                  color: AppTheme.warningColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$count follow-up${count == 1 ? "" : "s"} need your review',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    const Text(
+                      'Tap to acknowledge what your assistants reported.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.warningColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

@@ -319,7 +319,7 @@ class _DoctorFollowupCard extends StatelessWidget {
     if (t.needsReview) return ('NEEDS REVIEW', AppTheme.warningColor);
     if (t.isOverdue) return ('OVERDUE', AppTheme.errorColor);
     if (t.status == 'in_progress') {
-      return ('IN PROGRESS', Color(0xFF3182CE));
+      return ('IN PROGRESS', const Color(0xFF3182CE));
     }
     if (t.status == 'cancelled') return ('CANCELLED', AppTheme.textMuted);
     return ('PENDING', AppTheme.warningColor);

@@ -312,6 +312,20 @@ class _AssistantCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _MetricTile(
+                    label: 'Outside Visits',
+                    value: kpi.outsideVisitsTotal.toString(),
+                    icon: Icons.local_hospital_outlined,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(child: SizedBox()),
+              ],
+            ),
             const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(999),
@@ -473,6 +487,10 @@ class _AssistantDetailSheet extends StatelessWidget {
                         label: 'Follow-ups Overdue',
                         value: '${kpi.followupsOverdue}',
                         color: kpi.followupsOverdue > 0 ? Colors.red : null,
+                      ),
+                      _DetailRow(
+                        label: 'Outside Visits',
+                        value: '${kpi.outsideVisitsTotal}',
                       ),
                       _DetailRow(
                         label: 'Completion Rate',
