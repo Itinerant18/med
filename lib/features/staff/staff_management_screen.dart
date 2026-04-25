@@ -152,7 +152,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                                         onPressed: _refresh,
                                         child: const Text(
                                           'Retry',
-                                          style: TextStyle(color: Colors.white),
+                                          style: TextStyle(color: AppTheme.primaryForeground),
                                         ),
                                       ),
                                     ],
@@ -240,7 +240,7 @@ class _TopBar extends StatelessWidget {
         const SizedBox(width: 12),
         PopupMenuButton<_FilterAction>(
           tooltip: 'Filters',
-          color: Colors.white,
+          color: AppTheme.cardBg,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onSelected: (selection) {
@@ -368,13 +368,13 @@ class _SummaryChips extends ConsumerWidget {
           _CountChip(
             label: 'Doctors',
             count: counts['doctor'] ?? 0,
-            color: Colors.blue,
+            color: AppTheme.doctorAccent,
           ),
           const SizedBox(width: 10),
           _CountChip(
             label: 'Assistants',
             count: counts['assistant'] ?? 0,
-            color: Colors.amber.shade700,
+            color: AppTheme.assistantAccent,
           ),
         ],
       ),
@@ -732,7 +732,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                                     ),
                             child: const Text(
                               'Update Role',
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(color: AppTheme.primaryForeground),
                             ),
                           ),
                         ),
@@ -1040,9 +1040,9 @@ Color _roleColor(String role) {
     case 'head_doctor':
       return AppTheme.primaryTeal;
     case 'doctor':
-      return Colors.blue;
+      return AppTheme.doctorAccent;
     case 'assistant':
-      return Colors.amber.shade700;
+      return AppTheme.assistantAccent;
     default:
       return AppTheme.textMuted;
   }

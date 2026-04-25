@@ -160,7 +160,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                 child: const Text(
                   'UPDATE PASSWORD',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppTheme.primaryForeground,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),

@@ -62,7 +62,7 @@ class _AssistantProfileScreenState
               child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Logout', style: TextStyle(color: Colors.red))),
+              child: const Text('Logout', style: TextStyle(color: AppTheme.errorColor))),
         ],
       ),
     );
@@ -154,39 +154,39 @@ class _AssistantProfileScreenState
                         children: [
                           CircleAvatar(
                             radius: 52,
-                            backgroundColor: Colors.amber.shade700,
+                            backgroundColor: AppTheme.assistantAccent,
                             child: Text(initials,
                                 style: const TextStyle(
                                     fontSize: 34,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white)),
+                                    color: AppTheme.primaryForeground)),
                           ),
                           const SizedBox(height: 14),
                           Text(name,
                               style: const TextStyle(
                                   fontSize: 22, fontWeight: FontWeight.bold)),
                           Text(data['specialization'] ?? 'Clinical Assistant',
-                              style: const TextStyle(color: Colors.grey)),
+                              style: const TextStyle(color: AppTheme.textMuted)),
                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 5),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.1),
+                              color: AppTheme.assistantAccent.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.amber.shade700),
+                              border: Border.all(color: AppTheme.assistantAccent),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(AppIcons.support_agent_rounded,
-                                    size: 15, color: Colors.amber.shade700),
-                                const SizedBox(width: 5),
+                                    size: 15, color: AppTheme.assistantAccent),
+                                SizedBox(width: 5),
                                 Text('Assistant',
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.amber.shade700)),
+                                        color: AppTheme.assistantAccent)),
                               ],
                             ),
                           ),
@@ -206,7 +206,7 @@ class _AssistantProfileScreenState
                               child: Text('MY ACTIVITY',
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: Color(0xFF718096),
+                                      color: AppTheme.sectionLabel,
                                       letterSpacing: 1.2,
                                       fontWeight: FontWeight.w600)),
                             ),
@@ -217,12 +217,12 @@ class _AssistantProfileScreenState
                                 Container(
                                     height: 36,
                                     width: 1,
-                                    color: Colors.grey.shade300),
+                                    color: AppTheme.neutralDivider),
                                 _stat(s['visits'].toString(), 'My Visits'),
                                 Container(
                                     height: 36,
                                     width: 1,
-                                    color: Colors.grey.shade300),
+                                    color: AppTheme.neutralDivider),
                                 _stat(s['days'].toString(), 'Days Active'),
                               ],
                             ),
@@ -245,7 +245,7 @@ class _AssistantProfileScreenState
                             child: Text('PERSONAL INFORMATION',
                                 style: TextStyle(
                                     fontSize: 11,
-                                    color: Color(0xFF718096),
+                                    color: AppTheme.sectionLabel,
                                     letterSpacing: 1.2,
                                     fontWeight: FontWeight.w600)),
                           ),
@@ -283,7 +283,7 @@ class _AssistantProfileScreenState
                             child: Text('SIGN-IN METHODS',
                                 style: TextStyle(
                                     fontSize: 11,
-                                    color: Color(0xFF718096),
+                                    color: AppTheme.sectionLabel,
                                     letterSpacing: 1.2,
                                     fontWeight: FontWeight.w600)),
                           ),
@@ -361,20 +361,20 @@ class _AssistantProfileScreenState
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.08),
+                        color: AppTheme.warningColor.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade200),
+                        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.3)),
                       ),
-                      child: Row(
+                      child: const Row(
                         children: [
                           Icon(AppIcons.info_outline_rounded,
-                              color: Colors.amber.shade700, size: 18),
-                          const SizedBox(width: 10),
+                              color: AppTheme.warningColor, size: 18),
+                          SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'As an assistant, you can view and manage only the patients you have registered.',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.amber.shade800),
+                                  fontSize: 12, color: AppTheme.warningColor),
                             ),
                           ),
                         ],
@@ -392,7 +392,7 @@ class _AssistantProfileScreenState
                                 color: AppTheme.primaryTeal, size: 20),
                             title: const Text('About MediFlow'),
                             trailing: const Icon(AppIcons.chevron_right,
-                                size: 18, color: Colors.grey),
+                                size: 18, color: AppTheme.textMuted),
                             onTap: () => context.push('/about'),
                           ),
                           const Divider(height: 1),
@@ -403,7 +403,7 @@ class _AssistantProfileScreenState
                                 size: 20),
                             title: const Text('Notification Preferences'),
                             trailing: const Icon(AppIcons.chevron_right,
-                                size: 18, color: Colors.grey),
+                                size: 18, color: AppTheme.textMuted),
                             onTap: () =>
                                 context.push('/notification-preferences'),
                           ),
@@ -413,16 +413,16 @@ class _AssistantProfileScreenState
                                 color: AppTheme.primaryTeal, size: 20),
                             title: const Text('Change Password'),
                             trailing: const Icon(AppIcons.chevron_right,
-                                size: 18, color: Colors.grey),
+                                size: 18, color: AppTheme.textMuted),
                             onTap: () {},
                           ),
                           const Divider(height: 1),
                           ListTile(
                             leading: const Icon(AppIcons.logout,
-                                color: Colors.red, size: 20),
+                                color: AppTheme.errorColor, size: 20),
                             title: const Text('Logout',
                                 style: TextStyle(
-                                    color: Colors.red,
+                                    color: AppTheme.errorColor,
                                     fontWeight: FontWeight.bold)),
                             onTap: _logout,
                           ),
@@ -435,10 +435,10 @@ class _AssistantProfileScreenState
                       NeuButton(
                         onPressed: profileAsync.isLoading ? null : _save,
                         isLoading: profileAsync.isLoading,
-                        color: Colors.amber.shade700,
+                        color: AppTheme.assistantAccent,
                         child: const Text('SAVE CHANGES',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppTheme.primaryForeground,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1)),
                       ),
@@ -457,11 +457,11 @@ class _AssistantProfileScreenState
   Widget _stat(String val, String label) => Column(
         children: [
           Text(val,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade700)),
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  color: AppTheme.assistantAccent)),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       );
 
@@ -476,10 +476,10 @@ class _AssistantProfileScreenState
       decoration: BoxDecoration(
         color: enabled
             ? AppTheme.primaryTeal.withValues(alpha: 0.08)
-            : Colors.grey.shade100,
+            : AppTheme.neutralLight,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: enabled ? AppTheme.primaryTeal : Colors.grey.shade300,
+          color: enabled ? AppTheme.primaryTeal : AppTheme.neutralDivider,
         ),
       ),
       child: Row(
@@ -514,14 +514,14 @@ class _AssistantProfileScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
                 Text(value.isEmpty ? 'Not set' : value,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
               ],
             )),
             if (locked)
-              const Icon(AppIcons.lock_outline, size: 14, color: Colors.grey),
+              const Icon(AppIcons.lock_outline, size: 14, color: AppTheme.textMuted),
           ],
         ),
       );

@@ -74,7 +74,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Logout', style: TextStyle(color: Colors.red))),
+              child: const Text('Logout', style: TextStyle(color: AppTheme.errorColor))),
         ],
       ),
     );
@@ -167,7 +167,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                     style: const TextStyle(
                                         fontSize: 34,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white)),
+                                        color: AppTheme.primaryForeground)),
                               ),
                               Container(
                                 padding: const EdgeInsets.all(4),
@@ -176,7 +176,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(AppIcons.verified,
-                                    size: 18, color: Colors.white),
+                                    size: 18, color: AppTheme.primaryForeground),
                               ),
                             ],
                           ),
@@ -185,7 +185,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                               style: const TextStyle(
                                   fontSize: 22, fontWeight: FontWeight.bold)),
                           Text(data['specialization'] ?? 'Specialist',
-                              style: const TextStyle(color: Colors.grey)),
+                              style: const TextStyle(color: AppTheme.textMuted)),
                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -383,7 +383,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                           _tile(
                             AppIcons.bar_chart_rounded,
                             'Analytics Dashboard',
-                            Colors.deepPurple,
+                            AppTheme.analyticsAccent,
                             () => context.push('/analytics'),
                           ),
                           if (isHeadDoctor) ...[
@@ -391,14 +391,14 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             _tile(
                               AppIcons.people_alt_outlined,
                               'Manage Staff Accounts',
-                              Colors.orange,
+                              AppTheme.staffAccent,
                               () => context.push('/staff'),
                             ),
                             const Divider(height: 1),
                             _tile(
                               AppIcons.history_rounded,
                               'Audit Logs',
-                              Colors.blueGrey,
+                              AppTheme.auditAccent,
                               () => context.push('/audit-logs'),
                             ),
                           ],
@@ -424,7 +424,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             () {},
                           ),
                           const Divider(height: 1),
-                          _tile(AppIcons.logout, 'Logout', Colors.red, _logout),
+                          _tile(AppIcons.logout, 'Logout', AppTheme.errorColor, _logout),
                         ],
                       ),
                     ),
@@ -436,7 +436,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                         color: AppTheme.primaryTeal,
                         child: const Text('SAVE CHANGES',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppTheme.primaryForeground,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1)),
                       ),
@@ -474,12 +474,12 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.primaryTeal)),
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       );
 
   Widget _divider() =>
-      Container(height: 36, width: 1, color: Colors.grey.shade300);
+      Container(height: 36, width: 1, color: AppTheme.neutralDivider);
 
   Widget _providerChip({
     required String label,
@@ -492,10 +492,10 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
       decoration: BoxDecoration(
         color: enabled
             ? AppTheme.primaryTeal.withValues(alpha: 0.08)
-            : Colors.grey.shade100,
+            : AppTheme.neutralLight,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: enabled ? AppTheme.primaryTeal : Colors.grey.shade300,
+          color: enabled ? AppTheme.primaryTeal : AppTheme.neutralDivider,
         ),
       ),
       child: Row(
@@ -521,7 +521,7 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
         child: Text(t.toUpperCase(),
             style: const TextStyle(
                 fontSize: 11,
-                color: Color(0xFF718096),
+                color: AppTheme.sectionLabel,
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.w600)),
       );
@@ -540,14 +540,14 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
                 Text(value.isEmpty ? 'Not set' : value,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
               ],
             )),
             if (locked)
-              const Icon(AppIcons.lock_outline, size: 14, color: Colors.grey),
+              const Icon(AppIcons.lock_outline, size: 14, color: AppTheme.textMuted),
           ],
         ),
       );
@@ -557,11 +557,11 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
         leading: Icon(icon, color: color, size: 20),
         title: Text(label,
             style: TextStyle(
-              color: color == Colors.red ? Colors.red : null,
-              fontWeight: color == Colors.red ? FontWeight.bold : null,
+              color: color == AppTheme.errorColor ? AppTheme.errorColor : null,
+              fontWeight: color == AppTheme.errorColor ? FontWeight.bold : null,
             )),
         trailing: Icon(AppIcons.chevron_right,
-            size: 18, color: color == Colors.red ? Colors.red : Colors.grey),
+            size: 18, color: color == AppTheme.errorColor ? AppTheme.errorColor : AppTheme.textMuted),
         onTap: onTap,
       );
 }
