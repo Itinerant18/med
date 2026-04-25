@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/role_provider.dart';
-import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/features/patients/patient_list_provider.dart'; import 'package:mediflow/features/patients/patient_permissions.dart'; import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class PatientListScreen extends ConsumerStatefulWidget {
@@ -114,7 +114,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
     final filter = _buildFilter();
     final patientsAsync = ref.watch(roleAwarePatientsProvider(filter));
     final totalAsync = ref.watch(patientTotalCountProvider);
-    final isAdmin = ref.watch(isAdminProvider);
+    final isAdmin = ref.watch(isAdminProvider); final authState = ref.watch(authNotifierProvider).value;
 
     final totalCount = totalAsync.value ?? 0;
     final shownCount = patientsAsync.value?.length ?? 0;
@@ -298,7 +298,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                     itemBuilder: (context, index) => _PatientCard(
                       patient: patients[index],
                       searchQuery: _searchQuery,
-                      isAdmin: isAdmin,
+                      isAdmin: isAdmin, authState: authState,
                     ),
                   ),
                 );
@@ -307,7 +307,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: !PatientPermissions.canCreatePatient(authState) ? null : FloatingActionButton.extended(
         heroTag: 'patient-list-new-patient',
         backgroundColor: AppTheme.primaryTeal,
         foregroundColor: Colors.white,
@@ -435,12 +435,12 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
 class _PatientCard extends StatelessWidget {
   final Map<String, dynamic> patient;
   final String searchQuery;
-  final bool isAdmin;
+  final bool isAdmin; final AuthUserState? authState;
 
   const _PatientCard({
     required this.patient,
     required this.searchQuery,
-    required this.isAdmin,
+    required this.isAdmin, required this.authState,
   });
 
   @override
@@ -560,7 +560,7 @@ class _PatientCard extends StatelessWidget {
                       ),
                     ),
                     // Edit button
-                    IconButton(
+                    if (PatientPermissions.canEditPatient(authState, patient)) IconButton(
                       icon: const Icon(Icons.edit_outlined,
                           size: 18, color: AppTheme.primaryTeal),
                       onPressed: () => context

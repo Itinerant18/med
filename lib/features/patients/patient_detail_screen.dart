@@ -5,12 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart'; import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
-import 'package:mediflow/features/patients/patient_provider.dart';
+import 'package:mediflow/features/patients/patient_provider.dart'; import 'package:mediflow/features/patients/patient_permissions.dart';
 import 'package:mediflow/features/patients/visit_history_provider.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/followups/add_followup_sheet.dart';
-import 'package:mediflow/models/user_role.dart';
+
 import 'package:mediflow/core/app_snackbar.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
@@ -24,12 +24,9 @@ class PatientDetailScreen extends ConsumerWidget {
     final visitsAsync = ref.watch(visitHistoryProvider(patientId));
     final authState = ref.watch(authNotifierProvider).value;
 
-    bool canEdit(Map<String, dynamic>? patient) {
-      if (authState == null) return false;
-      if (authState.role == UserRole.doctor) return true;
-      if (patient == null) return false;
-      return patient['created_by_id'] == authState.session.user.id;
-    }
+    // Permission checks live in PatientPermissions so the patient list,
+    // patient card, and this detail screen can't drift out of sync with the
+    // role matrix in feature-list-implementation-plan.md.
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
@@ -44,38 +41,53 @@ class PatientDetailScreen extends ConsumerWidget {
         ),
         actions: [
           patientAsync.when(
-            data: (patient) => canEdit(patient)
-                ? Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.add_task_rounded,
-                            color: AppTheme.primaryTeal),
-                        tooltip: 'Add Follow-up',
-                        onPressed: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: AppTheme.bgColor,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(24)),
-                          ),
-                          builder: (_) =>
-                              AddFollowupSheet(preselectedPatientId: patientId),
+            data: (patient) {
+              final canFollowup =
+                  PatientPermissions.canAssignFollowup(authState);
+              final canEdit =
+                  PatientPermissions.canEditPatient(authState, patient);
+              final canDelete = PatientPermissions.canDeletePatient(authState);
+              if (!canFollowup && !canEdit && !canDelete) {
+                return const SizedBox.shrink();
+              }
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (canFollowup)
+                    IconButton(
+                      icon: const Icon(Icons.add_task_rounded,
+                          color: AppTheme.primaryTeal),
+                      tooltip: 'Add Follow-up',
+                      onPressed: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: AppTheme.bgColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(24)),
                         ),
+                        builder: (_) =>
+                            AddFollowupSheet(preselectedPatientId: patientId),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryTeal),
-                        onPressed: () => context.push('/patients/edit/$patientId'),
-                        tooltip: 'Edit patient',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                        onPressed: () => _confirmDelete(context, ref),
-                        tooltip: 'Delete patient',
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
+                    ),
+                  if (canEdit)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined,
+                          color: AppTheme.primaryTeal),
+                      onPressed: () =>
+                          context.push('/patients/edit/$patientId'),
+                      tooltip: 'Edit patient',
+                    ),
+                  if (canDelete)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.red),
+                      onPressed: () => _confirmDelete(context, ref),
+                      tooltip: 'Delete patient',
+                    ),
+                ],
+              );
+            },
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
