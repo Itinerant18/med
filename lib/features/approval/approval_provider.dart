@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/notification_service.dart';
+import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/user_role.dart';
@@ -24,12 +25,12 @@ class PendingDoctor {
 
   factory PendingDoctor.fromJson(Map<String, dynamic> json) {
     return PendingDoctor(
-      id: json['id'],
-      fullName: json['full_name'],
-      specialization: json['specialization'],
-      email: json['email'],
-      role: json['role'] ?? 'doctor',
-      createdAt: DateTime.parse(json['created_at']),
+      id: parseDbString(json['id']),
+      fullName: parseDbString(json['full_name'], 'Unknown'),
+      specialization: parseDbString(json['specialization']),
+      email: parseDbString(json['email']),
+      role: parseDbString(json['role'], 'doctor'),
+      createdAt: parseDbDateOr(json['created_at'], DateTime.now()),
     );
   }
 }
@@ -41,11 +42,15 @@ final pendingApprovalsProvider =
 class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
   SupabaseClient get _supabase => ref.read(supabaseClientProvider);
   RealtimeChannel? _registrationsChannel;
+  RealtimeChannel? _statusChangesChannel;
 
   @override
   Future<List<PendingDoctor>> build() async {
     ref.onDispose(() {
       _registrationsChannel?.unsubscribe();
+      _registrationsChannel = null;
+      _statusChangesChannel?.unsubscribe();
+      _statusChangesChannel = null;
     });
     return _fetchPending();
   }
@@ -53,12 +58,14 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
   Future<List<PendingDoctor>> _fetchPending() async {
     final response = await _supabase
         .from('doctors')
-        .select()
+        .select(
+            'id, full_name, specialization, email, role, created_at, approval_status')
         .eq('approval_status', 'pending')
         .order('created_at');
 
     return (response as List)
-        .map((json) => PendingDoctor.fromJson(json))
+        .map((json) =>
+            PendingDoctor.fromJson(Map<String, dynamic>.from(json as Map)))
         .toList();
   }
 
@@ -97,23 +104,33 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
         AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
   }
 
+  /// Subscribes to approval-status flips on the doctors table so the head
+  /// doctor's pending list refreshes when a row leaves "pending" (approved
+  /// elsewhere, rejected, etc.). Idempotent across logins.
   void listenForChanges() {
-    _supabase
-        .channel('public:doctors')
+    _statusChangesChannel?.unsubscribe();
+    _statusChangesChannel = _supabase
+        .channel('mediflow:doctors:status')
         .onPostgresChanges(
-            event: PostgresChangeEvent.all,
-            schema: 'public',
-            table: 'doctors',
-            callback: (payload) {
-final oldStatus = payload.oldRecord['approval_status']; final newStatus = payload.newRecord['approval_status']; if (oldStatus != newStatus) ref.invalidateSelf();
-            })
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'doctors',
+          callback: (payload) {
+            final oldStatus =
+                payload.oldRecord['approval_status']?.toString();
+            final newStatus =
+                payload.newRecord['approval_status']?.toString();
+            if (oldStatus == newStatus) return;
+            ref.invalidateSelf();
+          },
+        )
         .subscribe();
   }
 
   void listenForNewRegistrations() {
     _registrationsChannel?.unsubscribe();
     _registrationsChannel = _supabase
-        .channel('public:doctors:pending')
+        .channel('mediflow:doctors:pending')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',

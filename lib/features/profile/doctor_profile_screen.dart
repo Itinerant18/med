@@ -8,7 +8,6 @@ import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
-import 'package:mediflow/features/approval/pending_approvals_screen.dart';
 import 'package:mediflow/core/role_provider.dart';
 
 class DoctorProfileScreen extends ConsumerStatefulWidget {
@@ -139,14 +138,8 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               }
             });
           }
-          final name = data['full_name'] ?? 'Doctor';
-          final initials = name
-              .trim()
-              .split(' ')
-              .take(2)
-              .map((e) => e[0])
-              .join()
-              .toUpperCase();
+          final name = (data['full_name'] ?? 'Doctor').toString();
+          final initials = _initials(name);
           return RefreshIndicator(
             color: AppTheme.primaryTeal,
             onRefresh: () async {
@@ -160,7 +153,6 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Avatar + Role Badge
                     NeuCard(
                       child: Column(
                         children: [
@@ -224,8 +216,6 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Stats
                     statsAsync.when(
                       data: (s) => NeuCard(
                         child: Row(
@@ -244,8 +234,6 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 20),
-
-                    // Personal Info
                     NeuCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,8 +268,6 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Clinic Info
                     NeuCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +292,6 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     NeuCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,9 +303,9 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             children: [
                               _providerChip(
                                 label: 'Password',
-                                enabled:
-                                    authAsync.valueOrNull?.hasPasswordIdentity ??
-                                        false,
+                                enabled: authAsync
+                                        .valueOrNull?.hasPasswordIdentity ??
+                                    false,
                                 icon: Icons.lock_outline,
                               ),
                               _providerChip(
@@ -346,11 +331,12 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: (authAsync.valueOrNull?.hasGoogleIdentity ??
-                                          false) ||
-                                      _isLinkingGoogle
-                                  ? null
-                                  : _linkGoogle,
+                              onPressed:
+                                  (authAsync.valueOrNull?.hasGoogleIdentity ??
+                                              false) ||
+                                          _isLinkingGoogle
+                                      ? null
+                                      : _linkGoogle,
                               icon: _isLinkingGoogle
                                   ? const SizedBox(
                                       width: 16,
@@ -380,52 +366,60 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Admin Functions
                     NeuCard(
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
                           if (isHeadDoctor) ...[
-                            _tile(Icons.how_to_reg_rounded, 'Pending Approvals',
-                                AppTheme.primaryTeal, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const PendingApprovalsScreen()),
-                              );
-                            }),
+                            _tile(
+                              Icons.how_to_reg_rounded,
+                              'Pending Approvals',
+                              AppTheme.primaryTeal,
+                              () => context.push('/pending-approvals'),
+                            ),
                             const Divider(height: 1),
                           ],
-                          _tile(Icons.bar_chart_rounded, 'Analytics Dashboard',
-                              Colors.deepPurple,
-                              () => context.push('/analytics')),
+                          _tile(
+                            Icons.bar_chart_rounded,
+                            'Analytics Dashboard',
+                            Colors.deepPurple,
+                            () => context.push('/analytics'),
+                          ),
                           if (isHeadDoctor) ...[
                             const Divider(height: 1),
-                            _tile(Icons.people_alt_outlined,
-                                'Manage Staff Accounts', Colors.orange,
-                                () => context.push('/staff')),
+                            _tile(
+                              Icons.people_alt_outlined,
+                              'Manage Staff Accounts',
+                              Colors.orange,
+                              () => context.push('/staff'),
+                            ),
                             const Divider(height: 1),
-                            _tile(Icons.history_rounded, 'Audit Logs',
-                                Colors.blueGrey,
-                                () => context.push('/audit-logs')),
+                            _tile(
+                              Icons.history_rounded,
+                              'Audit Logs',
+                              Colors.blueGrey,
+                              () => context.push('/audit-logs'),
+                            ),
                           ],
                           const Divider(height: 1),
                           _tile(
-                              Icons.info_outline,
-                              'About MediFlow',
-                              AppTheme.primaryTeal,
-                              () => context.push('/about')),
+                            Icons.info_outline,
+                            'About MediFlow',
+                            AppTheme.primaryTeal,
+                            () => context.push('/about'),
+                          ),
                           const Divider(height: 1),
-                          _tile(Icons.lock_outline, 'Change Password',
-                              AppTheme.primaryTeal, () {}),
+                          _tile(
+                            Icons.lock_outline,
+                            'Change Password',
+                            AppTheme.primaryTeal,
+                            () {},
+                          ),
                           const Divider(height: 1),
                           _tile(Icons.logout, 'Logout', Colors.red, _logout),
                         ],
                       ),
                     ),
-
                     if (_isEditMode) ...[
                       const SizedBox(height: 24),
                       NeuButton(
@@ -448,6 +442,24 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
         },
       ),
     );
+  }
+
+  // Initials helper that tolerates empty names and single-word names without
+  // throwing on `[0]` index access.
+  String _initials(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'DR';
+    if (parts.length == 1) {
+      final first = parts.first;
+      return first.length >= 2
+          ? first.substring(0, 2).toUpperCase()
+          : first.toUpperCase();
+    }
+    return (parts.first[0] + parts.last[0]).toUpperCase();
   }
 
   Widget _stat(String val, String label) => Column(

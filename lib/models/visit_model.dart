@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:mediflow/core/parse_utils.dart';
 
 @immutable
 class DrVisit {
@@ -53,33 +54,33 @@ class DrVisit {
   });
 
   factory DrVisit.fromJson(Map<String, dynamic> json) {
+    final patients = parseDbMap(json['patients']);
+    final agent = parseDbMap(json['agent']);
     return DrVisit(
-      id: json['id'],
-      patientId: json['patient_id'],
-      doctorId: json['doctor_id'],
-      assignedAgentId: json['assigned_agent_id'],
-      visitNotes: json['visit_notes'],
-      diagnosis: json['diagnosis'],
-      visitDate: DateTime.parse(json['visit_date']),
-      followupDate: json['followup_date'] != null
-          ? DateTime.parse(json['followup_date'])
-          : null,
-      followupNotes: json['followup_notes'],
-      followupStatus: json['followup_status'] ?? 'pending',
-      status: json['status'] ?? 'active',
-      createdById: json['created_by_id'],
-      lastUpdatedBy: json['last_updated_by'],
-      lastUpdatedAt: json['last_updated_at'] != null
-          ? DateTime.parse(json['last_updated_at'])
-          : null,
-      createdAt: DateTime.parse(json['created_at']),
-      isExternalDoctor: json['is_external_doctor'] ?? false,
-      extDoctorName: json['ext_doctor_name'],
-      extDoctorSpecialization: json['ext_doctor_specialization'],
-      extDoctorHospital: json['ext_doctor_hospital'],
-      extDoctorPhone: json['ext_doctor_phone'],
-      patientName: json['patients']?['full_name'],
-      agentName: json['agent']?['full_name'],
+      id: parseDbString(json['id']),
+      patientId: parseDbString(json['patient_id']),
+      doctorId: parseDbString(json['doctor_id']),
+      assignedAgentId: json['assigned_agent_id']?.toString(),
+      visitNotes: json['visit_notes']?.toString(),
+      diagnosis: json['diagnosis']?.toString(),
+      // visit_date / created_at are required, but the row could be malformed
+      // in storage. Fall back to "now" so we never crash a list render.
+      visitDate: parseDbDateOr(json['visit_date'], DateTime.now()),
+      followupDate: parseDbDate(json['followup_date']),
+      followupNotes: json['followup_notes']?.toString(),
+      followupStatus: parseDbString(json['followup_status'], 'pending'),
+      status: parseDbString(json['status'], 'active'),
+      createdById: json['created_by_id']?.toString(),
+      lastUpdatedBy: json['last_updated_by']?.toString(),
+      lastUpdatedAt: parseDbDate(json['last_updated_at']),
+      createdAt: parseDbDateOr(json['created_at'], DateTime.now()),
+      isExternalDoctor: json['is_external_doctor'] == true,
+      extDoctorName: json['ext_doctor_name']?.toString(),
+      extDoctorSpecialization: json['ext_doctor_specialization']?.toString(),
+      extDoctorHospital: json['ext_doctor_hospital']?.toString(),
+      extDoctorPhone: json['ext_doctor_phone']?.toString(),
+      patientName: patients?['full_name']?.toString(),
+      agentName: agent?['full_name']?.toString(),
     );
   }
 

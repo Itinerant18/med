@@ -1,6 +1,7 @@
 // lib/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -85,18 +86,22 @@ class AgentOutsideVisitsNotifier
 
     await _supabase.from('agent_outside_visits').insert(data);
 
-    // If tied to a follow-up task, mark it complete.
+    // If tied to a follow-up task, mark it complete via the canonical
+    // FollowupTasksNotifier so:
+    //  • the same write path is used everywhere (no schema drift),
+    //  • the follow-ups list refreshes immediately after completion, and
+    //  • there's a single owner for the "external doctor" write — preventing
+    //    the previous race where two providers both wrote to the same row.
     if (followupTaskId != null) {
-      await _supabase.from('followup_tasks').update({
-        'status': 'completed',
-        'completed_at': DateTime.now().toIso8601String(),
-        'is_external_doctor': true,
-        'ext_doctor_name': extDoctorName,
-        'ext_doctor_specialization': extDoctorSpecialization,
-        'ext_doctor_hospital': extDoctorHospital,
-        'ext_doctor_phone': extDoctorPhone,
-        'completion_notes': visitNotes,
-      }).eq('id', followupTaskId);
+      await ref.read(followupTasksProvider.notifier).completeTask(
+            followupTaskId,
+            isExternalDoctor: true,
+            extDoctorName: extDoctorName,
+            extDoctorSpecialization: extDoctorSpecialization,
+            extDoctorHospital: extDoctorHospital,
+            extDoctorPhone: extDoctorPhone,
+            completionNotes: visitNotes,
+          );
     }
 
     ref.invalidateSelf();

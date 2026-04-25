@@ -527,7 +527,7 @@ class _PatientCard extends StatelessWidget {
                           Row(
                             children: [
                               Text(
-                                'ID: ${patient['id'].toString().substring(0, 8)}...',
+                                'ID: ${_shortId(patient['id'])}...',
                                 style: const TextStyle(
                                     fontSize: 11, color: AppTheme.textMuted),
                               ),
@@ -616,7 +616,7 @@ class _PatientCard extends StatelessWidget {
   }
 }
 
-class _SchemeBadge extends StatelessWidget {
+String _shortId(dynamic id) { final s = (id ?? '').toString(); return s.length <= 8 ? s : s.substring(0, 8); } class _SchemeBadge extends StatelessWidget {
   final String scheme;
   const _SchemeBadge({required this.scheme});
 

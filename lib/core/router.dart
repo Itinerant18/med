@@ -9,10 +9,10 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_form.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_list_screen.dart';
 import 'package:mediflow/features/analytics/analytics_screen.dart';
+import 'package:mediflow/features/approval/pending_approvals_screen.dart';
 import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
-import 'package:mediflow/features/dashboard/main_screen.dart';
 import 'package:mediflow/features/dashboard/performance_dashboard_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
@@ -58,12 +58,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
-        path: '/dashboard',
-        builder: (context, state) => const MainScreen(),
-      ),
-      GoRoute(
         path: '/profile',
         builder: (context, state) => const _RoleBasedProfileRouter(),
+      ),
+      GoRoute(
+        path: '/pending-approvals',
+        redirect: (context, state) {
+          // Head-doctor only. Bounce others to root.
+          final container = ProviderScope.containerOf(context);
+          final isHead = container.read(isHeadDoctorProvider);
+          return isHead ? null : '/';
+        },
+        builder: (context, state) => const PendingApprovalsScreen(),
       ),
       GoRoute(
         path: '/about',

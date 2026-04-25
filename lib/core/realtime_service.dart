@@ -39,7 +39,7 @@ class RealtimeService {
 
     try {
       _channel = Supabase.instance.client
-          .channel('mediflow-db-changes-${currentDoctorName.hashCode}')
+          .channel('mediflow:patients:${Supabase.instance.client.auth.currentUser?.id ?? "anon"}')
           .onPostgresChanges(
             event: PostgresChangeEvent.update,
             schema: 'public',

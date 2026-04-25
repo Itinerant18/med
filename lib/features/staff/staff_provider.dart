@@ -37,23 +37,23 @@ class StaffMember {
 
   factory StaffMember.fromJson(Map<String, dynamic> json) {
     return StaffMember(
-      id: json['id'] as String? ?? '',
-      fullName: json['full_name'] as String? ?? '',
-      specialization: json['specialization'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      phone: json['phone'] as String? ?? '',
-      role: json['role'] as String? ?? UserRole.assistant.databaseValue,
-      approvalStatus: json['approval_status'] as String? ?? 'pending',
-      approvedBy: json['approved_by'] as String?,
+      id: (json['id'] ?? '').toString(),
+      fullName: (json['full_name'] ?? '').toString(),
+      specialization: (json['specialization'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      phone: (json['phone'] ?? '').toString(),
+      role: (json['role'] ?? UserRole.assistant.databaseValue).toString(),
+      approvalStatus: (json['approval_status'] ?? 'pending').toString(),
+      approvedBy: json['approved_by']?.toString(),
       approvedAt: json['approved_at'] != null
-          ? DateTime.tryParse(json['approved_at'] as String)
+          ? DateTime.tryParse(json['approved_at'].toString())
           : null,
-      rejectionReason: json['rejection_reason'] as String?,
+      rejectionReason: json['rejection_reason']?.toString(),
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
-      phoneVerified: json['phone_verified'] as bool? ?? false,
-      fcmToken: json['fcm_token'] as String?,
+      phoneVerified: json['phone_verified'] == true,
+      fcmToken: json['fcm_token']?.toString(),
     );
   }
 
@@ -93,19 +93,32 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
 
   @override
   Future<List<StaffMember>> build() async {
-    final authState = ref.read(authNotifierProvider).valueOrNull;
+    // Watch the auth state so the staff list re-fetches automatically when
+    // the current user signs in/out or their role changes — otherwise the
+    // list would stay scoped to the previously logged-in user.
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
     if (authState?.role != UserRole.headDoctor) {
       return const [];
     }
     return _fetchStaff();
   }
 
+  // Trim the projection to the columns we actually render. Avoids pulling
+  // every column on a doctors table that may grow over time.
+  static const _staffSelect =
+      'id, full_name, specialization, email, phone, role, approval_status, '
+      'approved_by, approved_at, rejection_reason, created_at, phone_verified, '
+      'fcm_token';
+
   Future<List<StaffMember>> _fetchStaff() async {
-    final response =
-        await _supabase.from('doctors').select().order('created_at', ascending: false);
+    final response = await _supabase
+        .from('doctors')
+        .select(_staffSelect)
+        .order('created_at', ascending: false);
 
     return (response as List<dynamic>)
-        .map((row) => StaffMember.fromJson(Map<String, dynamic>.from(row as Map)))
+        .map((row) =>
+            StaffMember.fromJson(Map<String, dynamic>.from(row as Map)))
         .toList();
   }
 
@@ -117,8 +130,10 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
   Future<void> updateRole(String doctorId, UserRole newRole) async {
     final actor = _requireHeadDoctor();
 
+    // IMPORTANT: write the DB value (snake_case), not the Dart enum name.
+    // The doctors.role column stores 'head_doctor' / 'doctor' / 'assistant'.
     await _supabase.from('doctors').update({
-      'role': newRole.name,
+      'role': newRole.databaseValue,
     }).eq('id', doctorId);
 
     await _writeAuditLog(
@@ -127,7 +142,7 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
       actorRole: actor.role.databaseValue,
       action: 'UPDATE',
       targetId: doctorId,
-      description: 'Role updated to ${newRole.name}',
+      description: 'Role updated to ${newRole.databaseValue}',
     );
 
     await refresh();
@@ -231,12 +246,15 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
 
 final filteredStaffProvider =
     Provider.autoDispose.family<List<StaffMember>, StaffFilter>((ref, filter) {
-  final staff = ref.watch(staffListProvider).valueOrNull ?? const <StaffMember>[];
+  final staff =
+      ref.watch(staffListProvider).valueOrNull ?? const <StaffMember>[];
 
   return staff.where((member) {
+    // Compare against the DB value of the role enum, not the Dart `name`,
+    // so 'head_doctor' rows actually match UserRole.headDoctor.
     final matchesRole = filter.roleFilter == null
         ? true
-        : member.role == filter.roleFilter!.name;
+        : member.role == filter.roleFilter!.databaseValue;
     final matchesStatus = filter.statusFilter == 'all'
         ? true
         : member.approvalStatus == filter.statusFilter;
@@ -252,7 +270,8 @@ final filteredStaffProvider =
 });
 
 final staffCountByRoleProvider = Provider<Map<String, int>>((ref) {
-  final staff = ref.watch(staffListProvider).valueOrNull ?? const <StaffMember>[];
+  final staff =
+      ref.watch(staffListProvider).valueOrNull ?? const <StaffMember>[];
   final counts = <String, int>{
     'head_doctor': 0,
     'doctor': 0,

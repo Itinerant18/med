@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:mediflow/core/parse_utils.dart';
 
 @immutable
 class DoctorModel {
@@ -22,15 +23,13 @@ class DoctorModel {
 
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
     return DoctorModel(
-      id: (json['id'] ?? '') as String,
-      fullName: (json['full_name'] ?? 'Unknown') as String,
-      specialization: json['specialization'] as String?,
-      email: json['email'] as String?,
-      role: (json['role'] ?? 'assistant') as String,
-      approvalStatus: json['approval_status'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString())
-          : null,
+      id: parseDbString(json['id']),
+      fullName: parseDbString(json['full_name'], 'Unknown'),
+      specialization: json['specialization']?.toString(),
+      email: json['email']?.toString(),
+      role: parseDbString(json['role'], 'assistant'),
+      approvalStatus: json['approval_status']?.toString(),
+      createdAt: parseDbDate(json['created_at']),
     );
   }
 }
