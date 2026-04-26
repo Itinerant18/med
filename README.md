@@ -638,7 +638,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ---
 
-**Last Updated**: April 26, 2026  
-**Version**: 1.0.0
+**Last Updated**: April 25, 2026  
+**Version**: 1.0.3
 
 For questions or updates, please open an issue or discussion on GitHub.
