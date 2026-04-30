@@ -57,6 +57,10 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   final _extSpecCtrl = TextEditingController();
   final _extHospCtrl = TextEditingController();
   final _extPhoneCtrl = TextEditingController();
+  final _meetDrNameCtrl = TextEditingController();
+  final _meetPlaceCtrl = TextEditingController();
+  String? _meetDrType;
+  final _meetTimesVisitedCtrl = TextEditingController();
 
   DateTime _visitDate = DateTime.now();
   final _chiefComplaintCtrl = TextEditingController();
@@ -136,6 +140,9 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
     _extSpecCtrl.dispose();
     _extHospCtrl.dispose();
     _extPhoneCtrl.dispose();
+    _meetDrNameCtrl.dispose();
+    _meetPlaceCtrl.dispose();
+    _meetTimesVisitedCtrl.dispose();
     _chiefComplaintCtrl.dispose();
     _diagnosisCtrl.dispose();
     _prescriptionsCtrl.dispose();
@@ -205,6 +212,14 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
             prescriptions: _prescriptionsCtrl.text.trim(),
             visitNotes: _visitNotesCtrl.text.trim(),
             nextFollowupDate: _nextFollowupDate,
+            meetDrName: _meetDrNameCtrl.text.trim().isEmpty
+                ? null
+                : _meetDrNameCtrl.text.trim(),
+            meetPlace: _meetPlaceCtrl.text.trim().isEmpty
+                ? null
+                : _meetPlaceCtrl.text.trim(),
+            meetDrType: _meetDrType,
+            meetTimesVisited: int.tryParse(_meetTimesVisitedCtrl.text.trim()),
           );
 
       if (widget.followupTaskId != null) {
@@ -382,6 +397,54 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                       label: 'Doctor Phone',
                       hint: 'Contact number',
                       keyboardType: TextInputType.phone,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const SectionTitle(
+                  title: 'Dr Meet', icon: AppIcons.medical_services_rounded),
+              NeuCard(
+                child: Column(
+                  children: [
+                    NeuTextField(
+                      controller: _meetDrNameCtrl,
+                      label: 'Doctor Name',
+                      hint: 'Dr. who examined the patient',
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _meetPlaceCtrl,
+                      label: 'Place / Hospital',
+                      hint: 'Where the meeting took place',
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _meetDrType,
+                      decoration:
+                          const InputDecoration(labelText: 'Type of Doctor'),
+                      hint: const Text('Select doctor type'),
+                      items: [
+                        'Dental',
+                        'ENT',
+                        'General Surgeon',
+                        'GP',
+                        'RMP',
+                        'MDS'
+                      ]
+                          .map(
+                              (t) => DropdownMenuItem(value: t, child: Text(t)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _meetDrType = v),
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _meetTimesVisitedCtrl,
+                      label: 'No. of Times Visited',
+                      hint: 'e.g. 1',
+                      keyboardType: TextInputType.number,
                     ),
                   ],
                 ),

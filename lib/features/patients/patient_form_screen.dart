@@ -19,6 +19,15 @@ class PatientFormScreen extends ConsumerStatefulWidget {
 }
 
 class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
+  static const List<String> _investigationNames = [
+    'Blood Test',
+    'CT Scan',
+    'MRI',
+    'HRCT Thorax',
+    'Biopsy Report',
+    'Other Report',
+  ];
+
   final _formKey = GlobalKey<FormState>();
   // Track which patientId we last loaded so we re-fetch if the widget is
   // reused with a different id (e.g. cached routes).
@@ -61,6 +70,9 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   final _medicationsController = TextEditingController();
   String? _chiefComplaint;
   final _complaintCustomController = TextEditingController();
+  final _investigationPlaceController = TextEditingController();
+  final _referredByController = TextEditingController();
+  final Map<String, String> _investigationStatus = {};
 
   // Flags
   bool _isHighPriority = false;
@@ -71,6 +83,14 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   bool _consentIdVerified = false;
 
   bool get _isEdit => widget.patientId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final name in _investigationNames) {
+      _investigationStatus[name] = 'na';
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -113,6 +133,9 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           _conditionsController.text = patient['existing_conditions'] ?? '';
           _medicationsController.text = patient['current_medications'] ?? '';
           _policyNumberController.text = patient['policy_number'] ?? '';
+          _investigationPlaceController.text =
+              patient['investigation_place'] ?? '';
+          _referredByController.text = patient['referred_by'] ?? '';
 
           _gender = patient['gender'];
           _healthScheme = patient['health_scheme'];
@@ -123,6 +146,15 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
 
           if (patient['date_of_birth'] != null) {
             _dob = DateTime.tryParse(patient['date_of_birth']);
+          }
+
+          final savedStatus = patient['investigation_status'];
+          if (savedStatus is Map) {
+            savedStatus.forEach((k, v) {
+              if (_investigationStatus.containsKey(k.toString())) {
+                _investigationStatus[k.toString()] = v.toString();
+              }
+            });
           }
         });
       }
@@ -157,6 +189,8 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     _conditionsController.dispose();
     _medicationsController.dispose();
     _policyNumberController.dispose();
+    _investigationPlaceController.dispose();
+    _referredByController.dispose();
     super.dispose();
   }
 
@@ -207,6 +241,9 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         'existing_conditions': _conditionsController.text.trim(),
         'current_medications': _medicationsController.text.trim(),
         'policy_number': _policyNumberController.text.trim(),
+        'investigation_place': _investigationPlaceController.text.trim(),
+        'referred_by': _referredByController.text.trim(),
+        'investigation_status': Map<String, dynamic>.from(_investigationStatus),
       };
 
       if (_isEdit) {
@@ -375,6 +412,25 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                           hint: 'Diabetes, hypertension, etc.'),
                       _textField(_medicationsController, 'Current Medications',
                           multiLine: true, hint: 'Name, dose, frequency'),
+                    ]),
+                    const SizedBox(height: 16),
+
+                    _buildSection(
+                        'Investigations & Referral', AppIcons.biotech_rounded, [
+                      _textField(
+                        _investigationPlaceController,
+                        'Investigation Place',
+                        hint: 'Hospital / lab where investigations were done',
+                        capitalize: TextCapitalization.words,
+                      ),
+                      _investigationStatusSection(),
+                      _textField(
+                        _referredByController,
+                        'Referred By',
+                        hint:
+                            'Name of person or doctor who referred this patient',
+                        capitalize: TextCapitalization.words,
+                      ),
                     ]),
                     const SizedBox(height: 16),
 
@@ -635,6 +691,48 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _investigationStatusSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Investigations Done',
+          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        ..._investigationNames.expand((name) => [
+              _investigationRow(name),
+              const SizedBox(height: 10),
+            ]),
+      ]..removeLast(),
+    );
+  }
+
+  Widget _investigationRow(String name) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            name,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+        ChoiceChip(
+          label: const Text('Done'),
+          selected: _investigationStatus[name] == 'done',
+          onSelected: (_) =>
+              setState(() => _investigationStatus[name] = 'done'),
+        ),
+        const SizedBox(width: 8),
+        ChoiceChip(
+          label: const Text('N/A'),
+          selected: _investigationStatus[name] == 'na',
+          onSelected: (_) => setState(() => _investigationStatus[name] = 'na'),
+        ),
+      ],
     );
   }
 

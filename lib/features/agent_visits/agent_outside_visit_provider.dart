@@ -54,6 +54,10 @@ class AgentOutsideVisitsNotifier
     String? prescriptions,
     String? visitNotes,
     DateTime? nextFollowupDate,
+    String? meetDrName,
+    String? meetPlace,
+    String? meetDrType,
+    int? meetTimesVisited,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
@@ -82,6 +86,11 @@ class AgentOutsideVisitsNotifier
         'visit_notes': visitNotes,
       if (nextFollowupDate != null)
         'next_followup_date': dateStr(nextFollowupDate),
+      if (meetDrName != null && meetDrName.isNotEmpty)
+        'meet_dr_name': meetDrName,
+      if (meetPlace != null && meetPlace.isNotEmpty) 'meet_place': meetPlace,
+      if (meetDrType != null) 'meet_dr_type': meetDrType,
+      if (meetTimesVisited != null) 'meet_times_visited': meetTimesVisited,
     };
 
     await _supabase.from('agent_outside_visits').insert(data);

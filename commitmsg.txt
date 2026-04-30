@@ -1,3 +1,0 @@
-Push to GitHub (requested)
-
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

@@ -18,6 +18,10 @@ class AgentOutsideVisit {
     this.prescriptions,
     this.visitNotes,
     this.nextFollowupDate,
+    this.meetDrName,
+    this.meetPlace,
+    this.meetDrType,
+    this.meetTimesVisited,
     required this.status,
     this.reviewedBy,
     this.reviewedAt,
@@ -39,6 +43,10 @@ class AgentOutsideVisit {
   final String? prescriptions;
   final String? visitNotes;
   final DateTime? nextFollowupDate;
+  final String? meetDrName;
+  final String? meetPlace;
+  final String? meetDrType;
+  final int? meetTimesVisited;
   final String status;
   final String? reviewedBy;
   final DateTime? reviewedAt;
@@ -77,6 +85,10 @@ class AgentOutsideVisit {
       nextFollowupDate: json['next_followup_date'] != null
           ? _parseDate(json['next_followup_date'])
           : null,
+      meetDrName: json['meet_dr_name']?.toString(),
+      meetPlace: json['meet_place']?.toString(),
+      meetDrType: json['meet_dr_type']?.toString(),
+      meetTimesVisited: (json['meet_times_visited'] as num?)?.toInt(),
       status: json['status']?.toString() ?? 'recorded',
       reviewedBy: json['reviewed_by']?.toString(),
       reviewedAt: json['reviewed_at'] != null
