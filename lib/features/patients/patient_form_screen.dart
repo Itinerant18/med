@@ -268,10 +268,10 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
 
       if (_isEdit) {
         await ref
-            .read(patientProvider)
+            .read(patientProvider.notifier)
             .updatePatient(widget.patientId!, patientData);
       } else {
-        await ref.read(patientProvider).registerPatient(patientData);
+        await ref.read(patientProvider.notifier).registerPatient(patientData);
       }
 
       if (!mounted) return;
