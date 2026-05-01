@@ -80,14 +80,6 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
 
   @override
   void deactivate() {
-    // Reset search query when navigating away so the next entry starts clean.
-    // `deactivate` is called before `dispose`, while the element is still
-    // attached — using `ref.read` here is safe.
-    try {
-      ref.read(patientSearchQueryProvider.notifier).state = '';
-    } catch (_) {
-      // Provider may already be disposed — safe to ignore.
-    }
     super.deactivate();
   }
 
@@ -112,16 +104,13 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     try {
       final patient =
           await ref.read(patientDetailProvider(_selectedPatientId!).future);
-      if (patient != null && mounted) {
-        setState(() {
-          _selectedPatientName = patient['full_name'];
-          if (patient['date_of_birth'] != null) {
-            final dob = parseDbDate(patient['date_of_birth']);
-            if (dob == null) return;
-            _selectedPatientAge = (DateTime.now().year - dob.year).toString();
-          }
-        });
-      }
+      if (!mounted || patient == null) return;
+      setState(() {
+        _selectedPatientName = patient['full_name'];
+        final dob = parseDbDate(patient['date_of_birth']);
+        _selectedPatientAge =
+            dob != null ? (DateTime.now().year - dob.year).toString() : 'N/A';
+      });
     } catch (e) {
       debugPrint('Failed to load patient info: $e');
     }

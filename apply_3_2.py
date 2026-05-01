@@ -1,6 +1,8 @@
-// lib/features/patients/patient_list_provider.dart
-import 'dart:async';
+import os
 
+path = 'lib/features/patients/patient_list_provider.dart'
+
+content = r"""// lib/features/patients/patient_list_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
@@ -32,7 +34,7 @@ class SearchFilter {
     required this.dateRange,
     required this.visitType,
     required this.sortOption,
-    this.limit = 100,
+    this.limit = 20,
     this.offset = 0,
   });
 
@@ -85,26 +87,22 @@ class SearchFilter {
       visitType, sortOption, limit, offset);
 }
 
-const _patientListSelect =
-    'id, full_name, phone, email, symptoms, health_scheme, service_status, '
-    'is_high_priority, last_updated_by, last_updated_at, created_by_id, '
-    'created_at, area_affected, date_of_birth';
-
 // Role-aware filtered provider that respects RBAC:
 // Head doctors/doctors see everyone, agents see only patients they created.
 final roleAwarePatientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
-  final keepAliveLink = ref.keepAlive();
-  final cacheTimer = Timer(const Duration(seconds: 30), keepAliveLink.close);
-  ref.onDispose(cacheTimer.cancel);
-
+  // 1. Add 300ms debounce for search queries to reduce Supabase load.
   if (filter.query.isNotEmpty) {
     await Future.delayed(const Duration(milliseconds: 300));
   }
 
+  // Check if the request was cancelled during the debounce.
+  final link = ref.keepAlive();
   bool isDisposed = false;
   ref.onDispose(() {
     isDisposed = true;
+    // Don't keep alive indefinitely if it was disposed during fetch.
+    link.close();
   });
   if (isDisposed) return [];
 
@@ -113,18 +111,23 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
   final role = ref.watch(currentRoleProvider);
 
   try {
-    var query = supabase.from('patients').select(_patientListSelect);
+    var query = supabase.from('patients').select(
+        'id, full_name, phone, email, symptoms, health_scheme, service_status, is_high_priority, last_updated_by, last_updated_at, created_by_id, created_at, area_affected, date_of_birth');
 
+    // 2. Server-side Filtering (RBAC)
+    // Agents only see patients they created.
     if (role == UserRole.assistant && userState != null) {
       query = query.eq('created_by_id', userState.session.user.id);
     }
 
+    // 3. Server-side Search
     if (filter.query.trim().isNotEmpty) {
       final q = '%${filter.query.trim()}%';
       query = query.or(
           'full_name.ilike.$q,phone.ilike.$q,email.ilike.$q,symptoms.ilike.$q,area_affected.ilike.$q');
     }
 
+    // 4. Server-side Category Filters
     if (filter.healthScheme != HealthSchemeFilter.all) {
       final schemeStr = switch (filter.healthScheme) {
         HealthSchemeFilter.insurance => 'insurance',
@@ -153,17 +156,25 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
       query = query.gte('last_updated_at', cutoff.toIso8601String());
     }
 
-    final transformQuery = switch (filter.sortOption) {
-      SortOption.nameAsc => query.order('full_name', ascending: true),
-      SortOption.nameDesc => query.order('full_name', ascending: false),
-      SortOption.mostRecentVisit =>
-        query.order('last_updated_at', ascending: false),
-      SortOption.highPriorityFirst => query
-          .order('is_high_priority', ascending: false)
-          .order('full_name', ascending: true),
-      SortOption.newestRegistered =>
-        query.order('created_at', ascending: false),
-    }.range(filter.offset, filter.offset + filter.limit - 1);
+    // 5. Server-side Sorting
+    PostgrestTransformBuilder<PostgrestList> transformQuery;
+    switch (filter.sortOption) {
+      case SortOption.nameAsc:
+        transformQuery = query.order('full_name', ascending: true);
+      case SortOption.nameDesc:
+        transformQuery = query.order('full_name', ascending: false);
+      case SortOption.mostRecentVisit:
+        transformQuery = query.order('last_updated_at', ascending: false);
+      case SortOption.highPriorityFirst:
+        transformQuery = query
+            .order('is_high_priority', ascending: false)
+            .order('full_name', ascending: true);
+      case SortOption.newestRegistered:
+        transformQuery = query.order('created_at', ascending: false);
+    }
+
+    // 6. Server-side Pagination
+    transformQuery = transformQuery.range(filter.offset, filter.offset + filter.limit - 1);
 
     final response = await supabase.retry(() => transformQuery);
     return List<Map<String, dynamic>>.from(response);
@@ -186,9 +197,14 @@ final patientTotalCountProvider = FutureProvider.autoDispose<int>((ref) async {
       query = query.eq('created_by_id', userState.session.user.id);
     }
 
-    final response = await supabase.retry(() => query);
-    return (response as List).length;
+    // Use count() method correctly for Supabase 2.x
+    final response = await supabase.retry(() => query.count(CountOption.exact));
+    return response.count;
   } catch (e) {
     return 0;
   }
 });
+"""
+
+with open(path, 'w', encoding='utf-8', newline='\n') as f:
+    f.write(content)
