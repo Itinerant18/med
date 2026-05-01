@@ -7,22 +7,29 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/audit/audit_provider.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/patient_model.dart';
 
 final patientProvider =
     AsyncNotifierProvider<PatientNotifier, void>(PatientNotifier.new);
 
 /// Provider to fetch a single patient by ID.
 final patientDetailProvider =
-    FutureProvider.family<Map<String, dynamic>?, String>((ref, id) async {
+    FutureProvider.family<PatientModel?, String>((ref, id) async {
   if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
   final supabase = ref.read(supabaseClientProvider);
-  final response =
-      await supabase.from('patients').select().eq('id', id).maybeSingle();
-  return response;
+  try {
+    final response = await supabase.retry(() =>
+        supabase.from('patients').select().eq('id', id).maybeSingle());
+    if (response == null) return null;
+    return PatientModel.fromJson(Map<String, dynamic>.from(response));
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
 });
 
 class PatientNotifier extends AsyncNotifier<void> {
@@ -48,37 +55,41 @@ class PatientNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     String newId = '';
     state = await AsyncValue.guard(() async {
-      final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('Not authenticated. Please sign in again.');
+      try {
+        final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
+        if (userId == null) {
+          throw Exception('Not authenticated. Please sign in again.');
+        }
+
+        final finalData = {...patientData};
+        finalData.removeWhere((key, value) => value == null || value == '');
+
+        finalData['created_by_id'] = userId;
+        finalData['last_updated_by'] = _doctorName;
+        finalData['last_updated_by_id'] = userId;
+        finalData['last_updated_at'] = DateTime.now().toIso8601String();
+        finalData['service_status'] = 'pending';
+        finalData['created_at'] = DateTime.now().toIso8601String();
+
+        final response = await _supabase.retry(() => _supabase
+            .from('patients')
+            .insert(finalData)
+            .select('id')
+            .single());
+
+        newId = response['id'].toString();
+
+        await AuditService.instance.logFromAuth(
+          ref: ref,
+          action: 'INSERT',
+          targetTable: 'patients',
+          description:
+              'Patient registered: ${finalData['full_name'] ?? 'Unknown Patient'}',
+          newData: Map<String, dynamic>.from(finalData),
+        );
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
       }
-
-      final finalData = {...patientData};
-      finalData.removeWhere((key, value) => value == null || value == '');
-
-      finalData['created_by_id'] = userId;
-      finalData['last_updated_by'] = _doctorName;
-      finalData['last_updated_by_id'] = userId;
-      finalData['last_updated_at'] = DateTime.now().toIso8601String();
-      finalData['service_status'] = 'pending';
-      finalData['created_at'] = DateTime.now().toIso8601String();
-
-      final response = await _supabase
-          .from('patients')
-          .insert(finalData)
-          .select('id')
-          .single();
-
-      newId = response['id'].toString();
-
-      await AuditService.instance.logFromAuth(
-        ref: ref,
-        action: 'INSERT',
-        targetTable: 'patients',
-        description:
-            'Patient registered: ${finalData['full_name'] ?? 'Unknown Patient'}',
-        newData: Map<String, dynamic>.from(finalData),
-      );
     });
 
     // Re-throw so imperative callers still see the error.
@@ -96,66 +107,70 @@ class PatientNotifier extends AsyncNotifier<void> {
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      Map<String, dynamic>? existing;
       try {
-        existing = await _supabase
-            .from('patients')
-            .select()
-            .eq('id', id)
-            .maybeSingle();
+        Map<String, dynamic>? existing;
+        try {
+          existing = await _supabase.retry(() => _supabase
+              .from('patients')
+              .select()
+              .eq('id', id)
+              .maybeSingle());
+        } catch (e) {
+          throw Exception('Unable to load patient: ${AppError.getMessage(e)}');
+        }
+
+        if (existing == null) {
+          throw Exception(
+            'Patient not found or you do not have permission to edit it.',
+          );
+        }
+
+        final finalData = {
+          ...patientData,
+          'last_updated_by': _doctorName,
+          'last_updated_by_id': _userId,
+          'last_updated_at': DateTime.now().toIso8601String(),
+        };
+        finalData.removeWhere((key, value) => value == null);
+
+        await _supabase.retry(() => _supabase.from('patients').update(finalData).eq('id', id));
+
+        final patientName =
+            (finalData['full_name'] ?? existing['full_name'] ?? 'Unknown Patient')
+                .toString();
+        final oldStatus = existing['service_status']?.toString();
+        final newStatus = patientData['service_status']?.toString();
+        final ownerId = existing['created_by_id']?.toString();
+
+        if (newStatus != null && newStatus != oldStatus) {
+          unawaited(
+            _triggerStatusNotification(
+              patientId: id,
+              patientName: patientName,
+              oldStatus: oldStatus,
+              newStatus: newStatus,
+              ownerId: ownerId,
+            ).catchError((error, stackTrace) {
+              debugPrint('patient status notification failed: $error');
+            }),
+          );
+        }
+
+        await AuditService.instance.logFromAuth(
+          ref: ref,
+          action: 'UPDATE',
+          targetTable: 'patients',
+          targetId: id,
+          description: 'Patient updated: $patientName',
+          oldData: Map<String, dynamic>.from(existing),
+          newData: {
+            ...Map<String, dynamic>.from(existing),
+            ...finalData,
+          },
+        );
       } catch (e) {
-        throw Exception('Unable to load patient: $e');
+        throw Exception(AppError.getMessage(e));
       }
-
-      if (existing == null) {
-        throw Exception(
-          'Patient not found or you do not have permission to edit it.',
-        );
-      }
-
-      final finalData = {
-        ...patientData,
-        'last_updated_by': _doctorName,
-        'last_updated_by_id': _userId,
-        'last_updated_at': DateTime.now().toIso8601String(),
-      };
-      finalData.removeWhere((key, value) => value == null);
-
-      await _supabase.from('patients').update(finalData).eq('id', id);
-
-      final patientName =
-          (finalData['full_name'] ?? existing['full_name'] ?? 'Unknown Patient')
-              .toString();
-      final oldStatus = existing['service_status']?.toString();
-      final newStatus = patientData['service_status']?.toString();
-      final ownerId = existing['created_by_id']?.toString();
-
-      if (newStatus != null && newStatus != oldStatus) {
-        unawaited(
-          _triggerStatusNotification(
-            patientId: id,
-            patientName: patientName,
-            oldStatus: oldStatus,
-            newStatus: newStatus,
-            ownerId: ownerId,
-          ).catchError((error, stackTrace) {
-            debugPrint('patient status notification failed: $error');
-          }),
-        );
-      }
-
-      await AuditService.instance.logFromAuth(
-        ref: ref,
-        action: 'UPDATE',
-        targetTable: 'patients',
-        targetId: id,
-        description: 'Patient updated: $patientName',
-        oldData: Map<String, dynamic>.from(existing),
-        newData: {
-          ...Map<String, dynamic>.from(existing),
-          ...finalData,
-        },
-      );
     });
 
     if (state.hasError) throw state.error!;
@@ -168,37 +183,41 @@ class PatientNotifier extends AsyncNotifier<void> {
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      Map<String, dynamic>? existing;
       try {
-        existing = await _supabase
-            .from('patients')
-            .select()
-            .eq('id', id)
-            .maybeSingle();
-      } catch (e) {
-        throw Exception('Unable to load patient: $e');
-      }
+        Map<String, dynamic>? existing;
+        try {
+          existing = await _supabase.retry(() => _supabase
+              .from('patients')
+              .select()
+              .eq('id', id)
+              .maybeSingle());
+        } catch (e) {
+          throw Exception('Unable to load patient: ${AppError.getMessage(e)}');
+        }
 
-      if (existing == null) {
-        throw Exception(
-          'Patient not found or you do not have permission to delete it.',
+        if (existing == null) {
+          throw Exception(
+            'Patient not found or you do not have permission to delete it.',
+          );
+        }
+
+        await _cleanupPatientStorage(id, existing);
+        await _supabase.retry(() => _supabase.from('patients').delete().eq('id', id));
+
+        final patientName =
+            (existing['full_name'] ?? 'Unknown Patient').toString();
+
+        await AuditService.instance.logFromAuth(
+          ref: ref,
+          action: 'DELETE',
+          targetTable: 'patients',
+          targetId: id,
+          description: 'Patient deleted: $patientName',
+          oldData: Map<String, dynamic>.from(existing),
         );
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
       }
-
-      await _cleanupPatientStorage(id, existing);
-      await _supabase.from('patients').delete().eq('id', id);
-
-      final patientName =
-          (existing['full_name'] ?? 'Unknown Patient').toString();
-
-      await AuditService.instance.logFromAuth(
-        ref: ref,
-        action: 'DELETE',
-        targetTable: 'patients',
-        targetId: id,
-        description: 'Patient deleted: $patientName',
-        oldData: Map<String, dynamic>.from(existing),
-      );
     });
 
     if (state.hasError) throw state.error!;
@@ -212,13 +231,19 @@ class PatientNotifier extends AsyncNotifier<void> {
   }) async {
     if (query.trim().length < 2) return [];
 
-    final response = await _supabase
-        .from('patients')
-        .select('id, full_name, date_of_birth, phone')
-        .ilike('full_name', '%${query.trim()}%')
-        .limit(limit);
+    try {
+      final response = await _supabase.retry(() => _supabase
+          .from('patients')
+          .select('id, full_name, date_of_birth, phone')
+          .ilike('full_name', '%${query.trim()}%')
+          .limit(limit));
 
-    return List<Map<String, dynamic>>.from(response);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('Patient search failed: $e');
+      // Return empty list on error for better UX in search fields.
+      return [];
+    }
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────
@@ -228,6 +253,25 @@ class PatientNotifier extends AsyncNotifier<void> {
     Map<String, dynamic> existing,
   ) async {
     try {
+      // Preferred path: canonical storage metadata table.
+      final docs = await _supabase
+          .from('patient_documents')
+          .select('storage_path')
+          .eq('patient_id', patientId);
+      final canonicalPaths = (docs as List)
+          .map((e) => (e as Map)['storage_path']?.toString() ?? '')
+          .where((p) => p.isNotEmpty)
+          .toList(growable: false);
+      if (canonicalPaths.isNotEmpty) {
+        await _supabase.storage.from('patient-docs').remove(canonicalPaths);
+        await _supabase
+            .from('patient_documents')
+            .delete()
+            .eq('patient_id', patientId);
+        return;
+      }
+
+      // Legacy fallback: parse URLs when old metadata is all we have.
       final urls = (existing['document_urls'] as List?)
               ?.map((u) => u?.toString() ?? '')
               .where((u) => u.isNotEmpty)
@@ -265,16 +309,20 @@ class PatientNotifier extends AsyncNotifier<void> {
     required String newStatus,
     required String? ownerId,
   }) async {
-    await _supabase.functions.invoke(
-      'notify-status-change',
-      body: {
-        'patientId': patientId,
-        'patientName': patientName,
-        'oldStatus': oldStatus,
-        'newStatus': newStatus,
-        'updaterId': _userId,
-        'ownerId': ownerId,
-      },
-    );
+    try {
+      await _supabase.functions.invoke(
+        'notify-status-change',
+        body: {
+          'patientId': patientId,
+          'patientName': patientName,
+          'oldStatus': oldStatus,
+          'newStatus': newStatus,
+          'updaterId': _userId,
+          'ownerId': ownerId,
+        },
+      );
+    } catch (e) {
+      debugPrint('Failed to trigger status notification: $e');
+    }
   }
 }
