@@ -37,6 +37,12 @@ class AppTheme {
   static const Color staffAccent = Color(0xFFC18C5D); // matches secondary (Terracotta)
   static const Color auditAccent = Color(0xFF6E8898); // Slate Grey
 
+  // ── Neumorphic/Organic surface and shadow tokens ──
+  static const Color neuShadowLight = Color(0x80DED8CF);
+  static const Color neuShadowDark = Color(0xFFA3B1C6);
+  static const Color surfaceFill = Color(0x80FFFFFF);
+  static const Color surfaceWhite = Color(0xFFFFFFFF);
+
   // ── Section header label (replaces Color(0xFF718096)) ──
   static const Color sectionLabel = textMuted;
   static TextStyle headingFont({
@@ -107,14 +113,14 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0x80DED8CF), width: 1),
+          side: const BorderSide(color: neuShadowLight, width: 1),
         ),
       ),
 
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0x80FFFFFF),
+        fillColor: surfaceFill,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         border: OutlineInputBorder(
@@ -193,7 +199,7 @@ class AppTheme {
 
       // NavigationBar Theme
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: const Color(0xB3FFFFFF), // with opacity for blur
+        backgroundColor: surfaceFill.withValues(alpha: 0.7), // with opacity for blur
         elevation: 0,
         indicatorColor: primaryTeal,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -231,13 +237,13 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return primaryTeal;
-          return const Color(0xFFDED8CF);
+          return border;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return primaryTeal.withValues(alpha: 0.3);
           }
-          return const Color(0xFFF0EBE5);
+          return neutralLight;
         }),
       ),
     );
