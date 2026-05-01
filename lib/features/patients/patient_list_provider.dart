@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/patient_model.dart';
 import 'package:mediflow/models/user_role.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, other }
 
@@ -93,7 +94,7 @@ const _patientListSelect =
 // Role-aware filtered provider that respects RBAC:
 // Head doctors/doctors see everyone, agents see only patients they created.
 final roleAwarePatientsProvider = FutureProvider.autoDispose
-    .family<List<Map<String, dynamic>>, SearchFilter>((ref, filter) async {
+    .family<List<PatientModel>, SearchFilter>((ref, filter) async {
   final keepAliveLink = ref.keepAlive();
   final cacheTimer = Timer(const Duration(seconds: 30), keepAliveLink.close);
   ref.onDispose(cacheTimer.cancel);
@@ -166,7 +167,9 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
     }.range(filter.offset, filter.offset + filter.limit - 1);
 
     final response = await supabase.retry(() => transformQuery);
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List)
+        .map((row) => PatientModel.fromJson(Map<String, dynamic>.from(row as Map)))
+        .toList(growable: false);
   } catch (e) {
     if (isDisposed) return [];
     throw Exception(AppError.getMessage(e));
