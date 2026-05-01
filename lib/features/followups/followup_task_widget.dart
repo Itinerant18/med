@@ -110,8 +110,9 @@ class FollowupTaskWidget extends ConsumerWidget {
                 ),
               ],
 
-              // ── Target external doctor (where to go) ──
-              if (task.hasTargetDoctor) ...[
+              // ── Mission brief (doctor target + instructions) ──
+              if (task.hasTargetDoctor ||
+                  (task.visitInstructions?.isNotEmpty ?? false)) ...[
                 const SizedBox(height: 12),
                 _MissionBriefBlock(task: task),
               ],
@@ -133,57 +134,6 @@ class FollowupTaskWidget extends ConsumerWidget {
                       ),
                     ),
                   ],
-                ),
-              ],
-
-              // ── Doctor's instructions ──
-              if ((task.visitInstructions?.isNotEmpty ?? false)) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border(
-                      left: BorderSide(
-                        color: AppTheme.warningColor.withValues(alpha: 0.6),
-                        width: 3,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(AppIcons.assignment_outlined,
-                          size: 14, color: AppTheme.warningColor),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'INSTRUCTIONS',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.warningColor,
-                                letterSpacing: 1.1,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              task.visitInstructions!,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: AppTheme.textColor,
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
 
@@ -342,13 +292,22 @@ class FollowupTaskWidget extends ConsumerWidget {
   }
 }
 
-class _MissionBriefBlock extends StatelessWidget {
+class _MissionBriefBlock extends StatefulWidget {
   const _MissionBriefBlock({required this.task});
 
   final FollowupTask task;
 
   @override
+  State<_MissionBriefBlock> createState() => _MissionBriefBlockState();
+}
+
+class _MissionBriefBlockState extends State<_MissionBriefBlock>
+    with TickerProviderStateMixin {
+  bool _expanded = true;
+
+  @override
   Widget build(BuildContext context) {
+    final task = widget.task;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -361,73 +320,103 @@ class _MissionBriefBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(AppIcons.assignment_outlined,
-                  size: 13, color: Color(0xFF3182CE)),
-              SizedBox(width: 6),
-              Text(
-                'YOUR MISSION',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF3182CE),
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if ((task.targetExtDoctorName?.isNotEmpty ?? false) ||
-              (task.targetExtDoctorHospital?.isNotEmpty ?? false))
-            _briefRow(
-              AppIcons.local_hospital_outlined,
-              'Take ${task.patientName ?? "patient"} to:',
-              [
-                if (task.targetExtDoctorName?.isNotEmpty ?? false)
-                  task.targetExtDoctorName!,
-                if (task.targetExtDoctorSpecialization?.isNotEmpty ?? false)
-                  task.targetExtDoctorSpecialization!,
-                if (task.targetExtDoctorHospital?.isNotEmpty ?? false)
-                  task.targetExtDoctorHospital!,
-              ].join('  '),
-            ),
-          if (task.targetExtDoctorPhone?.isNotEmpty ?? false)
-            _briefRow(
-              AppIcons.phone_rounded,
-              'Doctor contact:',
-              task.targetExtDoctorPhone!,
-            ),
-          if (task.scheduledVisitDate != null)
-            _briefRow(
-              AppIcons.event_rounded,
-              'Scheduled for:',
-              '${task.scheduledVisitDate!.day}/${task.scheduledVisitDate!.month}/${task.scheduledVisitDate!.year}',
-            ),
-          if (task.visitInstructions?.isNotEmpty ?? false) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.warningColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(6),
-                border: Border(
-                  left: BorderSide(
-                    color: AppTheme.warningColor.withValues(alpha: 0.5),
-                    width: 3,
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                const Icon(AppIcons.assignment_outlined,
+                    size: 13, color: Color(0xFF3182CE)),
+                const SizedBox(width: 6),
+                const Text(
+                  'YOUR MISSION',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF3182CE),
+                    letterSpacing: 1.2,
                   ),
                 ),
-              ),
-              child: Text(
-                task.visitInstructions!,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textColor,
-                  height: 1.4,
+                const Spacer(),
+                AnimatedRotation(
+                  duration: const Duration(milliseconds: 180),
+                  turns: _expanded ? 0.5 : 0,
+                  child: const Icon(
+                    AppIcons.arrow_drop_down_rounded,
+                    size: 16,
+                    color: Color(0xFF3182CE),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: _expanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      if ((task.targetExtDoctorName?.isNotEmpty ?? false) ||
+                          (task.targetExtDoctorHospital?.isNotEmpty ?? false))
+                        _briefRow(
+                          AppIcons.local_hospital_outlined,
+                          'Take ${task.patientName ?? "patient"} to:',
+                          [
+                            if (task.targetExtDoctorName?.isNotEmpty ?? false)
+                              task.targetExtDoctorName!,
+                            if ((task.targetExtDoctorSpecialization
+                                    ?.isNotEmpty ??
+                                false))
+                              task.targetExtDoctorSpecialization!,
+                            if (task.targetExtDoctorHospital?.isNotEmpty ??
+                                false)
+                              task.targetExtDoctorHospital!,
+                          ].join('  '),
+                        ),
+                      if (task.targetExtDoctorPhone?.isNotEmpty ?? false)
+                        _briefRow(
+                          AppIcons.phone_rounded,
+                          'Doctor contact:',
+                          task.targetExtDoctorPhone!,
+                        ),
+                      if (task.scheduledVisitDate != null)
+                        _briefRow(
+                          AppIcons.event_rounded,
+                          'Scheduled for:',
+                          '${task.scheduledVisitDate!.day}/${task.scheduledVisitDate!.month}/${task.scheduledVisitDate!.year}',
+                        ),
+                      if (task.visitInstructions?.isNotEmpty ?? false) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color:
+                                AppTheme.warningColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border(
+                              left: BorderSide(
+                                color: AppTheme.warningColor
+                                    .withValues(alpha: 0.5),
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            task.visitInstructions!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textColor,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
