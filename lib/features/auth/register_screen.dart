@@ -244,32 +244,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Join MediFlow',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.textColor,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Create your professional account',
-                          style: TextStyle(
-                            color: AppTheme.textMuted.withValues(alpha: 0.8),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildLogoHeader(),
+                  const SizedBox(height: 24),
 
                   // ── Personal Info ──
                   NeuCard(
@@ -697,6 +673,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildLogoHeader() {
+    return const Column(
+      children: [
+        NeuCard(
+          padding: EdgeInsets.all(20),
+          borderRadius: 24,
+          child: SizedBox(
+            width: 64,
+            height: 64,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppTheme.primaryTeal,
+                borderRadius: BorderRadius.all(Radius.circular(18)),
+              ),
+              child: Icon(
+                AppIcons.local_hospital_rounded,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        Text(
+          'MediFlow',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.primaryTeal,
+            letterSpacing: -1,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          'Create your professional account',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
     );
   }
 }
