@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:mediflow/core/app_config.dart';
 import 'package:mediflow/core/navigation_service.dart';
+import 'package:mediflow/core/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Background message handler — must be a top-level function.
@@ -115,13 +116,14 @@ class FcmService {
 
   Future<void> _saveTokenToSupabase(String token) async {
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
       if (userId == null) return;
 
-      await Supabase.instance.client.from('doctors').update({
+      await client.retry(() => client.from('doctors').update({
         'fcm_token': token,
         'fcm_updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
+      }).eq('id', userId));
 
       debugPrint('[FCM] Token saved to Supabase');
     } catch (e) {
@@ -137,11 +139,12 @@ class FcmService {
       await _tokenRefreshSub?.cancel();
       _tokenRefreshSub = null;
 
-      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
       if (userId != null) {
-        await Supabase.instance.client.from('doctors').update({
+        await client.retry(() => client.from('doctors').update({
           'fcm_token': null,
-        }).eq('id', userId);
+        }).eq('id', userId));
       }
 
       await _fcm.deleteToken();
@@ -182,11 +185,12 @@ class FcmService {
     Map<String, String>? data,
   }) async {
     try {
-      final result = await Supabase.instance.client
+      final client = Supabase.instance.client;
+      final result = await client.retry(() => client
           .from('doctors')
           .select('fcm_token')
           .eq('id', doctorId)
-          .maybeSingle();
+          .maybeSingle());
 
       final token = result?['fcm_token'] as String?;
       if (token == null || token.isEmpty) {
@@ -232,29 +236,64 @@ class FcmService {
     required String body,
     Map<String, String>? data,
   }) async {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) return false;
-
-    final res = await http.post(
-      Uri.parse('${AppConfig.supabaseUrl}$_edgeFnPath'),
-      headers: {
-        'Authorization': 'Bearer ${session.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'token': token,
-        'title': title,
-        'body': body,
-        if (data != null) 'data': data,
-      }),
-    );
-
-    if (res.statusCode == 200) {
-      debugPrint('[FCM] Push sent successfully');
-      return true;
+    final accessToken = await _getValidAccessToken();
+    if (accessToken == null) {
+      debugPrint('[FCM] Cannot call edge function: no valid auth session.');
+      return false;
     }
-    debugPrint('[FCM] Edge function error ${res.statusCode}: ${res.body}');
-    return false;
+
+    try {
+      final res = await http.post(
+        Uri.parse('${AppConfig.supabaseUrl}$_edgeFnPath'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'token': token,
+          'title': title,
+          'body': body,
+          if (data != null) 'data': data,
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        debugPrint('[FCM] Push sent successfully');
+        return true;
+      }
+      debugPrint('[FCM] Edge function error ${res.statusCode}: ${res.body}');
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        debugPrint('[FCM] Auth rejected by edge function, user must re-authenticate.');
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[FCM] Edge function network/call error: $e');
+      return false;
+    }
+  }
+
+  static Future<String?> _getValidAccessToken() async {
+    final auth = Supabase.instance.client.auth;
+    var session = auth.currentSession;
+    if (session == null) return null;
+
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final expiry = session.expiresAt ?? 0;
+    final isExpired = expiry <= nowSeconds + 30;
+    if (!isExpired) return session.accessToken;
+
+    try {
+      final refreshed = await auth.refreshSession();
+      session = refreshed.session ?? auth.currentSession;
+      return session?.accessToken;
+    } catch (e) {
+      debugPrint('[FCM] Session refresh failed before edge call: $e');
+      // Graceful fallback: sign out stale session so UI can drive re-auth.
+      try {
+        await auth.signOut();
+      } catch (_) {}
+      return null;
+    }
   }
 
   // ── Foreground / tap handlers ─────────────────────────────────────────────
