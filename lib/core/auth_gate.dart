@@ -10,6 +10,7 @@ import '../features/auth/auth_provider.dart';
 import '../features/approval/approval_provider.dart';
 import '../features/approval/awaiting_approval_screen.dart';
 import '../features/approval/rejected_screen.dart';
+import 'notification_provider.dart';
 import 'realtime_service.dart';
 
 class AuthGate extends ConsumerWidget {
@@ -50,11 +51,15 @@ class AuthGate extends ConsumerWidget {
           final doctorName = userState.doctorName ?? 'Staff';
 
           final container = ProviderScope.containerOf(context,
-              listen: false); /* capture up-front */
+              listen: false);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             try {
-              RealtimeService.instance
-                  .subscribeToPatientChanges(doctorName, container);
+              RealtimeService.instance.subscribeToPatientChanges(
+                doctorName,
+                (notification) => container
+                    .read(notificationProvider.notifier)
+                    .addNotification(notification),
+              );
               if (userState.isHeadDoctor) {
                 container
                     .read(pendingApprovalsProvider.notifier)
