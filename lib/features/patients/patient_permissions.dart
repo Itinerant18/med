@@ -15,6 +15,7 @@
 // detail screens can't drift apart on permissions.
 
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/models/patient_model.dart';
 import 'package:mediflow/models/user_role.dart';
 
 class PatientPermissions {
@@ -29,13 +30,13 @@ class PatientPermissions {
   /// patients they personally created (matches RLS in Supabase).
   static bool canEditPatient(
     AuthUserState? auth,
-    Map<String, dynamic>? patient,
+    PatientModel? patient,
   ) {
     if (auth == null) return false;
     final role = auth.role;
     if (role == UserRole.doctor || role == UserRole.headDoctor) return true;
     if (patient == null) return false;
-    return patient['created_by_id'] == auth.session.user.id;
+    return patient.createdById == auth.session.user.id;
   }
 
   /// Per the plan, hard-deleting a patient record is a Head Doctor–only
