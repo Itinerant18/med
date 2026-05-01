@@ -367,12 +367,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    doctorName,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 17,
+                   const SizedBox(height: 14),
+                   Text(
+                     role == UserRole.assistant ? doctorName : 'Dr. $doctorName',
+                     textAlign: TextAlign.center,
+                     style: const TextStyle(
+                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textColor,
                     ),

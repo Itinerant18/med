@@ -21,81 +21,109 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text(
-          'Outside Visits',
+          'My External Doctor Visits',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
           IconButton(
             icon: const Icon(AppIcons.refresh_rounded),
+            tooltip: 'Refresh visits',
             onPressed: () =>
                 ref.read(agentOutsideVisitsProvider.notifier).refresh(),
           ),
         ],
       ),
-      body: visitsAsync.when(
-        loading: () => ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 5,
-          itemBuilder: (_, __) => const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: NeuShimmer(
-                width: double.infinity, height: 100, borderRadius: 16),
-          ),
-        ),
-        error: (e, _) => Center(
-          child: NeuCard(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(AppIcons.error_outline_rounded,
-                    color: AppTheme.errorColor, size: 32),
-                const SizedBox(height: 12),
-                Text(
-                  e.toString(),
-                  style: const TextStyle(color: AppTheme.textMuted),
-                ),
-              ],
-            ),
-          ),
-        ),
-        data: (visits) {
-          if (visits.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(AppIcons.local_hospital_outlined,
-                      size: 64, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No outside visits recorded',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Tap the + button to record a visit to an external doctor',
-                    style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            color: AppTheme.primaryTeal.withValues(alpha: 0.06),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: const Text(
+              'Visits where you accompanied a patient to an external specialist doctor.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.primaryTeal,
+                fontWeight: FontWeight.w600,
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(agentOutsideVisitsProvider.notifier).refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-              itemCount: visits.length,
-              itemBuilder: (_, i) => _VisitCard(visit: visits[i]),
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: visitsAsync.when(
+              loading: () => ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 5,
+                itemBuilder: (_, __) => const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: NeuShimmer(
+                      width: double.infinity, height: 100, borderRadius: 16),
+                ),
+              ),
+              error: (e, _) => Center(
+                child: NeuCard(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(AppIcons.error_outline_rounded,
+                          color: AppTheme.errorColor, size: 32),
+                      const SizedBox(height: 12),
+                      Text(
+                        e.toString(),
+                        style: const TextStyle(color: AppTheme.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (visits) {
+                if (visits.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(AppIcons.medical_services_outlined,
+                            size: 64, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No external visits recorded yet',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'When you accompany a patient to a specialist and record the outcome, it appears here.',
+                          style: TextStyle(
+                              color: AppTheme.textMuted, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'You can also record visits from a task card in "My Tasks".',
+                          style:
+                              TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(agentOutsideVisitsProvider.notifier).refresh(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    itemCount: visits.length,
+                    itemBuilder: (_, i) => _VisitCard(visit: visits[i]),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'new-outside-visit',
@@ -108,7 +136,7 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
         },
         icon: const Icon(AppIcons.add_rounded, color: Colors.white),
         label: const Text(
-          'Record Visit',
+          'New External Visit',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
@@ -216,6 +244,41 @@ class _VisitCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+            if (visit.followupTaskId != null)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    Icon(AppIcons.add_task_rounded,
+                        size: 13, color: AppTheme.primaryTeal),
+                    SizedBox(width: 6),
+                    Text(
+                      'Linked to a doctor-assigned task',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.primaryTeal,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    Icon(AppIcons.info_outline_rounded,
+                        size: 13, color: AppTheme.textMuted),
+                    SizedBox(width: 6),
+                    Text(
+                      'Standalone visit',
+                      style:
+                          TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

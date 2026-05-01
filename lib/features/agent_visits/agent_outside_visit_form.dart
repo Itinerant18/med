@@ -80,6 +80,10 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
     super.initState();
     _selectedPatientId = widget.preselectedPatientId;
     _selectedPatientName = widget.preselectedPatientName;
+    if (widget.followupTaskId != null && widget.preselectedPatientId != null) {
+      assert(_selectedPatientId != null,
+          'Patient must be pre-filled when coming from a task');
+    }
     _extNameCtrl.text = widget.prefillExtDoctorName ?? '';
     _extHospCtrl.text = widget.prefillExtDoctorHospital ?? '';
     _extSpecCtrl.text = widget.prefillExtDoctorSpecialization ?? '';
@@ -241,12 +245,14 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isFromTask = widget.followupTaskId != null;
+
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text(
-          'Record Outside Visit',
+          'Record External Doctor Visit',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -289,7 +295,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                         child: Text(
                           widget.followupTaskId != null
                               ? 'This will complete the linked follow-up task and record the outside doctor visit.'
-                              : 'Record a visit you made with a patient to an external doctor.',
+                              : 'Record the outcome of accompanying a patient to an external specialist. Fill in what the specialist found and prescribed.',
                           style: const TextStyle(
                               fontSize: 12, color: AppTheme.primaryTeal),
                         ),
@@ -300,43 +306,104 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
 
               const SectionTitle(
                   title: 'Patient', icon: AppIcons.person_search_rounded),
-              GestureDetector(
-                onTap: widget.preselectedPatientId != null
-                    ? null
-                    : _showPatientPicker,
-                child: NeuCard(
+              if (isFromTask && widget.preselectedPatientId != null)
+                NeuCard(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
-                      Icon(
-                        AppIcons.person_rounded,
-                        color: _selectedPatientId == null
-                            ? AppTheme.textMuted
-                            : AppTheme.primaryTeal,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryTeal.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(AppIcons.person_rounded,
+                            color: AppTheme.primaryTeal, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          _selectedPatientName ?? 'Tap to select patient',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedPatientName ?? 'Loading...',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const Text(
+                              'Patient assigned by doctor',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppTheme.textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.successColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: AppTheme.successColor, width: 0.8),
+                        ),
+                        child: const Text(
+                          'PRE-ASSIGNED',
                           style: TextStyle(
-                            fontSize: 15,
-                            color: _selectedPatientId == null
-                                ? AppTheme.textMuted
-                                : AppTheme.textColor,
-                            fontWeight: _selectedPatientId == null
-                                ? FontWeight.normal
-                                : FontWeight.w600,
+                            color: AppTheme.successColor,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
-                      if (widget.preselectedPatientId == null)
-                        const Icon(AppIcons.arrow_drop_down_rounded,
-                            color: AppTheme.textMuted),
                     ],
                   ),
+                )
+              else ...[
+                GestureDetector(
+                  onTap: _showPatientPicker,
+                  child: NeuCard(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(
+                          AppIcons.person_rounded,
+                          color: _selectedPatientId == null
+                              ? AppTheme.textMuted
+                              : AppTheme.primaryTeal,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedPatientName ??
+                                'Select patient you accompanied',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: _selectedPatientId == null
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textColor,
+                              fontWeight: _selectedPatientId == null
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const Icon(AppIcons.arrow_drop_down_rounded,
+                            color: AppTheme.textMuted),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Select the patient you took to the external doctor.',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                ),
+              ],
               const SizedBox(height: 20),
               const SectionTitle(
                   title: 'Visit Date', icon: AppIcons.calendar_today_rounded),
@@ -364,8 +431,38 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               ),
               const SizedBox(height: 20),
               const SectionTitle(
-                  title: 'External Doctor',
-                  icon: AppIcons.local_hospital_outlined),
+                  title: 'Specialist Doctor Visited',
+                  icon: AppIcons.medical_services_outlined),
+              if (isFromTask &&
+                  (_extNameCtrl.text.isNotEmpty ||
+                      _extSpecCtrl.text.isNotEmpty ||
+                      _extHospCtrl.text.isNotEmpty ||
+                      _extPhoneCtrl.text.isNotEmpty))
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryTeal.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(AppIcons.info_outline_rounded,
+                          color: AppTheme.primaryTeal, size: 14),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Pre-filled from your assigned task. Update if different.',
+                          style: TextStyle(
+                              fontSize: 11, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               NeuCard(
                 child: Column(
                   children: [
@@ -403,20 +500,26 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               ),
               const SizedBox(height: 20),
               const SectionTitle(
-                  title: 'Dr Meet', icon: AppIcons.medical_services_rounded),
+                  title: 'Doctor Meeting Details',
+                  icon: AppIcons.medical_services_rounded),
+              const Text(
+                'If the doctor who actually examined the patient is different from above, fill this in.',
+                style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 8),
               NeuCard(
                 child: Column(
                   children: [
                     NeuTextField(
                       controller: _meetDrNameCtrl,
-                      label: 'Doctor Name',
+                      label: 'Examining Doctor Name',
                       hint: 'Dr. who examined the patient',
                       textCapitalization: TextCapitalization.words,
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
                       controller: _meetPlaceCtrl,
-                      label: 'Place / Hospital',
+                      label: 'Hospital / Clinic Where Examined',
                       hint: 'Where the meeting took place',
                       textCapitalization: TextCapitalization.words,
                     ),
@@ -442,7 +545,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                     const SizedBox(height: 12),
                     NeuTextField(
                       controller: _meetTimesVisitedCtrl,
-                      label: 'No. of Times Visited',
+                      label: 'How Many Times Visited This Doctor',
                       hint: 'e.g. 1',
                       keyboardType: TextInputType.number,
                     ),
@@ -451,36 +554,36 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               ),
               const SizedBox(height: 20),
               const SectionTitle(
-                  title: 'Visit Details',
+                  title: 'What Happened at the Visit',
                   icon: AppIcons.medical_information_outlined),
               NeuCard(
                 child: Column(
                   children: [
                     NeuTextField(
                       controller: _chiefComplaintCtrl,
-                      label: 'Chief Complaint',
-                      hint: 'Main reason for the visit',
+                      label: 'Reason for Visit / Patient\'s Complaint',
+                      hint: 'Why did the patient see this specialist?',
                       maxLines: 2,
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
                       controller: _diagnosisCtrl,
-                      label: 'Diagnosis',
-                      hint: "Doctor's diagnosis",
+                      label: 'Specialist\'s Diagnosis',
+                      hint: 'What did the specialist conclude?',
                       maxLines: 2,
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
                       controller: _prescriptionsCtrl,
-                      label: 'Prescriptions',
-                      hint: 'Medicines prescribed, dosage...',
+                      label: 'Medicines / Tests Prescribed',
+                      hint: 'What did the specialist prescribe or recommend?',
                       maxLines: 3,
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
                       controller: _visitNotesCtrl,
-                      label: 'Additional Notes',
-                      hint: 'Any other observations...',
+                      label: 'Your Observations',
+                      hint: 'Anything important you observed during the visit',
                       maxLines: 3,
                     ),
                   ],
@@ -488,7 +591,8 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               ),
               const SizedBox(height: 20),
               const SectionTitle(
-                  title: 'Next Follow-up', icon: AppIcons.event_repeat_rounded),
+                  title: 'Specialist Recommended Follow-up',
+                  icon: AppIcons.event_repeat_rounded),
               GestureDetector(
                 onTap: () => _pickDate(false),
                 child: NeuCard(
@@ -502,7 +606,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                       Expanded(
                         child: Text(
                           _nextFollowupDate == null
-                              ? 'Set next follow-up date (optional)'
+                              ? 'Date the specialist said to come back (if any)'
                               : DateFormat('MMMM d, yyyy')
                                   .format(_nextFollowupDate!),
                           style: TextStyle(
@@ -533,9 +637,11 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                 child: NeuButton(
                   onPressed: _isLoading ? null : _submit,
                   isLoading: _isLoading,
-                  child: const Text(
-                    'SAVE OUTSIDE VISIT',
-                    style: TextStyle(
+                  child: Text(
+                    isFromTask
+                        ? 'SAVE VISIT & COMPLETE TASK'
+                        : 'SAVE EXTERNAL VISIT',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                       fontSize: 16,

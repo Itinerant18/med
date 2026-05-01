@@ -166,7 +166,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
           .from('followup_tasks')
           .select('*, patients(full_name)')
           .eq('assigned_to', userState.session.user.id)
-          .eq('due_date', todayStr)
+          .or('due_date.eq.$todayStr,status.eq.overdue')
           .neq('status', 'completed')
           .order('created_at', ascending: false);
       followupTasks = (followupRaw as List)

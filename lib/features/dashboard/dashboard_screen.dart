@@ -63,12 +63,14 @@ class DashboardScreen extends ConsumerWidget {
                       _buildSectionHeader('Today\'s followups'),
                       _buildFollowupTasksList(data.followupTasks),
                     ],
-                    if (data.highPriorityPatients.isNotEmpty) ...[
+                    if (isAdmin && data.highPriorityPatients.isNotEmpty) ...[
                       _buildSectionHeader('Requires Immediate Attention'),
                       _buildHighPriorityList(
                           data.highPriorityPatients, isAdmin),
                     ],
-                    _buildSectionHeader('Today\'s Visits'),
+                    _buildSectionHeader(
+                      isAdmin ? 'Today\'s Visits' : 'Patients Visited Today',
+                    ),
                     data.todayVisits.isEmpty
                         ? _buildEmptyVisits()
                         : _buildVisitsList(data.todayVisits, isAdmin, context),
@@ -110,7 +112,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Dr. $name',
+                  role.isAdmin ? 'Dr. $name' : name,
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
@@ -203,33 +205,28 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildStatCards(DashboardState data, bool isAdmin) {
-    return SizedBox(
-      height: 114,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        children: [
-          _StatCard(
-            label: 'Today\'s Visits',
-            value: data.stats.todayVisitsCount.toString(),
-            icon: AppIcons.calendar_today_rounded,
-            color: AppTheme.primaryTeal,
-          ),
-          const SizedBox(width: 12),
-          _StatCard(
-            label: 'Pending Labs',
-            value: data.stats.pendingLabsCount.toString(),
-            icon: AppIcons.biotech_rounded,
-            color: const Color(0xFFD97706),
-          ),
-          const SizedBox(width: 12),
-          _StatCard(
-            label: 'OT Scheduled',
-            value: data.stats.upcomingOTCount.toString(),
-            icon: AppIcons.medical_services_rounded,
-            color: const Color(0xFFDC2626),
-          ),
-          if (isAdmin) ...[
+    final cards = isAdmin
+        ? <Widget>[
+            _StatCard(
+              label: 'Today\'s Visits',
+              value: data.stats.todayVisitsCount.toString(),
+              icon: AppIcons.calendar_today_rounded,
+              color: AppTheme.primaryTeal,
+            ),
+            const SizedBox(width: 12),
+            _StatCard(
+              label: 'Pending Labs',
+              value: data.stats.pendingLabsCount.toString(),
+              icon: AppIcons.biotech_rounded,
+              color: const Color(0xFFD97706),
+            ),
+            const SizedBox(width: 12),
+            _StatCard(
+              label: 'OT Scheduled',
+              value: data.stats.upcomingOTCount.toString(),
+              icon: AppIcons.medical_services_rounded,
+              color: const Color(0xFFDC2626),
+            ),
             const SizedBox(width: 12),
             _StatCard(
               label: 'High Priority',
@@ -237,8 +234,36 @@ class DashboardScreen extends ConsumerWidget {
               icon: AppIcons.priority_high_rounded,
               color: Colors.deepPurple,
             ),
-          ],
-        ],
+          ]
+        : <Widget>[
+            _StatCard(
+              label: 'My Patients',
+              value: '${data.todayVisits.length}',
+              icon: AppIcons.people_rounded,
+              color: AppTheme.primaryTeal,
+            ),
+            const SizedBox(width: 12),
+            _StatCard(
+              label: 'Follow-ups Due',
+              value: '${data.followupTasks.length}',
+              icon: AppIcons.add_task_rounded,
+              color: AppTheme.warningColor,
+            ),
+            const SizedBox(width: 12),
+            _StatCard(
+              label: 'Visits Today',
+              value: '${data.assignedVisits.length}',
+              icon: AppIcons.health_and_safety_rounded,
+              color: const Color(0xFF3182CE),
+            ),
+          ];
+
+    return SizedBox(
+      height: 114,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: cards,
       ),
     );
   }

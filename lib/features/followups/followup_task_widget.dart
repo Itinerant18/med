@@ -113,7 +113,7 @@ class FollowupTaskWidget extends ConsumerWidget {
               // ── Target external doctor (where to go) ──
               if (task.hasTargetDoctor) ...[
                 const SizedBox(height: 12),
-                _TargetDoctorBlock(task: task),
+                _MissionBriefBlock(task: task),
               ],
 
               // ── Scheduled visit date ──
@@ -241,7 +241,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                     Expanded(
                       child: _ActionButton(
                         icon: AppIcons.local_hospital_outlined,
-                        label: 'Record Visit',
+                        label: 'Record What Happened',
                         background: const Color(0xFF3182CE),
                         onTap: () =>
                             _openOutsideVisitForm(context, ref, isInProgress),
@@ -342,6 +342,132 @@ class FollowupTaskWidget extends ConsumerWidget {
   }
 }
 
+class _MissionBriefBlock extends StatelessWidget {
+  const _MissionBriefBlock({required this.task});
+
+  final FollowupTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3182CE).withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFF3182CE).withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(AppIcons.assignment_outlined,
+                  size: 13, color: Color(0xFF3182CE)),
+              SizedBox(width: 6),
+              Text(
+                'YOUR MISSION',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF3182CE),
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if ((task.targetExtDoctorName?.isNotEmpty ?? false) ||
+              (task.targetExtDoctorHospital?.isNotEmpty ?? false))
+            _briefRow(
+              AppIcons.local_hospital_outlined,
+              'Take ${task.patientName ?? "patient"} to:',
+              [
+                if (task.targetExtDoctorName?.isNotEmpty ?? false)
+                  task.targetExtDoctorName!,
+                if (task.targetExtDoctorSpecialization?.isNotEmpty ?? false)
+                  task.targetExtDoctorSpecialization!,
+                if (task.targetExtDoctorHospital?.isNotEmpty ?? false)
+                  task.targetExtDoctorHospital!,
+              ].join('  '),
+            ),
+          if (task.targetExtDoctorPhone?.isNotEmpty ?? false)
+            _briefRow(
+              AppIcons.phone_rounded,
+              'Doctor contact:',
+              task.targetExtDoctorPhone!,
+            ),
+          if (task.scheduledVisitDate != null)
+            _briefRow(
+              AppIcons.event_rounded,
+              'Scheduled for:',
+              '${task.scheduledVisitDate!.day}/${task.scheduledVisitDate!.month}/${task.scheduledVisitDate!.year}',
+            ),
+          if (task.visitInstructions?.isNotEmpty ?? false) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border(
+                  left: BorderSide(
+                    color: AppTheme.warningColor.withValues(alpha: 0.5),
+                    width: 3,
+                  ),
+                ),
+              ),
+              child: Text(
+                task.visitInstructions!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textColor,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _briefRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 13, color: const Color(0xFF3182CE)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 12, color: AppTheme.textColor),
+                children: [
+                  TextSpan(
+                    text: '$label ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
 class _TargetDoctorBlock extends StatelessWidget {
   const _TargetDoctorBlock({required this.task});
 
@@ -399,6 +525,15 @@ class _TargetDoctorBlock extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Take the patient to this doctor and record the outcome.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ],
             ),
           ),

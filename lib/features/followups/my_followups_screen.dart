@@ -53,7 +53,7 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text(
-          'My Follow-ups',
+          'My Tasks',
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3),
         ),
         actions: [
@@ -95,11 +95,40 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
                   color: AppTheme.primaryTeal,
                   onRefresh: () =>
                       ref.read(followupTasksProvider.notifier).refresh(),
-                  child: ListView.builder(
+                  child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: filtered.length,
-                    itemBuilder: (_, index) =>
-                        FollowupTaskWidget(task: filtered[index]),
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryTeal.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.primaryTeal.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(AppIcons.info_outline_rounded,
+                                color: AppTheme.primaryTeal, size: 16),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Use "Record Ext. Visit" on a task card to log what happened when you took a patient to an external specialist.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.primaryTeal,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ...filtered
+                          .map((task) => FollowupTaskWidget(task: task)),
+                    ],
                   ),
                 );
               },
@@ -117,39 +146,16 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'record-outside-visit',
-            backgroundColor: const Color(0xFF3182CE),
-            tooltip: 'Record outside doctor visit',
-            onPressed: () async {
-              final result = await context.push<bool>('/agent-visits/new');
-              if (result == true) {
-                ref.read(followupTasksProvider.notifier).refresh();
-              }
-            },
-            child: const Icon(AppIcons.local_hospital_rounded,
-                color: Colors.white, size: 18),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton.extended(
-            heroTag: 'view-outside-visits',
-            backgroundColor: AppTheme.primaryTeal,
-            onPressed: () => context.push('/agent-visits'),
-            icon: const Icon(AppIcons.history_rounded,
-                color: Colors.white, size: 18),
-            label: const Text(
-              'My Outside Visits',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'view-external-visits',
+        backgroundColor: AppTheme.primaryTeal,
+        onPressed: () => context.push('/agent-visits'),
+        icon: const Icon(AppIcons.history_rounded,
+            color: Colors.white, size: 18),
+        label: const Text(
+          'My External Visits',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -164,8 +170,8 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
           const SizedBox(height: 12),
           Text(
             _filter == _FollowupFilter.all
-                ? 'No follow-ups assigned'
-                : 'No follow-ups in "${_filter.label}"',
+                ? 'No tasks assigned yet'
+                : 'No tasks in "${_filter.label}"',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -174,7 +180,7 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Follow-up tasks from doctors will appear here.',
+            'The doctor assigns you tasks — like taking a patient to a specialist or following up on a referred patient. They will appear here.',
             style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
             textAlign: TextAlign.center,
           ),

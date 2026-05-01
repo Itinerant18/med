@@ -165,7 +165,7 @@ class _AssistantProfileScreenState
                           Text(name,
                               style: const TextStyle(
                                   fontSize: 22, fontWeight: FontWeight.bold)),
-                          Text(data['specialization'] ?? 'Clinical Assistant',
+                          Text(data['specialization'] ?? 'Field Agent',
                               style: const TextStyle(color: AppTheme.textMuted)),
                           const SizedBox(height: 10),
                           Container(
@@ -179,10 +179,10 @@ class _AssistantProfileScreenState
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(AppIcons.support_agent_rounded,
+                                Icon(AppIcons.assignment_ind_outlined,
                                     size: 15, color: AppTheme.assistantAccent),
                                 SizedBox(width: 5),
-                                Text('Assistant',
+                                Text('Field Agent',
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
@@ -218,7 +218,7 @@ class _AssistantProfileScreenState
                                     height: 36,
                                     width: 1,
                                     color: AppTheme.neutralDivider),
-                                _stat(s['visits'].toString(), 'My Visits'),
+                                _stat(s['visits'].toString(), 'My Patients'),
                                 Container(
                                     height: 36,
                                     width: 1,
@@ -372,7 +372,7 @@ class _AssistantProfileScreenState
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'As an assistant, you can view and manage only the patients you have registered.',
+                              'As a field agent, you register patients you bring in and manage your assigned tasks. You only see patients you have registered.',
                               style: TextStyle(
                                   fontSize: 12, color: AppTheme.warningColor),
                             ),

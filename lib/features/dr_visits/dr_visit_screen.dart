@@ -154,7 +154,7 @@ class DrVisitScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Visits will appear here once they are created.',
+            'Referral leads and patient visits will appear here.',
             style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -215,6 +215,16 @@ class _VisitCard extends StatelessWidget {
                             visit.leadPatientName != null &&
                             visit.leadPatientName!.isNotEmpty) ...[
                           const SizedBox(height: 6),
+                          const Text(
+                            'Referral',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               const Icon(

@@ -178,7 +178,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                   children: [
                     const Expanded(
                       child: Text(
-                        'Doctor not in organization (external)',
+                        'Referral Lead from External Doctor',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -228,7 +228,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Recording a patient lead — fill in the referring doctor and the potential patient\'s contact details. Your assistant will follow up.',
+                          'Recording a referral lead. Fill in the referring external doctor\'s details and the potential patient they referred. Your agent will contact and bring them in.',
                           style: TextStyle(
                               fontSize: 12, color: AppTheme.primaryTeal),
                         ),
@@ -302,7 +302,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                 ),
                 const SizedBox(height: 24),
                 const SectionTitle(
-                  title: 'Patient Lead',
+                  title: 'Referred Patient (Lead)',
                   icon: AppIcons.person_add_rounded,
                 ),
                 NeuCard(
@@ -311,6 +311,8 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                       NeuTextField(
                         controller: _leadNameCtrl,
                         label: 'Lead patient name',
+                        hint:
+                            'Patient name as given by the referring doctor',
                         validator: (value) {
                           if (_isExternal &&
                               (value == null || value.trim().isEmpty)) {
