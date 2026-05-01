@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/user_role.dart';
@@ -156,7 +157,7 @@ final analyticsSummaryProvider =
   final last30DaysStart = ref.read(_last30DaysStartProvider);
   final last30DaysStartIso = last30DaysStart.toIso8601String();
 
-  final patientsQuery = isHeadDoctor
+  final patientsBuilder = isHeadDoctor
       ? supabase.from('patients').select(
           'id, is_high_priority, health_scheme, created_by_id, created_at, last_updated_at')
       : supabase
@@ -165,7 +166,7 @@ final analyticsSummaryProvider =
               'id, is_high_priority, health_scheme, created_by_id, created_at, last_updated_at')
           .eq('created_by_id', userId);
 
-  final visitsQuery = isHeadDoctor
+  final visitsBuilder = isHeadDoctor
       ? supabase.from('visits').select(
           'id, doctor_id, visit_type, tests_performed, ot_required, patient_flow_status, visit_date, created_by_id')
       : supabase
@@ -174,7 +175,7 @@ final analyticsSummaryProvider =
               'id, doctor_id, visit_type, tests_performed, ot_required, patient_flow_status, visit_date, created_by_id')
           .eq('doctor_id', userId);
 
-  final drVisitsQuery = isHeadDoctor
+  final drVisitsBuilder = isHeadDoctor
       ? supabase.from('dr_visits').select(
           'id, doctor_id, assigned_agent_id, followup_status, status, visit_date')
       : supabase
@@ -183,7 +184,7 @@ final analyticsSummaryProvider =
               'id, doctor_id, assigned_agent_id, followup_status, status, visit_date')
           .eq('doctor_id', userId);
 
-  final followupsQuery = isHeadDoctor
+  final followupsBuilder = isHeadDoctor
       ? supabase
           .from('followup_tasks')
           .select('id, assigned_to, status, due_date, created_at')
@@ -192,13 +193,13 @@ final analyticsSummaryProvider =
           .select('id, assigned_to, status, due_date, created_at')
           .eq('assigned_to', userId);
 
-  final doctorsQuery = isHeadDoctor
+  final doctorsBuilder = isHeadDoctor
       ? supabase
           .from('doctors')
           .select('id, full_name, role, approval_status, created_at')
-      : Future.value(<dynamic>[]);
+      : null;
 
-  final recentVisitsQuery = isHeadDoctor
+  final recentVisitsBuilder = isHeadDoctor
       ? supabase
           .from('visits')
           .select('visit_date')
@@ -209,127 +210,131 @@ final analyticsSummaryProvider =
           .eq('doctor_id', userId)
           .gte('visit_date', last30DaysStartIso);
 
-  final results = await Future.wait<dynamic>([
-    patientsQuery,
-    visitsQuery,
-    drVisitsQuery,
-    followupsQuery,
-    doctorsQuery,
-    recentVisitsQuery,
-  ]);
+  try {
+    final results = await Future.wait<dynamic>([
+      supabase.retry(() => patientsBuilder),
+      supabase.retry(() => visitsBuilder),
+      supabase.retry(() => drVisitsBuilder),
+      supabase.retry(() => followupsBuilder),
+      doctorsBuilder != null ? supabase.retry(() => doctorsBuilder) : Future.value(<dynamic>[]),
+      supabase.retry(() => recentVisitsBuilder),
+    ]);
 
-  final patients = List<Map<String, dynamic>>.from(results[0] as List);
-  final visits = List<Map<String, dynamic>>.from(results[1] as List);
-  final drVisits = List<Map<String, dynamic>>.from(results[2] as List);
-  final followups = List<Map<String, dynamic>>.from(results[3] as List);
-  final doctors = isHeadDoctor
-      ? List<Map<String, dynamic>>.from(results[4] as List)
-      : const <Map<String, dynamic>>[];
-  final recentVisits = List<Map<String, dynamic>>.from(results[5] as List);
+    final patients = List<Map<String, dynamic>>.from(results[0] as List);
+    final visits = List<Map<String, dynamic>>.from(results[1] as List);
+    final drVisits = List<Map<String, dynamic>>.from(results[2] as List);
+    final followups = List<Map<String, dynamic>>.from(results[3] as List);
+    final doctors = isHeadDoctor
+        ? List<Map<String, dynamic>>.from(results[4] as List)
+        : const <Map<String, dynamic>>[];
+    final recentVisits = List<Map<String, dynamic>>.from(results[5] as List);
 
-  final visitsByType = <String, int>{
-    'OPD': 0,
-    'IPD': 0,
-    'Emergency': 0,
-  };
-  for (final visit in visits) {
-    final type = (visit['visit_type'] ?? '').toString();
-    if (visitsByType.containsKey(type)) {
-      visitsByType[type] = visitsByType[type]! + 1;
+    final visitsByType = <String, int>{
+      'OPD': 0,
+      'IPD': 0,
+      'Emergency': 0,
+    };
+    for (final visit in visits) {
+      final type = (visit['visit_type'] ?? '').toString();
+      if (visitsByType.containsKey(type)) {
+        visitsByType[type] = visitsByType[type]! + 1;
+      }
     }
-  }
 
-  final patientsByScheme = <String, int>{
-    'insurance': 0,
-    'cash': 0,
-    'sastho_sathi': 0,
-    'other': 0,
-  };
-  for (final patient in patients) {
-    final scheme =
-        (patient['health_scheme'] ?? 'other').toString().toLowerCase();
-    final normalizedScheme =
-        patientsByScheme.containsKey(scheme) ? scheme : 'other';
-    patientsByScheme[normalizedScheme] =
-        patientsByScheme[normalizedScheme]! + 1;
-  }
+    final patientsByScheme = <String, int>{
+      'insurance': 0,
+      'cash': 0,
+      'sastho_sathi': 0,
+      'other': 0,
+    };
+    for (final patient in patients) {
+      final scheme =
+          (patient['health_scheme'] ?? 'other').toString().toLowerCase();
+      final normalizedScheme =
+          patientsByScheme.containsKey(scheme) ? scheme : 'other';
+      patientsByScheme[normalizedScheme] =
+          patientsByScheme[normalizedScheme]! + 1;
+    }
 
-  final now = DateTime.now();
-  final todayStart = DateTime(now.year, now.month, now.day);
-  final todayEnd = todayStart.add(const Duration(days: 1));
-  final todayVisits = visits.where((visit) {
-    final rawDate = visit['visit_date'];
-    if (rawDate is! String) return false;
-    final parsed = DateTime.tryParse(rawDate);
-    return parsed != null &&
-        !parsed.isBefore(todayStart) &&
-        parsed.isBefore(todayEnd);
-  }).length;
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+    final todayVisits = visits.where((visit) {
+      final rawDate = visit['visit_date'];
+      if (rawDate is! String) return false;
+      final parsed = DateTime.tryParse(rawDate);
+      return parsed != null &&
+          !parsed.isBefore(todayStart) &&
+          parsed.isBefore(todayEnd);
+    }).length;
 
-  final totalFollowups = followups.length;
-  final completedFollowups = followups
-      .where((task) =>
-          (task['status'] ?? '').toString().toLowerCase() == 'completed')
-      .length;
-  final followupCompletion =
-      totalFollowups == 0 ? 0.0 : completedFollowups / totalFollowups;
+    final totalFollowups = followups.length;
+    final completedFollowups = followups
+        .where((task) =>
+            (task['status'] ?? '').toString().toLowerCase() == 'completed')
+        .length;
+    final followupCompletion =
+        totalFollowups == 0 ? 0.0 : completedFollowups / totalFollowups;
 
-  final groupedLast30Days = <DateTime, int>{};
-  for (final visit in recentVisits) {
-    final rawDate = visit['visit_date'];
-    if (rawDate is! String) continue;
-    final parsed = DateTime.tryParse(rawDate);
-    if (parsed == null) continue;
-    final bucket = DateTime(parsed.year, parsed.month, parsed.day);
-    groupedLast30Days[bucket] = (groupedLast30Days[bucket] ?? 0) + 1;
-  }
+    final groupedLast30Days = <DateTime, int>{};
+    for (final visit in recentVisits) {
+      final rawDate = visit['visit_date'];
+      if (rawDate is! String) continue;
+      final parsed = DateTime.tryParse(rawDate);
+      if (parsed == null) continue;
+      final bucket = DateTime(parsed.year, parsed.month, parsed.day);
+      groupedLast30Days[bucket] = (groupedLast30Days[bucket] ?? 0) + 1;
+    }
 
-  final last30DaysVisits = List<DailyVisitCount>.generate(30, (index) {
-    final date = last30DaysStart.add(Duration(days: index));
-    return DailyVisitCount(
-      date: date,
-      count: groupedLast30Days[date] ?? 0,
+    final last30DaysVisits = List<DailyVisitCount>.generate(30, (index) {
+      final date = last30DaysStart.add(Duration(days: index));
+      return DailyVisitCount(
+        date: date,
+        count: groupedLast30Days[date] ?? 0,
+      );
+    });
+
+    final activeDays = last30DaysVisits.where((entry) => entry.count > 0).length;
+    final avgVisitsPerDay =
+        activeDays == 0 ? 0.0 : recentVisits.length / activeDays;
+
+    final activeStaff = isHeadDoctor
+        ? doctors
+            .where((doctor) =>
+                (doctor['approval_status'] ?? '').toString().toLowerCase() ==
+                'approved')
+            .length
+        : 0;
+
+    final pendingApprovals = isHeadDoctor
+        ? doctors
+            .where((doctor) =>
+                (doctor['approval_status'] ?? '').toString().toLowerCase() ==
+                'pending')
+            .length
+        : 0;
+
+    final highPriorityPatients = patients
+        .where((patient) => (patient['is_high_priority'] ?? false) == true)
+        .length;
+
+    return AnalyticsSummary(
+      totalPatients: patients.length,
+      totalVisits: visits.length,
+      totalDrVisits: drVisits.length,
+      activeStaff: activeStaff,
+      pendingApprovals: pendingApprovals,
+      highPriorityPatients: highPriorityPatients,
+      todayVisits: todayVisits,
+      avgVisitsPerDay: avgVisitsPerDay,
+      visitsByType: visitsByType,
+      patientsByScheme: patientsByScheme,
+      followupCompletion: followupCompletion,
+      last30DaysVisits: last30DaysVisits,
     );
-  });
-
-  final activeDays = last30DaysVisits.where((entry) => entry.count > 0).length;
-  final avgVisitsPerDay =
-      activeDays == 0 ? 0.0 : recentVisits.length / activeDays;
-
-  final activeStaff = isHeadDoctor
-      ? doctors
-          .where((doctor) =>
-              (doctor['approval_status'] ?? '').toString().toLowerCase() ==
-              'approved')
-          .length
-      : 0;
-
-  final pendingApprovals = isHeadDoctor
-      ? doctors
-          .where((doctor) =>
-              (doctor['approval_status'] ?? '').toString().toLowerCase() ==
-              'pending')
-          .length
-      : 0;
-
-  final highPriorityPatients = patients
-      .where((patient) => (patient['is_high_priority'] ?? false) == true)
-      .length;
-
-  return AnalyticsSummary(
-    totalPatients: patients.length,
-    totalVisits: visits.length,
-    totalDrVisits: drVisits.length,
-    activeStaff: activeStaff,
-    pendingApprovals: pendingApprovals,
-    highPriorityPatients: highPriorityPatients,
-    todayVisits: todayVisits,
-    avgVisitsPerDay: avgVisitsPerDay,
-    visitsByType: visitsByType,
-    patientsByScheme: patientsByScheme,
-    followupCompletion: followupCompletion,
-    last30DaysVisits: last30DaysVisits,
-  );
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
 });
 
 /// Provides staff-level performance analytics for head doctors.
@@ -342,57 +347,61 @@ final staffPerformanceProvider =
     return const <StaffPerformance>[];
   }
 
-  final results = await Future.wait<dynamic>([
-    supabase
-        .from('doctors')
-        .select('id, full_name, role, approval_status, created_at'),
-    supabase.from('visits').select('id, doctor_id, created_by_id'),
-    supabase.from('patients').select('id, created_by_id'),
-    supabase.from('dr_visits').select('id, doctor_id'),
-    supabase.from('followup_tasks').select('id, assigned_to, status'),
-  ]);
+  try {
+    final results = await Future.wait<dynamic>([
+      supabase.retry(() => supabase
+          .from('doctors')
+          .select('id, full_name, role, approval_status, created_at')),
+      supabase.retry(() => supabase.from('visits').select('id, doctor_id, created_by_id')),
+      supabase.retry(() => supabase.from('patients').select('id, created_by_id')),
+      supabase.retry(() => supabase.from('dr_visits').select('id, doctor_id')),
+      supabase.retry(() => supabase.from('followup_tasks').select('id, assigned_to, status')),
+    ]);
 
-  final doctors = List<Map<String, dynamic>>.from(results[0] as List)
-      .where((doctor) =>
-          (doctor['approval_status'] ?? '').toString().toLowerCase() ==
-          'approved')
-      .toList();
-  final visits = List<Map<String, dynamic>>.from(results[1] as List);
-  final patients = List<Map<String, dynamic>>.from(results[2] as List);
-  final drVisits = List<Map<String, dynamic>>.from(results[3] as List);
-  final followups = List<Map<String, dynamic>>.from(results[4] as List);
+    final doctors = List<Map<String, dynamic>>.from(results[0] as List)
+        .where((doctor) =>
+            (doctor['approval_status'] ?? '').toString().toLowerCase() ==
+            'approved')
+        .toList();
+    final visits = List<Map<String, dynamic>>.from(results[1] as List);
+    final patients = List<Map<String, dynamic>>.from(results[2] as List);
+    final drVisits = List<Map<String, dynamic>>.from(results[3] as List);
+    final followups = List<Map<String, dynamic>>.from(results[4] as List);
 
-  final performance = doctors.map((doctor) {
-    final doctorId = doctor['id'].toString();
-    final visitsCount = visits
-        .where((visit) =>
-            (visit['doctor_id'] ?? visit['created_by_id']).toString() ==
-            doctorId)
-        .length;
-    final patientsCount = patients
-        .where((patient) =>
-            (patient['created_by_id'] ?? '').toString() == doctorId)
-        .length;
-    final drVisitsCount = drVisits
-        .where((drVisit) => (drVisit['doctor_id'] ?? '').toString() == doctorId)
-        .length;
-    final followupsCompleted = followups
-        .where((task) =>
-            (task['assigned_to'] ?? '').toString() == doctorId &&
-            (task['status'] ?? '').toString().toLowerCase() == 'completed')
-        .length;
+    final performance = doctors.map((doctor) {
+      final doctorId = doctor['id'].toString();
+      final visitsCount = visits
+          .where((visit) =>
+              (visit['doctor_id'] ?? visit['created_by_id']).toString() ==
+              doctorId)
+          .length;
+      final patientsCount = patients
+          .where((patient) =>
+              (patient['created_by_id'] ?? '').toString() == doctorId)
+          .length;
+      final drVisitsCount = drVisits
+          .where((drVisit) => (drVisit['doctor_id'] ?? '').toString() == doctorId)
+          .length;
+      final followupsCompleted = followups
+          .where((task) =>
+              (task['assigned_to'] ?? '').toString() == doctorId &&
+              (task['status'] ?? '').toString().toLowerCase() == 'completed')
+          .length;
 
-    return StaffPerformance(
-      doctorId: doctorId,
-      doctorName: (doctor['full_name'] ?? '').toString(),
-      role: (doctor['role'] ?? '').toString(),
-      visitsCount: visitsCount,
-      patientsCount: patientsCount,
-      drVisitsCount: drVisitsCount,
-      followupsCompleted: followupsCompleted,
-    );
-  }).toList();
+      return StaffPerformance(
+        doctorId: doctorId,
+        doctorName: (doctor['full_name'] ?? '').toString(),
+        role: (doctor['role'] ?? '').toString(),
+        visitsCount: visitsCount,
+        patientsCount: patientsCount,
+        drVisitsCount: drVisitsCount,
+        followupsCompleted: followupsCompleted,
+      );
+    }).toList();
 
-  performance.sort((a, b) => b.visitsCount.compareTo(a.visitsCount));
-  return performance;
+    performance.sort((a, b) => b.visitsCount.compareTo(a.visitsCount));
+    return performance;
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
 });

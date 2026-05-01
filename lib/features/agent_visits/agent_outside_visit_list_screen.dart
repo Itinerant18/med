@@ -6,8 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/shared/widgets/skeleton_loader.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 class AgentOutsideVisitListScreen extends ConsumerWidget {
   const AgentOutsideVisitListScreen({super.key});
@@ -35,83 +38,53 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            color: AppTheme.primaryTeal.withValues(alpha: 0.06),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: const Text(
-              'Visits where you accompanied a patient to an external specialist doctor.',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.primaryTeal,
-                fontWeight: FontWeight.w600,
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: NeuCard(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(AppIcons.info_outline_rounded,
+                      color: AppTheme.primaryTeal, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Visits recorded when taking patients to external specialists.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryTeal,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           Expanded(
             child: visitsAsync.when(
-              loading: () => ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: 5,
-                itemBuilder: (_, __) => const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: NeuShimmer(
-                      width: double.infinity, height: 100, borderRadius: 16),
-                ),
-              ),
-              error: (e, _) => Center(
-                child: NeuCard(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(AppIcons.error_outline_rounded,
-                          color: AppTheme.errorColor, size: 32),
-                      const SizedBox(height: 12),
-                      Text(
-                        e.toString(),
-                        style: const TextStyle(color: AppTheme.textMuted),
-                      ),
-                    ],
-                  ),
-                ),
+              loading: () => const FollowupListSkeleton(),
+              error: (error, stack) => ErrorBoundary(
+                error: error,
+                stackTrace: stack,
+                contextLabel: 'agent_outside_visits',
+                title: 'Failed to load external visits',
+                onRetry: () => ref
+                    .read(agentOutsideVisitsProvider.notifier)
+                    .refresh(),
               ),
               data: (visits) {
                 if (visits.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(AppIcons.medical_services_outlined,
-                            size: 64, color: Colors.grey.shade300),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No external visits recorded yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'When you accompany a patient to a specialist and record the outcome, it appears here.',
-                          style: TextStyle(
-                              color: AppTheme.textMuted, fontSize: 13),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'You can also record visits from a task card in "My Tasks".',
-                          style:
-                              TextStyle(color: AppTheme.textMuted, fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                  return const EmptyState(
+                    icon: AppIcons.medical_services_outlined,
+                    title: 'No external visits recorded yet',
+                    subtitle:
+                        'When you accompany a patient to a specialist and record the outcome, it appears here. You can also record visits from a task card in "My Tasks".',
                   );
                 }
 
                 return RefreshIndicator(
+                  color: AppTheme.primaryTeal,
                   onRefresh: () =>
                       ref.read(agentOutsideVisitsProvider.notifier).refresh(),
                   child: ListView.builder(
@@ -134,10 +107,10 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
             ref.read(agentOutsideVisitsProvider.notifier).refresh();
           }
         },
-        icon: const Icon(AppIcons.add_rounded, color: Colors.white),
+        icon: const Icon(AppIcons.add_rounded, color: AppTheme.surfaceWhite),
         label: const Text(
           'New External Visit',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppTheme.surfaceWhite, fontWeight: FontWeight.bold),
         ),
       ),
     );

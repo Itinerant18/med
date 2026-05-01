@@ -12,6 +12,7 @@ import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/shared/widgets/patient_picker_bottom_sheet.dart';
 
 class AgentOutsideVisitForm extends ConsumerStatefulWidget {
   /// Optional: pre-link to an existing followup task. When set, the
@@ -183,7 +184,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => const _PatientPickerSheet(),
+      builder: (_) => const PatientPickerBottomSheet(),
     ).then((result) {
       if (result is Map) {
         setState(() {
@@ -711,89 +712,6 @@ class _DoctorInstructionsBanner extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PatientPickerSheet extends ConsumerStatefulWidget {
-  const _PatientPickerSheet();
-
-  @override
-  ConsumerState<_PatientPickerSheet> createState() =>
-      _PatientPickerSheetState();
-}
-
-class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
-  String _query = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final patientsAsync = ref.watch(roleAwarePatientsProvider(SearchFilter(
-      query: _query,
-      healthScheme: HealthSchemeFilter.all,
-      priority: PriorityFilter.all,
-      dateRange: DateRangeFilter.allTime,
-      visitType: VisitTypeFilter.all,
-      sortOption: SortOption.nameAsc,
-    )));
-
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.8,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const Text(
-                'Select Patient',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              NeuTextField(
-                label: 'Search',
-                prefixIcon: const Icon(AppIcons.search),
-                onChanged: (v) => setState(() => _query = v),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: patientsAsync.when(
-                  data: (patients) {
-                    if (patients.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No patients found',
-                          style: TextStyle(color: AppTheme.textMuted),
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      itemCount: patients.length,
-                      itemBuilder: (_, i) => ListTile(
-                        title: Text(
-                          (patients[i]['full_name'] ?? '').toString(),
-                        ),
-                        subtitle: Text(
-                          (patients[i]['phone'] ?? '').toString(),
-                        ),
-                        onTap: () => Navigator.pop(context, {
-                          'id': patients[i]['id'],
-                          'name': patients[i]['full_name'],
-                        }),
-                      ),
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e')),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
