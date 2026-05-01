@@ -447,7 +447,7 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
         boxShadow: const [
           BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
           BoxShadow(
-              color: Color(0xFFA3B1C6), offset: Offset(3, 3), blurRadius: 8),
+              color: AppTheme.neuShadowDark, offset: Offset(3, 3), blurRadius: 8),
         ],
       ),
       child: TextField(
