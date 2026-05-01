@@ -82,13 +82,22 @@ final profileStatsProvider =
 
   final supabase = ref.watch(supabaseClientProvider);
 
-  final visitsRes =
-      await supabase.from('visits').select('id').eq('doctor_id', user.id);
-
-  final patientsRes = await supabase
-      .from('patients')
-      .select('id')
-      .eq('last_updated_by', doctorName);
+  final results = await Future.wait<List<dynamic>>([
+    supabase
+        .from('visits')
+        .select('id')
+        .eq('doctor_id', user.id)
+        .then((value) => value as List<dynamic>)
+        .catchError((_) => <dynamic>[]),
+    supabase
+        .from('patients')
+        .select('id')
+        .eq('last_updated_by', doctorName)
+        .then((value) => value as List<dynamic>)
+        .catchError((_) => <dynamic>[]),
+  ]);
+  final visitsRes = results[0];
+  final patientsRes = results[1];
 
   final createdAtRaw = profileData['created_at'];
   final createdAt = createdAtRaw != null
@@ -97,8 +106,8 @@ final profileStatsProvider =
   final daysActive = DateTime.now().difference(createdAt).inDays + 1;
 
   return {
-    'patients': (patientsRes as List).length,
-    'visits': (visitsRes as List).length,
+    'patients': patientsRes.length,
+    'visits': visitsRes.length,
     'days': daysActive,
   };
 });
