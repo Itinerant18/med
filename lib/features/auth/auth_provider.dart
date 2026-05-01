@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/google_auth_config.dart';
@@ -128,9 +129,13 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }
 
   Future<Map<String, dynamic>?> _lookupAccountByPhone(String phone) async {
-    final response = await _supabase.rpc('lookup_account_by_phone',
-        params: {'p_phone': phone}).maybeSingle();
-    return response;
+    try {
+      final response = await _supabase.retry(() => _supabase.rpc('lookup_account_by_phone',
+          params: {'p_phone': phone}).maybeSingle());
+      return response;
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   Future<void> signIn({
@@ -139,17 +144,21 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final response = await _supabase.auth.signInWithPassword(
-        email: email.trim().toLowerCase(),
-        password: password,
-      );
-      final session = response.session ?? _supabase.auth.currentSession;
-      if (session == null) {
-        throw Exception('Sign-in succeeded but no session was created.');
+      try {
+        final response = await _supabase.auth.signInWithPassword(
+          email: email.trim().toLowerCase(),
+          password: password,
+        );
+        final session = response.session ?? _supabase.auth.currentSession;
+        if (session == null) {
+          throw Exception('Sign-in succeeded but no session was created.');
+        }
+        // Sync FCM token after sign in
+        _syncFcmToken();
+        return _resolveAuthUserState(session);
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
       }
-      // Sync FCM token after sign in
-      _syncFcmToken();
-      return _resolveAuthUserState(session);
     });
   }
 
@@ -157,19 +166,24 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     required String phone,
     required String password,
   }) async {
-    final normalizedPhone = normalizePhoneNumber(phone);
-    if (normalizedPhone.isEmpty) {
-      throw Exception('Enter a valid mobile number.');
+    try {
+      final normalizedPhone = normalizePhoneNumber(phone);
+      if (normalizedPhone.isEmpty) {
+        throw Exception('Enter a valid mobile number.');
+      }
+
+      final doctor = await _lookupAccountByPhone(normalizedPhone);
+
+      final email = doctor?['email'] as String?;
+      if (email == null || email.trim().isEmpty) {
+        throw Exception('No password account was found for this mobile number.');
+      }
+
+      await signIn(email: email, password: password);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+      rethrow;
     }
-
-    final doctor = await _lookupAccountByPhone(normalizedPhone);
-
-    final email = doctor?['email'] as String?;
-    if (email == null || email.trim().isEmpty) {
-      throw Exception('No password account was found for this mobile number.');
-    }
-
-    await signIn(email: email, password: password);
   }
 
   Future<void> signUp({
@@ -182,47 +196,51 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final selectedRole = role ?? UserRole.doctor;
-      final normalizedPhone = normalizePhoneNumber(phone);
+      try {
+        final selectedRole = role ?? UserRole.doctor;
+        final normalizedPhone = normalizePhoneNumber(phone);
 
-      if (normalizedPhone.isEmpty) {
-        throw Exception('Enter a valid mobile number.');
-      }
+        if (normalizedPhone.isEmpty) {
+          throw Exception('Enter a valid mobile number.');
+        }
 
-      final response = await _supabase.auth.signUp(
-        email: email.trim().toLowerCase(),
-        password: password,
-        data: {
+        final response = await _supabase.auth.signUp(
+          email: email.trim().toLowerCase(),
+          password: password,
+          data: {
+            'full_name': fullName.trim(),
+            'specialization': specialization.trim(),
+            'role': selectedRole == UserRole.headDoctor
+                ? 'doctor'
+                : selectedRole.name,
+          },
+        );
+
+        final userId = response.user?.id;
+        if (userId == null) {
+          throw Exception('Registration failed. Please try again.');
+        }
+
+        // Upsert doctor record including phone + phone_verified flag
+        await _supabase.retry(() => _supabase.from('doctors').upsert({
+          'id': userId,
           'full_name': fullName.trim(),
           'specialization': specialization.trim(),
+          'email': email.trim(),
+          'phone': normalizedPhone,
+          'phone_verified': true, // ← Phone was verified via Firebase OTP
           'role': selectedRole == UserRole.headDoctor
               ? 'doctor'
-              : selectedRole.name,
-        },
-      );
+              : selectedRole.databaseValue,
+          'approval_status': 'pending',
+          'created_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id'));
 
-      final userId = response.user?.id;
-      if (userId == null) {
-        throw Exception('Registration failed. Please try again.');
+        final session = response.session ?? _supabase.auth.currentSession;
+        return _resolveAuthUserState(session);
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
       }
-
-      // Upsert doctor record including phone + phone_verified flag
-      await _supabase.from('doctors').upsert({
-        'id': userId,
-        'full_name': fullName.trim(),
-        'specialization': specialization.trim(),
-        'email': email.trim(),
-        'phone': normalizedPhone,
-        'phone_verified': true, // ← Phone was verified via Firebase OTP
-        'role': selectedRole == UserRole.headDoctor
-            ? 'doctor'
-            : selectedRole.databaseValue,
-        'approval_status': 'pending',
-        'created_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'id');
-
-      final session = response.session ?? _supabase.auth.currentSession;
-      return _resolveAuthUserState(session);
     });
   }
 
@@ -234,94 +252,103 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     UserRole? role,
     bool phoneVerified = false,
   }) async {
-    final normalizedPhone = normalizePhoneNumber(phone);
-    if (normalizedPhone.isEmpty) {
-      throw Exception('Enter a valid mobile number first.');
-    }
-
-    final selectedRole = role ?? UserRole.doctor;
-    final doctorByPhone = await _lookupAccountByPhone(normalizedPhone);
-
-    if (requireExistingAccount && doctorByPhone == null) {
-      throw Exception(
-        'No account was found for this mobile number. Register first.',
-      );
-    }
-
-    if (!requireExistingAccount && doctorByPhone != null) {
-      throw Exception(
-        'This mobile number is already registered. Please sign in instead.',
-      );
-    }
-
-    if (!requireExistingAccount && !phoneVerified) {
-      throw Exception(
-          'Verify your mobile number before continuing with Google.');
-    }
-
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        throw Exception('Google sign-in was cancelled.');
+    try {
+      final normalizedPhone = normalizePhoneNumber(phone);
+      if (normalizedPhone.isEmpty) {
+        throw Exception('Enter a valid mobile number first.');
       }
 
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
+      final selectedRole = role ?? UserRole.doctor;
+      final doctorByPhone = await _lookupAccountByPhone(normalizedPhone);
 
-      if (idToken == null || accessToken == null) {
-        throw Exception(_missingGoogleTokenMessage());
+      if (requireExistingAccount && doctorByPhone == null) {
+        throw Exception(
+          'No account was found for this mobile number. Register first.',
+        );
       }
 
-      final response = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-
-      final session = response.session ?? _supabase.auth.currentSession;
-      if (session == null) {
-        throw Exception('Google sign-in succeeded but no session was created.');
+      if (!requireExistingAccount && doctorByPhone != null) {
+        throw Exception(
+          'This mobile number is already registered. Please sign in instead.',
+        );
       }
 
-      if (requireExistingAccount) {
-        final profile = await _supabase
-            .from('doctors')
-            .select('phone')
-            .eq('id', session.user.id)
-            .maybeSingle();
+      if (!requireExistingAccount && !phoneVerified) {
+        throw Exception(
+            'Verify your mobile number before continuing with Google.');
+      }
 
-        final profilePhone = profile?['phone'] as String?;
-        if (profilePhone != normalizedPhone) {
-          await _supabase.auth.signOut();
-          await _googleSignIn.signOut();
-          throw Exception(
-            'This Google sign-in is not linked to that account yet. Sign in with your password once, then link Google from your profile.',
+      state = const AsyncLoading();
+      state = await AsyncValue.guard(() async {
+        try {
+          final googleUser = await _googleSignIn.signIn();
+          if (googleUser == null) {
+            throw Exception('Google sign-in was cancelled.');
+          }
+
+          final googleAuth = await googleUser.authentication;
+          final idToken = googleAuth.idToken;
+          final accessToken = googleAuth.accessToken;
+
+          if (idToken == null || accessToken == null) {
+            throw Exception(_missingGoogleTokenMessage());
+          }
+
+          final response = await _supabase.auth.signInWithIdToken(
+            provider: OAuthProvider.google,
+            idToken: idToken,
+            accessToken: accessToken,
           );
+
+          final session = response.session ?? _supabase.auth.currentSession;
+          if (session == null) {
+            throw Exception('Google sign-in succeeded but no session was created.');
+          }
+
+          if (requireExistingAccount) {
+            final profile = await _supabase.retry(() => _supabase
+                .from('doctors')
+                .select('phone')
+                .eq('id', session.user.id)
+                .maybeSingle());
+
+            final profilePhone = profile?['phone'] as String?;
+            if (profilePhone != normalizedPhone) {
+              await _supabase.auth.signOut();
+              await _googleSignIn.signOut();
+              throw Exception(
+                'This Google sign-in is not linked to that account yet. Sign in with your password once, then link Google from your profile.',
+              );
+            }
+
+            _syncFcmToken();
+            return _resolveAuthUserState(session);
+          }
+
+          await _supabase.retry(() => _supabase.from('doctors').upsert({
+            'id': session.user.id,
+            'full_name': (fullName ?? googleUser.displayName ?? '').trim(),
+            'specialization': (specialization ?? '').trim(),
+            'email': session.user.email?.trim() ?? googleUser.email.trim(),
+            'phone': normalizedPhone,
+            'phone_verified': true,
+            'role': selectedRole == UserRole.headDoctor
+                ? 'doctor'
+                : selectedRole.databaseValue,
+            'approval_status': 'pending',
+            'created_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'id'));
+
+          _syncFcmToken();
+          return _resolveAuthUserState(session);
+        } catch (e) {
+          throw Exception(AppError.getMessage(e));
         }
-
-        _syncFcmToken();
-        return _resolveAuthUserState(session);
-      }
-
-      await _supabase.from('doctors').upsert({
-        'id': session.user.id,
-        'full_name': (fullName ?? googleUser.displayName ?? '').trim(),
-        'specialization': (specialization ?? '').trim(),
-        'email': session.user.email?.trim() ?? googleUser.email.trim(),
-        'phone': normalizedPhone,
-        'phone_verified': true,
-        'role': selectedRole == UserRole.headDoctor
-            ? 'doctor'
-            : selectedRole.databaseValue,
-        'approval_status': 'pending',
-        'created_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'id');
-
-      _syncFcmToken();
-      return _resolveAuthUserState(session);
-    });
+      });
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+      rethrow;
+    }
   }
 
   Future<void> linkGoogleIdentity() async {
@@ -337,48 +364,57 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _googleSignIn.signOut();
+      try {
+        await _googleSignIn.signOut();
 
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        throw Exception('Google linking was cancelled.');
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          throw Exception('Google linking was cancelled.');
+        }
+
+        final googleAuth = await googleUser.authentication;
+        final idToken = googleAuth.idToken;
+        final accessToken = googleAuth.accessToken;
+
+        if (idToken == null || accessToken == null) {
+          throw Exception(_missingGoogleTokenMessage());
+        }
+
+        final response = await _supabase.auth.linkIdentityWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+
+        final session = response.session ?? _supabase.auth.currentSession;
+        if (session == null) {
+          throw Exception(
+              'Google was linked but the session could not be refreshed.');
+        }
+
+        return _resolveAuthUserState(session);
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
       }
-
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
-
-      if (idToken == null || accessToken == null) {
-        throw Exception(_missingGoogleTokenMessage());
-      }
-
-      final response = await _supabase.auth.linkIdentityWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-
-      final session = response.session ?? _supabase.auth.currentSession;
-      if (session == null) {
-        throw Exception(
-            'Google was linked but the session could not be refreshed.');
-      }
-
-      return _resolveAuthUserState(session);
     });
   }
 
   Future<void> signOut() async {
     try {
       ref.read(notificationProvider.notifier).clearAll();
+      ref.read(notificationPreferencesControllerProvider.notifier).resetToDefaults();
     } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
     await FcmService.instance.clearToken();
     await _googleSignIn.signOut();
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _supabase.auth.signOut();
-      return null;
+      try {
+        await _supabase.auth.signOut();
+        return null;
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
+      }
     });
   }
 
@@ -390,12 +426,12 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     final linkedProviders = await _getLinkedProviders(user);
 
     try {
-      final profile = await _supabase
+      final profile = await _supabase.retry(() => _supabase
           .from('doctors')
           .select(
               'full_name, specialization, role, approval_status, rejection_reason, phone, phone_verified')
           .eq('id', user.id)
-          .maybeSingle();
+          .maybeSingle());
 
       if (profile != null) {
         return AuthUserState(

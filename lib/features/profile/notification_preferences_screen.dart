@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/app_icons.dart';
-import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/theme.dart';
@@ -18,8 +17,14 @@ class NotificationPreferencesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final preferences = ref.watch(notificationPreferencesProvider);
-    final quietHoursEnabled = ref.watch(quietHoursEnabledProvider);
+    final preferencesAsync = ref.watch(notificationPreferencesControllerProvider);
+    final preferencesState =
+        preferencesAsync.valueOrNull ?? NotificationPreferencesState.defaults;
+    final preferences = preferencesState.channelPreferences;
+    final quietHoursEnabled = preferencesState.quietHoursEnabled;
+    final controller =
+        ref.read(notificationPreferencesControllerProvider.notifier);
+
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(title: const Text('Notification Preferences')),
@@ -64,13 +69,9 @@ class NotificationPreferencesScreen extends ConsumerWidget {
                     ),
                     Switch(
                       value: quietHoursEnabled,
-                      onChanged: (value) {
-                        ref.read(quietHoursEnabledProvider.notifier).state =
-                            value;
-                        FcmService.instance.configureQuietHours(
-                          enabled: value,
-                        );
-                      },
+                      onChanged: preferencesAsync.isLoading
+                          ? null
+                          : (value) => controller.setQuietHoursEnabled(value),
                     ),
                   ],
                 ),
@@ -111,18 +112,10 @@ class NotificationPreferencesScreen extends ConsumerWidget {
                   ),
                   Switch(
                     value: enabled,
-                    onChanged: (value) {
-                      ref
-                          .read(notificationPreferencesProvider.notifier)
-                          .setCategoryEnabled(category, value);
-                      final next = {
-                        ...preferences,
-                        category: value,
-                      };
-                      ref
-                          .read(notificationProvider.notifier)
-                          .updatePreferences(next);
-                    },
+                    onChanged: preferencesAsync.isLoading
+                        ? null
+                        : (value) =>
+                            controller.setCategoryEnabled(category, value),
                   ),
                 ],
               ),

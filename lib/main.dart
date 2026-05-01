@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mediflow/core/app_config.dart';
 import 'package:mediflow/core/connectivity_wrapper.dart';
 import 'package:mediflow/core/fcm_service.dart';
+import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/notification_service.dart';
 import 'package:mediflow/core/router.dart';
 import 'package:mediflow/core/theme.dart';
@@ -65,6 +66,7 @@ class MediFlowApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(notificationPreferencesControllerProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
