@@ -196,7 +196,9 @@ class _VisitCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          visit.patientName ?? 'Unknown Patient',
+                          visit.patientName ??
+                              visit.leadPatientName ??
+                              'Unknown Patient',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16),
                         ),
@@ -209,6 +211,33 @@ class _VisitCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                        if (visit.isExternalDoctor &&
+                            visit.leadPatientName != null &&
+                            visit.leadPatientName!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                AppIcons.person_add_rounded,
+                                size: 13,
+                                color: AppTheme.textMuted,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Lead: ${visit.leadPatientName}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _LeadStatusChip(status: visit.leadStatus),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -247,6 +276,39 @@ class _VisitCard extends StatelessWidget {
       default:
         return AppTheme.warningColor;
     }
+  }
+}
+
+class _LeadStatusChip extends StatelessWidget {
+  const _LeadStatusChip({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      'contacted' => AppTheme.doctorAccent,
+      'converted' => AppTheme.successColor,
+      'not_interested' => AppTheme.textMuted,
+      _ => AppTheme.warningColor,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 }
 

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:mediflow/core/neu_widgets.dart';
-import 'package:mediflow/core/theme.dart';
-import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
-import 'package:mediflow/features/dr_visits/agents_provider.dart';
-import 'package:mediflow/features/dr_visits/external_doctor_fields.dart';
-import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
+import 'package:mediflow/core/neu_widgets.dart';
+import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/features/dr_visits/agents_provider.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
+import 'package:mediflow/features/patients/patient_list_provider.dart';
 
 class DrVisitForm extends ConsumerStatefulWidget {
   const DrVisitForm({super.key});
@@ -34,6 +33,10 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   final _extSpecCtrl = TextEditingController();
   final _extHospCtrl = TextEditingController();
   final _extPhoneCtrl = TextEditingController();
+  final _leadNameCtrl = TextEditingController();
+  final _leadPhoneCtrl = TextEditingController();
+  final _leadAddrCtrl = TextEditingController();
+  final _leadNotesCtrl = TextEditingController();
   DateTime? _followupDate;
 
   @override
@@ -45,11 +48,15 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
     _extSpecCtrl.dispose();
     _extHospCtrl.dispose();
     _extPhoneCtrl.dispose();
+    _leadNameCtrl.dispose();
+    _leadPhoneCtrl.dispose();
+    _leadAddrCtrl.dispose();
+    _leadNotesCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    if (_selectedPatientId == null) {
+    if (!_isExternal && _selectedPatientId == null) {
       AppSnackbar.showError(context, 'Please select a patient');
       return;
     }
@@ -59,13 +66,17 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
     setState(() => _isLoading = true);
     try {
       await ref.read(drVisitsProvider.notifier).createVisit(
-            patientId: _selectedPatientId!,
+            patientId: _selectedPatientId,
             assignedAgentId: _selectedAgentId,
             isExternal: _isExternal,
             extDoctorName: _extNameCtrl.text.trim(),
             extDoctorSpecialization: _extSpecCtrl.text.trim(),
             extDoctorHospital: _extHospCtrl.text.trim(),
             extDoctorPhone: _extPhoneCtrl.text.trim(),
+            leadPatientName: _leadNameCtrl.text.trim(),
+            leadPatientPhone: _leadPhoneCtrl.text.trim(),
+            leadPatientAddress: _leadAddrCtrl.text.trim(),
+            leadNotes: _leadNotesCtrl.text.trim(),
             visitNotes: _visitNotesController.text.trim(),
             diagnosis: _diagnosisController.text.trim(),
             followupDate: _followupDate,
@@ -76,7 +87,9 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
+      if (mounted) {
+        AppSnackbar.showError(context, AppError.getMessage(e));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -118,44 +131,43 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Patient Selection
-              const SectionTitle(
-                  title: 'Patient', icon: AppIcons.person_search_rounded),
-              GestureDetector(
-                onTap: _showPatientPicker,
-                child: NeuCard(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.person_rounded,
-                          color: _selectedPatientId == null
-                              ? AppTheme.textMuted
-                              : AppTheme.primaryTeal),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _selectedPatientName ?? 'Select Patient',
-                          style: TextStyle(
-                            fontSize: 16,
+              if (!_isExternal) ...[
+                const SectionTitle(
+                    title: 'Patient', icon: AppIcons.person_search_rounded),
+                GestureDetector(
+                  onTap: _showPatientPicker,
+                  child: NeuCard(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.person_rounded,
                             color: _selectedPatientId == null
                                 ? AppTheme.textMuted
-                                : AppTheme.textColor,
-                            fontWeight: _selectedPatientId == null
-                                ? FontWeight.normal
-                                : FontWeight.w600,
+                                : AppTheme.primaryTeal),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedPatientName ?? 'Select Patient',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: _selectedPatientId == null
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textColor,
+                              fontWeight: _selectedPatientId == null
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                      const Icon(AppIcons.arrow_drop_down_rounded,
-                          color: AppTheme.textMuted),
-                    ],
+                        const Icon(AppIcons.arrow_drop_down_rounded,
+                            color: AppTheme.textMuted),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Agent Assignment
+                const SizedBox(height: 24),
+              ],
               const SectionTitle(
                   title: 'Assign Assistant',
                   icon: AppIcons.assignment_ind_outlined),
@@ -179,13 +191,18 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                       onChanged: (value) {
                         setState(() {
                           _isExternal = value;
-                          if (value) {
-                            _selectedAgentId = null;
-                          } else {
+                          if (!value) {
                             _extNameCtrl.clear();
                             _extSpecCtrl.clear();
                             _extHospCtrl.clear();
                             _extPhoneCtrl.clear();
+                            _leadNameCtrl.clear();
+                            _leadPhoneCtrl.clear();
+                            _leadAddrCtrl.clear();
+                            _leadNotesCtrl.clear();
+                          } else {
+                            _selectedPatientId = null;
+                            _selectedPatientName = null;
                           }
                         });
                       },
@@ -195,44 +212,136 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
               ),
               const SizedBox(height: 12),
               if (_isExternal)
-                const SectionTitle(
-                  title: 'External Doctor',
-                  icon: AppIcons.local_hospital_outlined,
-                ),
-              if (_isExternal)
-                ExternalDoctorFields(
-                  nameController: _extNameCtrl,
-                  specializationController: _extSpecCtrl,
-                  hospitalController: _extHospCtrl,
-                  phoneController: _extPhoneCtrl,
-                )
-              else
-                assistantsAsync.when(
-                  data: (assistants) => NeuCard(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedAgentId,
-                      decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none),
-                      hint: const Text('Select Assistant (Optional)'),
-                      items: assistants
-                          .map((a) => DropdownMenuItem(
-                              value: a.id, child: Text(a.fullName)))
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedAgentId = val),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primaryTeal.withValues(alpha: 0.3),
                     ),
                   ),
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Text('Error loading assistants: $err'),
+                  child: const Row(
+                    children: [
+                      Icon(AppIcons.info_outline_rounded,
+                          color: AppTheme.primaryTeal, size: 18),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Recording a patient lead — fill in the referring doctor and the potential patient\'s contact details. Your assistant will follow up.',
+                          style: TextStyle(
+                              fontSize: 12, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              const SizedBox(height: 12),
+              assistantsAsync.when(
+                data: (assistants) => NeuCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _selectedAgentId,
+                    decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none),
+                    hint: Text(_isExternal
+                        ? 'Select Assistant for Lead Follow-up'
+                        : 'Select Assistant (Optional)'),
+                    items: assistants
+                        .map((a) => DropdownMenuItem(
+                            value: a.id, child: Text(a.fullName)))
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedAgentId = val),
+                  ),
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Text('Error loading assistants: $err'),
+              ),
               const SizedBox(height: 24),
-
-              // Visit Details
+              if (_isExternal) ...[
+                const SectionTitle(
+                  title: 'Referring Doctor',
+                  icon: AppIcons.local_hospital_outlined,
+                ),
+                NeuCard(
+                  child: Column(
+                    children: [
+                      NeuTextField(
+                        controller: _extNameCtrl,
+                        label: 'Doctor Name *',
+                        hint: 'Referring doctor name',
+                        validator: (value) {
+                          if (_isExternal &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Doctor name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _extSpecCtrl,
+                        label: 'Specialization',
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _extHospCtrl,
+                        label: 'Hospital / Clinic',
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _extPhoneCtrl,
+                        label: 'Phone',
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const SectionTitle(
+                  title: 'Patient Lead',
+                  icon: AppIcons.person_add_rounded,
+                ),
+                NeuCard(
+                  child: Column(
+                    children: [
+                      NeuTextField(
+                        controller: _leadNameCtrl,
+                        label: 'Lead patient name',
+                        validator: (value) {
+                          if (_isExternal &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Lead patient name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _leadPhoneCtrl,
+                        label: 'Lead patient phone',
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _leadAddrCtrl,
+                        label: 'Lead patient address',
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _leadNotesCtrl,
+                        label: 'Notes / doctor\'s instructions',
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
               const SectionTitle(
                   title: 'Visit Details',
                   icon: AppIcons.medical_information_outlined),
@@ -249,8 +358,6 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                 hint: 'Final or tentative diagnosis...',
               ),
               const SizedBox(height: 24),
-
-              // Follow-up
               const SectionTitle(
                   title: 'Follow-up', icon: AppIcons.event_note_rounded),
               GestureDetector(
@@ -304,7 +411,6 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                 hint: 'Tests to be done, medications, etc...',
                 maxLines: 2,
               ),
-
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,

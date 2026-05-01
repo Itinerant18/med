@@ -4,7 +4,7 @@ import 'package:mediflow/core/parse_utils.dart';
 @immutable
 class DrVisit {
   final String id;
-  final String patientId;
+  final String? patientId;
   final String doctorId;
   final String? assignedAgentId;
   final String? visitNotes;
@@ -23,6 +23,13 @@ class DrVisit {
   final String? extDoctorSpecialization;
   final String? extDoctorHospital;
   final String? extDoctorPhone;
+  final String? leadPatientName;
+  final String? leadPatientPhone;
+  final String? leadPatientAddress;
+  final String? leadNotes;
+  final String leadStatus;
+  final String? convertedPatientId;
+  final List<Map<String, dynamic>> contactAttempts;
 
   // Joined fields
   final String? patientName;
@@ -30,7 +37,7 @@ class DrVisit {
 
   const DrVisit({
     required this.id,
-    required this.patientId,
+    this.patientId,
     required this.doctorId,
     this.assignedAgentId,
     this.visitNotes,
@@ -49,6 +56,13 @@ class DrVisit {
     this.extDoctorSpecialization,
     this.extDoctorHospital,
     this.extDoctorPhone,
+    this.leadPatientName,
+    this.leadPatientPhone,
+    this.leadPatientAddress,
+    this.leadNotes,
+    this.leadStatus = 'new_lead',
+    this.convertedPatientId,
+    this.contactAttempts = const [],
     this.patientName,
     this.agentName,
   });
@@ -58,7 +72,7 @@ class DrVisit {
     final agent = parseDbMap(json['agent']);
     return DrVisit(
       id: parseDbString(json['id']),
-      patientId: parseDbString(json['patient_id']),
+      patientId: json['patient_id']?.toString(),
       doctorId: parseDbString(json['doctor_id']),
       assignedAgentId: json['assigned_agent_id']?.toString(),
       visitNotes: json['visit_notes']?.toString(),
@@ -79,6 +93,15 @@ class DrVisit {
       extDoctorSpecialization: json['ext_doctor_specialization']?.toString(),
       extDoctorHospital: json['ext_doctor_hospital']?.toString(),
       extDoctorPhone: json['ext_doctor_phone']?.toString(),
+      leadPatientName: json['lead_patient_name']?.toString(),
+      leadPatientPhone: json['lead_patient_phone']?.toString(),
+      leadPatientAddress: json['lead_patient_address']?.toString(),
+      leadNotes: json['lead_notes']?.toString(),
+      leadStatus: parseDbString(json['lead_status'], 'new_lead'),
+      convertedPatientId: json['converted_patient_id']?.toString(),
+      contactAttempts: ((json['contact_attempts'] as List?) ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
       patientName: patients?['full_name']?.toString(),
       agentName: agent?['full_name']?.toString(),
     );
@@ -104,6 +127,13 @@ class DrVisit {
       'ext_doctor_specialization': extDoctorSpecialization,
       'ext_doctor_hospital': extDoctorHospital,
       'ext_doctor_phone': extDoctorPhone,
+      'lead_patient_name': leadPatientName,
+      'lead_patient_phone': leadPatientPhone,
+      'lead_patient_address': leadPatientAddress,
+      'lead_notes': leadNotes,
+      'lead_status': leadStatus,
+      'converted_patient_id': convertedPatientId,
+      'contact_attempts': contactAttempts,
     };
   }
 }

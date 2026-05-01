@@ -19,7 +19,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardProvider);
-    final authState = ref.watch(authNotifierProvider).value;
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
     final role = authState?.role ?? UserRole.assistant;
     final isAdmin = role.isAdmin;
     final name = authState?.doctorName ?? (isAdmin ? 'Doctor' : 'Staff');
@@ -41,7 +41,7 @@ class DashboardScreen extends ConsumerWidget {
                   greeting,
                   name,
                   role,
-                  dashboardAsync.value?.isLive ?? false,
+                  dashboardAsync.valueOrNull?.isLive ?? false,
                   ref,
                 ),
               ),

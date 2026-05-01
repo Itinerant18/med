@@ -31,7 +31,7 @@ class PatientService {
   String get _doctorName => _userState?.doctorName ?? 'Staff';
   String? get _userId => _userState?.session.user.id;
 
-  Future<void> registerPatient(Map<String, dynamic> patientData) async {
+  Future<String> registerPatient(Map<String, dynamic> patientData) async {
     final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('Not authenticated. Please sign in again.');
@@ -47,7 +47,11 @@ class PatientService {
     finalData['service_status'] = 'pending';
     finalData['created_at'] = DateTime.now().toIso8601String();
 
-    await _supabase.from('patients').insert(finalData);
+    final response = await _supabase
+        .from('patients')
+        .insert(finalData)
+        .select('id')
+        .single();
 
     await AuditService.log(
       ref: _ref,
@@ -57,6 +61,8 @@ class PatientService {
           'Patient registered: ${finalData['full_name'] ?? 'Unknown Patient'}',
       newData: Map<String, dynamic>.from(finalData),
     );
+
+    return response['id'].toString();
   }
 
   Future<void> updatePatient(

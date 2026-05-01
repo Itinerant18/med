@@ -104,7 +104,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
 
   Future<DashboardState> _fetch() async {
     final supabase = ref.read(supabaseClientProvider);
-    final userState = ref.read(authNotifierProvider).value;
+    final userState = ref.read(authNotifierProvider).valueOrNull;
     final isAgent = userState?.role == UserRole.assistant;
 
     final now = DateTime.now();
@@ -146,7 +146,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
     if (isAgent && userState != null) {
       final assignedRaw = await supabase
           .from('dr_visits')
-          .select('*, patients(full_name)')
+          .select('*, patients:patients!dr_visits_patient_id_fkey(full_name)')
           .eq('assigned_agent_id', userState.session.user.id)
           .gte('visit_date', startOfDay)
           .lte('visit_date', endOfDay)
