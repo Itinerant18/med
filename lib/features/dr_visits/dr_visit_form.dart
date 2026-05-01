@@ -8,7 +8,8 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/dr_visits/agents_provider.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
-import 'package:mediflow/features/patients/patient_list_provider.dart';
+
+import 'package:mediflow/shared/widgets/patient_picker_bottom_sheet.dart';
 
 class DrVisitForm extends ConsumerStatefulWidget {
   const DrVisitForm({super.key});
@@ -38,6 +39,28 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   final _leadAddrCtrl = TextEditingController();
   final _leadNotesCtrl = TextEditingController();
   DateTime? _followupDate;
+
+  void _onReferralLeadChanged(bool value) {
+    setState(() {
+      _isExternal = value;
+      if (!value) {
+        _selectedAgentId = null;
+        _extNameCtrl.clear();
+        _extSpecCtrl.clear();
+        _extHospCtrl.clear();
+        _extPhoneCtrl.clear();
+        _leadNameCtrl.clear();
+        _leadPhoneCtrl.clear();
+        _leadAddrCtrl.clear();
+        _leadNotesCtrl.clear();
+      } else {
+        _selectedPatientId = null;
+        _selectedPatientName = null;
+        _selectedAgentId = null;
+        _followupDate = null;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -102,7 +125,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
       backgroundColor: AppTheme.bgColor,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => const _PatientPickerSheet(),
+      builder: (context) => const PatientPickerBottomSheet(),
     ).then((result) {
       if (result != null && result is Map) {
         setState(() {
@@ -188,24 +211,7 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                     ),
                     Switch(
                       value: _isExternal,
-                      onChanged: (value) {
-                        setState(() {
-                          _isExternal = value;
-                          if (!value) {
-                            _extNameCtrl.clear();
-                            _extSpecCtrl.clear();
-                            _extHospCtrl.clear();
-                            _extPhoneCtrl.clear();
-                            _leadNameCtrl.clear();
-                            _leadPhoneCtrl.clear();
-                            _leadAddrCtrl.clear();
-                            _leadNotesCtrl.clear();
-                          } else {
-                            _selectedPatientId = null;
-                            _selectedPatientName = null;
-                          }
-                        });
-                      },
+                      onChanged: _onReferralLeadChanged,
                     ),
                   ],
                 ),
@@ -430,66 +436,6 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PatientPickerSheet extends ConsumerStatefulWidget {
-  const _PatientPickerSheet();
-
-  @override
-  ConsumerState<_PatientPickerSheet> createState() =>
-      _PatientPickerSheetState();
-}
-
-class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
-  String _query = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final patientsAsync = ref.watch(roleAwarePatientsProvider(SearchFilter(
-      query: _query,
-      healthScheme: HealthSchemeFilter.all,
-      priority: PriorityFilter.all,
-      dateRange: DateRangeFilter.allTime,
-      visitType: VisitTypeFilter.all,
-      sortOption: SortOption.nameAsc,
-    )));
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          const Text('Select Patient',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          NeuTextField(
-            label: 'Search Patient',
-            prefixIcon: const Icon(AppIcons.search),
-            onChanged: (v) => setState(() => _query = v),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: patientsAsync.when(
-              data: (patients) => ListView.builder(
-                itemCount: patients.length,
-                itemBuilder: (context, index) {
-                  final p = patients[index];
-                  return ListTile(
-                    title: Text(p['full_name'] ?? 'Unknown'),
-                    subtitle: Text(p['phone'] ?? ''),
-                    onTap: () => Navigator.pop(
-                        context, {'id': p['id'], 'name': p['full_name']}),
-                  );
-                },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
-            ),
-          ),
-        ],
       ),
     );
   }
