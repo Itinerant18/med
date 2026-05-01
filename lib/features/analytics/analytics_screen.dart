@@ -7,6 +7,7 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/analytics/analytics_provider.dart';
+import 'package:mediflow/shared/widgets/dashboard_stat_carousel.dart';
 
 final _staffSortDescendingProvider =
     StateProvider.autoDispose<bool>((ref) => true);
@@ -298,120 +299,53 @@ class _OverviewRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = [
-      _OverviewCardData(
-        title: 'Total Patients',
+    final items = [
+      DashboardStatItem(
+        label: 'Total Patients',
         value: '${summary.totalPatients}',
         icon: AppIcons.people_rounded,
         color: AppTheme.primaryTeal,
       ),
-      _OverviewCardData(
-        title: "Today's Visits",
+      DashboardStatItem(
+        label: "Today's Visits",
         value: '${summary.todayVisits}',
         icon: AppIcons.calendar_today_rounded,
         color: AppTheme.primaryTeal,
       ),
-      _OverviewCardData(
-        title: 'Clinical Visits',
+      DashboardStatItem(
+        label: 'Clinical Visits',
         value: '${summary.totalVisits}',
         icon: AppIcons.medical_services_rounded,
         color: const Color(0xFF3182CE),
       ),
-      _OverviewCardData(
-        title: 'High Priority',
+      DashboardStatItem(
+        label: 'High Priority',
         value: '${summary.highPriorityPatients}',
         icon: AppIcons.priority_high_rounded,
         color: AppTheme.errorColor,
       ),
-      _OverviewCardData(
-        title: 'Avg Visits/Day',
+      DashboardStatItem(
+        label: 'Avg Visits/Day',
         value: summary.avgVisitsPerDay.toStringAsFixed(1),
         icon: AppIcons.insights_rounded,
         color: const Color(0xFF805AD5),
       ),
-      _OverviewCardData(
-        title: 'Followup Rate',
+      DashboardStatItem(
+        label: 'Followup Rate',
         value: '${(summary.followupCompletion * 100).toStringAsFixed(0)}%',
         icon: AppIcons.event_repeat_rounded,
         color: const Color(0xFFDD6B20),
       ),
     ];
 
-    return SizedBox(
+    return DashboardStatCarousel(
+      items: items,
       height: 108,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: cards.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => _OverviewCard(card: cards[index]),
-      ),
-    );
-  }
-}
-
-class _OverviewCardData {
-  const _OverviewCardData({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-}
-
-class _OverviewCard extends StatelessWidget {
-  const _OverviewCard({required this.card});
-
-  final _OverviewCardData card;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 130,
-      height: 100,
-      child: NeuCard(
-        borderRadius: 18,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: card.color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(card.icon, color: card.color, size: 19),
-            ),
-            const Spacer(),
-            Text(
-              card.value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textColor,
-                letterSpacing: -0.4,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              card.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppTheme.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
+      cardWidth: 130,
+      cardHeight: 100,
+      borderRadius: 18,
+      useNeuCard: true,
+      padding: EdgeInsets.zero,
     );
   }
 }
@@ -813,6 +747,35 @@ class _BarChart extends CustomPainter {
   _BarChart(this.points);
 
   final List<DailyVisitCount> points;
+  final TextPainter _labelPainter = TextPainter(
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+  );
+  final Map<int, String> _labelCache = {};
+  Size? _lastSize;
+  List<DailyVisitCount>? _lastPointsRef;
+  final Map<int, Offset> _labelOffsets = {};
+  double _cachedBarWidth = 0;
+
+  void _updateLayoutCache(Size size, double leftPadding, double barWidth) {
+    if (_lastSize == size &&
+        identical(_lastPointsRef, points) &&
+        _cachedBarWidth == barWidth) {
+      return;
+    }
+    _lastSize = size;
+    _lastPointsRef = points;
+    _cachedBarWidth = barWidth;
+    _labelOffsets.clear();
+
+    for (var i = 0; i < points.length; i++) {
+      if (i % 5 == 0 || i == points.length - 1) {
+        _labelCache[i] = '${points[i].date.day}';
+        _labelOffsets[i] =
+            Offset(leftPadding + (barWidth * i), size.height - 18);
+      }
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -830,10 +793,7 @@ class _BarChart extends CustomPainter {
       ..color = AppTheme.primaryTeal.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
-    final labelStyle = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
+    _updateLayoutCache(size, leftPadding, barWidth);
 
     for (var i = 0; i < points.length; i++) {
       final point = points[i];
@@ -848,18 +808,19 @@ class _BarChart extends CustomPainter {
       canvas.drawRRect(rect, barPaint);
 
       if (i % 5 == 0 || i == points.length - 1) {
-        labelStyle.text = TextSpan(
-          text: '${point.date.day}',
+        _labelPainter.text = TextSpan(
+          text: _labelCache[i] ?? '${point.date.day}',
           style: const TextStyle(
             color: AppTheme.textMuted,
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
         );
-        labelStyle.layout(minWidth: barWidth);
-        labelStyle.paint(
+        _labelPainter.layout(minWidth: barWidth);
+        _labelPainter.paint(
           canvas,
-          Offset(leftPadding + (barWidth * i), size.height - 18),
+          _labelOffsets[i] ??
+              Offset(leftPadding + (barWidth * i), size.height - 18),
         );
       }
     }
