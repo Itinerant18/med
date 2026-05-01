@@ -10,7 +10,6 @@ import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/features/clinical/clinical_provider.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
-import 'package:mediflow/core/parse_utils.dart';
 
 class ClinicalEntryScreen extends ConsumerStatefulWidget {
   final String? patientId;
@@ -106,8 +105,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           await ref.read(patientDetailProvider(_selectedPatientId!).future);
       if (!mounted || patient == null) return;
       setState(() {
-        _selectedPatientName = patient['full_name'];
-        final dob = parseDbDate(patient['date_of_birth']);
+        _selectedPatientName = patient.fullName;
+        final dob = patient.dateOfBirth;
         _selectedPatientAge =
             dob != null ? (DateTime.now().year - dob.year).toString() : 'N/A';
       });
