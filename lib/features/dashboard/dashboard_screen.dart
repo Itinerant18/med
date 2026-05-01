@@ -7,13 +7,14 @@ import 'package:intl/intl.dart';
 import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/shared/widgets/skeleton_loader.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
-import 'package:mediflow/shared/widgets/empty_state.dart';
-import 'package:mediflow/shared/widgets/error_boundary.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
 import 'package:mediflow/models/user_role.dart';
+import 'package:mediflow/shared/widgets/dashboard_stat_carousel.dart';
+import 'package:mediflow/shared/widgets/service_status_badge.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -49,7 +50,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
               dashboardAsync.when(
                 loading: () => const SliverToBoxAdapter(
-                  child: _DashboardSkeleton(),
+                  child: DashboardSkeleton(),
                 ),
                 error: (error, stack) => SliverToBoxAdapter(
                   child: _buildErrorState(context, ref, error),
@@ -185,14 +186,15 @@ class DashboardScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppTheme.successColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.4), width: 0.8),
+        border: Border.all(
+            color: AppTheme.successColor.withValues(alpha: 0.4), width: 0.8),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _PulseDot(),
-          const SizedBox(width: 4),
-          const Text(
+          SizedBox(width: 4),
+          Text(
             'LIVE',
             style: TextStyle(
               fontSize: 10,
@@ -207,52 +209,47 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildStatCards(DashboardState data, bool isAdmin) {
-    final cards = isAdmin
-        ? <Widget>[
-            _StatCard(
+    final items = isAdmin
+        ? <DashboardStatItem>[
+            DashboardStatItem(
               label: 'Today\'s Visits',
               value: data.stats.todayVisitsCount.toString(),
               icon: AppIcons.calendar_today_rounded,
               color: AppTheme.primaryTeal,
             ),
-            const SizedBox(width: 12),
-            _StatCard(
+            DashboardStatItem(
               label: 'Pending Labs',
               value: data.stats.pendingLabsCount.toString(),
               icon: AppIcons.biotech_rounded,
               color: AppTheme.warningColor,
             ),
-            const SizedBox(width: 12),
-            _StatCard(
+            DashboardStatItem(
               label: 'OT Scheduled',
               value: data.stats.upcomingOTCount.toString(),
               icon: AppIcons.medical_services_rounded,
               color: AppTheme.errorColor,
             ),
-            const SizedBox(width: 12),
-            _StatCard(
+            DashboardStatItem(
               label: 'High Priority',
               value: data.stats.highPriorityCount.toString(),
               icon: AppIcons.priority_high_rounded,
               color: AppTheme.analyticsAccent,
             ),
           ]
-        : <Widget>[
-            _StatCard(
+        : <DashboardStatItem>[
+            DashboardStatItem(
               label: 'My Patients',
               value: '${data.todayVisits.length}',
               icon: AppIcons.people_rounded,
               color: AppTheme.primaryTeal,
             ),
-            const SizedBox(width: 12),
-            _StatCard(
+            DashboardStatItem(
               label: 'Follow-ups Due',
               value: '${data.followupTasks.length}',
               icon: AppIcons.add_task_rounded,
               color: AppTheme.warningColor,
             ),
-            const SizedBox(width: 12),
-            _StatCard(
+            DashboardStatItem(
               label: 'Visits Today',
               value: '${data.assignedVisits.length}',
               icon: AppIcons.health_and_safety_rounded,
@@ -260,13 +257,14 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ];
 
-    return SizedBox(
+    return DashboardStatCarousel(
+      items: items,
       height: 114,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        children: cards,
-      ),
+      cardWidth: 132,
+      cardHeight: 100,
+      borderRadius: 16,
+      useNeuCard: false,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 
@@ -344,23 +342,74 @@ class DashboardScreen extends ConsumerWidget {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: NeuCard(
-        child: EmptyState(
-          icon: AppIcons.event_available_rounded,
-          title: 'No visits recorded today',
-          subtitle: 'Visits logged today will appear here.',
-          compact: true,
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                AppIcons.event_available_rounded,
+                size: 52,
+                color: AppTheme.textMuted,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'No visits recorded today',
+                style: TextStyle(
+                  color: AppTheme.textColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Visits logged today will appear here',
+                style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
-    return ErrorBoundary(
-      error: error,
-      contextLabel: 'dashboard',
-      title: 'Unable to load dashboard',
-      retryLabel: 'Try Again',
-      onRetry: () => ref.read(dashboardProvider.notifier).refresh(),
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: NeuCard(
+        child: Column(
+          children: [
+            const Icon(
+              AppIcons.cloud_off_rounded,
+              size: 48,
+              color: AppTheme.textMuted,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Unable to load dashboard',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              error.toString().length > 100
+                  ? '${error.toString().substring(0, 100)}...'
+                  : error.toString(),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            NeuButton(
+              onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              child: const Text(
+                'Try Again',
+                style: TextStyle(
+                  color: AppTheme.surfaceWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -369,82 +418,6 @@ class DashboardScreen extends ConsumerWidget {
     if (h < 12) return 'Good morning,';
     if (h < 17) return 'Good afternoon,';
     return 'Good evening,';
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 132,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.white,
-            offset: Offset(-3, -3),
-            blurRadius: 8,
-          ),
-          BoxShadow(
-            color: AppTheme.neuShadowDark,
-            offset: Offset(3, 3),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  letterSpacing: -1,
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -463,7 +436,8 @@ class _PriorityCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.bgColor,
         borderRadius: BorderRadius.circular(14),
-        border: const Border(left: BorderSide(color: AppTheme.errorColor, width: 4)),
+        border: const Border(
+            left: BorderSide(color: AppTheme.errorColor, width: 4)),
         boxShadow: const [
           BoxShadow(
             color: AppTheme.neuShadowDark,
@@ -471,7 +445,7 @@ class _PriorityCard extends StatelessWidget {
             blurRadius: 6,
           ),
           BoxShadow(
-            color: Colors.white,
+            color: AppTheme.surfaceWhite,
             offset: Offset(-3, -3),
             blurRadius: 6,
           ),
@@ -567,7 +541,7 @@ class _AssignedVisitCard extends StatelessWidget {
           ),
           boxShadow: const [
             BoxShadow(
-              color: Colors.white,
+              color: AppTheme.surfaceWhite,
               offset: Offset(-2, -2),
               blurRadius: 6,
             ),
@@ -604,12 +578,7 @@ class _AssignedVisitCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _StatusChip(
-                status: followupStatus,
-                color: followupStatus == 'completed'
-                    ? AppTheme.successColor
-                    : AppTheme.warningColor,
-              ),
+              ServiceStatusBadge(status: followupStatus, size: 9),
             ],
           ),
         ),
@@ -643,7 +612,6 @@ class _VisitCard extends StatelessWidget {
     final status =
         (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
     final addedBy = visit['last_updated_by'] as String?;
-    final statusColor = _statusColor(status);
 
     return GestureDetector(
       onTap: patientId != null
@@ -664,7 +632,7 @@ class _VisitCard extends StatelessWidget {
           ),
           boxShadow: const [
             BoxShadow(
-              color: Colors.white,
+              color: AppTheme.surfaceWhite,
               offset: Offset(-2, -2),
               blurRadius: 6,
             ),
@@ -692,7 +660,7 @@ class _VisitCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  _StatusChip(status: status, color: statusColor),
+                  ServiceStatusBadge(status: status, size: 9),
                 ],
               ),
               const SizedBox(height: 8),
@@ -728,7 +696,7 @@ class _VisitCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       AppIcons.person_outline_rounded,
                       size: 12,
                       color: AppTheme.textMuted,
@@ -736,7 +704,7 @@ class _VisitCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'Recorded by Dr. $addedBy',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         color: AppTheme.textMuted,
                         fontStyle: FontStyle.italic,
@@ -747,48 +715,6 @@ class _VisitCard extends StatelessWidget {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'discharged':
-        return AppTheme.successColor;
-      case 'referred':
-        return AppTheme.doctorAccent;
-      case 'admitted':
-      case 'under observation':
-        return AppTheme.warningColor;
-      default:
-        return AppTheme.assistantAccent;
-    }
-  }
-
-}
-
-class _StatusChip extends StatelessWidget {
-  final String status;
-  final Color color;
-
-  const _StatusChip({required this.status, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color, width: 0.8),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -827,6 +753,7 @@ class _MiniChip extends StatelessWidget {
 }
 
 class _PulseDot extends StatefulWidget {
+  const _PulseDot();
   @override
   State<_PulseDot> createState() => _PulseDotState();
 }
@@ -863,43 +790,6 @@ class _PulseDotState extends State<_PulseDot>
           color: AppTheme.successColor,
           shape: BoxShape.circle,
         ),
-      ),
-    );
-  }
-}
-
-class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 98,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 3,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, __) =>
-                  const NeuShimmer(width: 130, height: 98, borderRadius: 16),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const NeuShimmer(width: 200, height: 16, borderRadius: 8),
-          const SizedBox(height: 12),
-          const NeuShimmer(
-              width: double.infinity, height: 80, borderRadius: 16),
-          const SizedBox(height: 10),
-          const NeuShimmer(
-              width: double.infinity, height: 80, borderRadius: 16),
-          const SizedBox(height: 10),
-          const NeuShimmer(
-              width: double.infinity, height: 80, borderRadius: 16),
-        ],
       ),
     );
   }
