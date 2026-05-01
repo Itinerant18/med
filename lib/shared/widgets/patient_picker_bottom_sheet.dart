@@ -15,8 +15,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/neu_widgets.dart';
-import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/models/patient_model.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 /// Bottom sheet that lets the user search and pick a patient.
 ///
@@ -54,9 +56,9 @@ class _PatientPickerBottomSheetState
     extends ConsumerState<PatientPickerBottomSheet> {
   String _query = '';
 
-  void _pick(Map<String, dynamic> patient) {
-    final id = patient['id']?.toString() ?? '';
-    final name = (patient['full_name'] ?? '').toString();
+  void _pick(PatientModel patient) {
+    final id = patient.id;
+    final name = patient.fullName;
     if (widget.onSelected != null) {
       widget.onSelected!(id, name);
     } else {
@@ -100,14 +102,17 @@ class _PatientPickerBottomSheetState
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: patientsAsync.when(
+                child: patientsAsync.whenWithBoundary(
+                  contextLabel: 'patient_picker',
+                  errorTitle: 'Failed to load patients',
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   data: (patients) {
                     if (patients.isEmpty) {
-                      return Center(
-                        child: Text(
-                          widget.emptyText,
-                          style: const TextStyle(color: AppTheme.textMuted),
-                        ),
+                      return EmptyState(
+                        icon: AppIcons.person_search_rounded,
+                        title: widget.emptyText,
+                        compact: true,
                       );
                     }
                     return ListView.builder(
@@ -116,19 +121,14 @@ class _PatientPickerBottomSheetState
                         final p = patients[i];
                         return ListTile(
                           title: Text(
-                            (p['full_name'] ?? 'Unknown').toString(),
+                            p.fullName.isEmpty ? 'Unknown' : p.fullName,
                           ),
-                          subtitle: Text(
-                            (p['phone'] ?? '').toString(),
-                          ),
+                          subtitle: Text(p.phone ?? ''),
                           onTap: () => _pick(p),
                         );
                       },
                     );
                   },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e')),
                 ),
               ),
             ],

@@ -42,6 +42,10 @@ class AppIcons {
   static const document = FontAwesomeIcons.fileArrowUp;
   static const camera = FontAwesomeIcons.camera;
 
+  // Empty-state tokens (replace history_toggle_off_rounded for empty data).
+  static const inbox_outlined = FontAwesomeIcons.inbox;
+  static const document_empty = FontAwesomeIcons.fileLines;
+
   // Material icon compatibility tokens used by existing screens.
   static const access_time_rounded = FontAwesomeIcons.clock;
   static const account_tree_outlined = FontAwesomeIcons.diagramProject;

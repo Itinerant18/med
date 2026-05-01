@@ -6,6 +6,8 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 enum _FollowupFilter { all, pending, inProgress, completed, overdue }
 
@@ -141,7 +143,14 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
                       width: double.infinity, height: 110, borderRadius: 16),
                 ),
               ),
-              error: (error, _) => _buildError(error),
+              error: (error, stack) => ErrorBoundary(
+                error: error,
+                stackTrace: stack,
+                contextLabel: 'my_followups',
+                title: 'Failed to load follow-ups',
+                onRetry: () =>
+                    ref.read(followupTasksProvider.notifier).refresh(),
+              ),
             ),
           ),
         ],
@@ -161,75 +170,15 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(AppIcons.add_task_rounded,
-              size: 64, color: AppTheme.textMuted),
-          const SizedBox(height: 12),
-          Text(
-            _filter == _FollowupFilter.all
-                ? 'No tasks assigned yet'
-                : 'No tasks in "${_filter.label}"',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'The doctor assigns you tasks — like taking a patient to a specialist or following up on a referred patient. They will appear here.',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    final isAll = _filter == _FollowupFilter.all;
+    return EmptyState(
+      icon: AppIcons.add_task_rounded,
+      title: isAll
+          ? 'No tasks assigned yet'
+          : 'No tasks in "${_filter.label}"',
+      subtitle:
+          'The doctor assigns you tasks — like taking a patient to a specialist or following up on a referred patient. They will appear here.',
     );
   }
 
-  Widget _buildError(Object error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: NeuCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(AppIcons.error_outline_rounded,
-                  size: 40, color: AppTheme.errorColor),
-              const SizedBox(height: 12),
-              const Text(
-                'Failed to load follow-ups',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString().length > 120
-                    ? '${error.toString().substring(0, 120)}...'
-                    : error.toString(),
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              NeuButton(
-                onPressed: () =>
-                    ref.read(followupTasksProvider.notifier).refresh(),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                child: const Text(
-                  'Try Again',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

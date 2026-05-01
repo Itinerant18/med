@@ -8,6 +8,8 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/audit/audit_provider.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 class AuditLogsScreen extends ConsumerStatefulWidget {
   const AuditLogsScreen({super.key});
@@ -105,14 +107,13 @@ class _AuditLogsScreenState extends ConsumerState<AuditLogsScreen> {
                     ),
                   ),
                 Expanded(
-                  child: ref.watch(auditLogsProvider).when(
+                  child: ref.watch(auditLogsProvider).whenWithBoundary(
                         loading: () => _AuditLoadingList(
                           controller: _scrollController,
                         ),
-                        error: (error, _) => _AuditErrorView(
-                          message: error.toString(),
-                          onRetry: _refresh,
-                        ),
+                        onRetry: _refresh,
+                        contextLabel: 'audit_logs',
+                        errorTitle: 'Failed to load audit logs',
                         data: (state) => _AuditList(
                           controller: _scrollController,
                           state: state,
@@ -252,64 +253,6 @@ class _AuditLoadingList extends StatelessWidget {
   }
 }
 
-class _AuditErrorView extends StatelessWidget {
-  const _AuditErrorView({
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      children: [
-        const SizedBox(height: 80),
-        NeuCard(
-          child: Column(
-            children: [
-              const Icon(
-                AppIcons.error_outline_rounded,
-                size: 32,
-                color: AppTheme.errorColor,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Failed to load audit logs',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 16),
-              NeuButton(
-                onPressed: onRetry,
-                child: const Text(
-                  'Retry',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _AuditList extends StatelessWidget {
   const _AuditList({
     required this.controller,
@@ -328,7 +271,12 @@ class _AuditList extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: const [
           SizedBox(height: 80),
-          _EmptyAuditView(),
+          EmptyState(
+            icon: AppIcons.document_empty,
+            title: 'No audit activity found',
+            subtitle:
+                'Audit events will appear here as staff make changes.',
+          ),
         ],
       );
     }
@@ -890,7 +838,9 @@ class _AuditFilterSheetState extends ConsumerState<_AuditFilterSheet> {
                 ),
                 if (isHeadDoctor) ...[
                   const SizedBox(height: 12),
-                  ref.watch(auditActorsProvider).when(
+                  ref.watch(
+                    auditActorsProvider((page: 0, pageSize: 100)),
+                  ).when(
                         loading: () => const NeuShimmer(
                           width: double.infinity,
                           height: 56,
@@ -1087,30 +1037,3 @@ class _NoAccessCard extends StatelessWidget {
   }
 }
 
-class _EmptyAuditView extends StatelessWidget {
-  const _EmptyAuditView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        children: [
-          Icon(
-            AppIcons.history_toggle_off_rounded,
-            size: 44,
-            color: AppTheme.textMuted,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'No audit activity found',
-            style: TextStyle(
-              color: AppTheme.textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

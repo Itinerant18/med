@@ -9,6 +9,8 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
 import 'package:mediflow/models/user_role.dart';
@@ -148,8 +150,8 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildRoleBadge(UserRole role) {
     final badgeColor = switch (role) {
       UserRole.headDoctor => AppTheme.primaryTeal,
-      UserRole.doctor => const Color(0xFF3182CE),
-      UserRole.assistant => Colors.amber.shade700,
+      UserRole.doctor => AppTheme.doctorAccent,
+      UserRole.assistant => AppTheme.assistantAccent,
     };
 
     return Container(
@@ -181,9 +183,9 @@ class DashboardScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
+        color: AppTheme.successColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.shade400, width: 0.8),
+        border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.4), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -195,7 +197,7 @@ class DashboardScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: Colors.green,
+              color: AppTheme.successColor,
               letterSpacing: 0.5,
             ),
           ),
@@ -218,21 +220,21 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Pending Labs',
               value: data.stats.pendingLabsCount.toString(),
               icon: AppIcons.biotech_rounded,
-              color: const Color(0xFFD97706),
+              color: AppTheme.warningColor,
             ),
             const SizedBox(width: 12),
             _StatCard(
               label: 'OT Scheduled',
               value: data.stats.upcomingOTCount.toString(),
               icon: AppIcons.medical_services_rounded,
-              color: const Color(0xFFDC2626),
+              color: AppTheme.errorColor,
             ),
             const SizedBox(width: 12),
             _StatCard(
               label: 'High Priority',
               value: data.stats.highPriorityCount.toString(),
               icon: AppIcons.priority_high_rounded,
-              color: Colors.deepPurple,
+              color: AppTheme.analyticsAccent,
             ),
           ]
         : <Widget>[
@@ -254,7 +256,7 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Visits Today',
               value: '${data.assignedVisits.length}',
               icon: AppIcons.health_and_safety_rounded,
-              color: const Color(0xFF3182CE),
+              color: AppTheme.doctorAccent,
             ),
           ];
 
@@ -339,77 +341,26 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyVisits() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: NeuCard(
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                AppIcons.event_available_rounded,
-                size: 52,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No visits recorded today',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Visits logged today will appear here',
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-              ),
-            ],
-          ),
+        child: EmptyState(
+          icon: AppIcons.event_available_rounded,
+          title: 'No visits recorded today',
+          subtitle: 'Visits logged today will appear here.',
+          compact: true,
         ),
       ),
     );
   }
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: NeuCard(
-        child: Column(
-          children: [
-            const Icon(
-              AppIcons.cloud_off_rounded,
-              size: 48,
-              color: AppTheme.textMuted,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Unable to load dashboard',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              error.toString().length > 100
-                  ? '${error.toString().substring(0, 100)}...'
-                  : error.toString(),
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            NeuButton(
-              onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              child: const Text(
-                'Try Again',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return ErrorBoundary(
+      error: error,
+      contextLabel: 'dashboard',
+      title: 'Unable to load dashboard',
+      retryLabel: 'Try Again',
+      onRetry: () => ref.read(dashboardProvider.notifier).refresh(),
     );
   }
 
@@ -449,7 +400,7 @@ class _StatCard extends StatelessWidget {
             blurRadius: 8,
           ),
           BoxShadow(
-            color: Color(0xFFA3B1C6),
+            color: AppTheme.neuShadowDark,
             offset: Offset(3, 3),
             blurRadius: 8,
           ),
@@ -512,10 +463,10 @@ class _PriorityCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.bgColor,
         borderRadius: BorderRadius.circular(14),
-        border: const Border(left: BorderSide(color: Colors.red, width: 4)),
+        border: const Border(left: BorderSide(color: AppTheme.errorColor, width: 4)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0xFFA3B1C6),
+            color: AppTheme.neuShadowDark,
             offset: Offset(3, 3),
             blurRadius: 6,
           ),
@@ -535,7 +486,7 @@ class _PriorityCard extends StatelessWidget {
               const Icon(
                 AppIcons.warning_amber_rounded,
                 size: 13,
-                color: Colors.red,
+                color: AppTheme.errorColor,
               ),
               const SizedBox(width: 4),
               Expanded(
@@ -565,7 +516,7 @@ class _PriorityCard extends StatelessWidget {
                   const Icon(
                     AppIcons.person_outline_rounded,
                     size: 11,
-                    color: Colors.blueGrey,
+                    color: AppTheme.textMuted,
                   ),
                   const SizedBox(width: 3),
                   Expanded(
@@ -573,7 +524,7 @@ class _PriorityCard extends StatelessWidget {
                       'by ${patient['last_updated_by']}',
                       style: const TextStyle(
                         fontSize: 10,
-                        color: Colors.blueGrey,
+                        color: AppTheme.textMuted,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -621,7 +572,7 @@ class _AssignedVisitCard extends StatelessWidget {
               blurRadius: 6,
             ),
             BoxShadow(
-              color: Color(0xFFA3B1C6),
+              color: AppTheme.neuShadowDark,
               offset: Offset(2, 2),
               blurRadius: 6,
             ),
@@ -656,8 +607,8 @@ class _AssignedVisitCard extends StatelessWidget {
               _StatusChip(
                 status: followupStatus,
                 color: followupStatus == 'completed'
-                    ? Colors.green
-                    : Colors.orange,
+                    ? AppTheme.successColor
+                    : AppTheme.warningColor,
               ),
             ],
           ),
@@ -706,7 +657,7 @@ class _VisitCard extends StatelessWidget {
           border: Border(
             left: BorderSide(
               color: isHighPriority
-                  ? Colors.red
+                  ? AppTheme.errorColor
                   : AppTheme.primaryTeal.withValues(alpha: 0.4),
               width: isHighPriority ? 4 : 2,
             ),
@@ -718,7 +669,7 @@ class _VisitCard extends StatelessWidget {
               blurRadius: 6,
             ),
             BoxShadow(
-              color: Color(0xFFA3B1C6),
+              color: AppTheme.neuShadowDark,
               offset: Offset(2, 2),
               blurRadius: 6,
             ),
@@ -768,8 +719,8 @@ class _VisitCard extends StatelessWidget {
                           ? 'Labs Done'
                           : 'Labs Pending',
                       color: visit['tests_performed'] == true
-                          ? Colors.green
-                          : Colors.orange,
+                          ? AppTheme.successColor
+                          : AppTheme.warningColor,
                     ),
                 ],
               ),
@@ -780,14 +731,14 @@ class _VisitCard extends StatelessWidget {
                     Icon(
                       AppIcons.person_outline_rounded,
                       size: 12,
-                      color: Colors.grey.shade500,
+                      color: AppTheme.textMuted,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Recorded by Dr. $addedBy',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade500,
+                        color: AppTheme.textMuted,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -804,16 +755,17 @@ class _VisitCard extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case 'discharged':
-        return Colors.green;
+        return AppTheme.successColor;
       case 'referred':
-        return Colors.blue;
+        return AppTheme.doctorAccent;
       case 'admitted':
       case 'under observation':
-        return const Color(0xFFD97706);
+        return AppTheme.warningColor;
       default:
-        return Colors.amber.shade700;
+        return AppTheme.assistantAccent;
     }
   }
+
 }
 
 class _StatusChip extends StatelessWidget {
@@ -908,7 +860,7 @@ class _PulseDotState extends State<_PulseDot>
         width: 6,
         height: 6,
         decoration: const BoxDecoration(
-          color: Colors.green,
+          color: AppTheme.successColor,
           shape: BoxShape.circle,
         ),
       ),
