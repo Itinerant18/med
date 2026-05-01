@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FollowupTask {
@@ -141,18 +143,31 @@ class FollowupTask {
 String _dateOnly(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-// Keep-alive provider — the Follow-ups tab, dashboard, and other screens can
-// read/refresh it without fear of the provider being disposed mid-fetch.
 final followupTasksProvider =
-    AsyncNotifierProvider<FollowupTasksNotifier, List<FollowupTask>>(
+    AsyncNotifierProvider.autoDispose<FollowupTasksNotifier, List<FollowupTask>>(
   FollowupTasksNotifier.new,
 );
 
-class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
+class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>> {
   SupabaseClient get _supabase => ref.read(supabaseClientProvider);
+  bool _disposed = false;
 
   @override
   Future<List<FollowupTask>> build() async {
+    _disposed = false;
+    final cacheLink = ref.keepAlive();
+    ref.listen<AsyncValue<AuthUserState?>>(authNotifierProvider, (prev, next) {
+      if (_disposed) return;
+      if (next.valueOrNull == null) {
+        cacheLink.close();
+        ref.invalidateSelf();
+      }
+    });
+    ref.onDispose(() {
+      _disposed = true;
+      cacheLink.close();
+    });
+
     return _fetchTasks(markOverdue: true);
   }
 
@@ -164,28 +179,32 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
       await _markOverdue(user.id);
     }
 
-    final response = await _supabase
-        .from('followup_tasks')
-        .select('*, patients(full_name)')
-        .eq('assigned_to', user.id)
-        .order('due_date', ascending: true)
-        .order('created_at', ascending: false);
+    try {
+      final response = await _supabase.retry(() => _supabase
+          .from('followup_tasks')
+          .select('*, patients(full_name)')
+          .eq('assigned_to', user.id)
+          .order('due_date', ascending: true)
+          .order('created_at', ascending: false));
 
-    return (response as List)
-        .map((json) =>
-            FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
-        .toList();
+      return (response as List)
+          .map((json) =>
+              FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
+          .toList();
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   Future<void> _markOverdue(String userId) async {
     try {
       final todayStr = _dateOnly(DateTime.now());
-      await _supabase
+      await _supabase.retry(() => _supabase
           .from('followup_tasks')
           .update({'status': 'overdue'})
           .eq('assigned_to', userId)
           .inFilter('status', const ['pending', 'in_progress'])
-          .lt('due_date', todayStr);
+          .lt('due_date', todayStr));
     } catch (e) {
       // Non-fatal — continue even if overdue update fails.
       debugPrint('followup _markOverdue error: $e');
@@ -201,11 +220,11 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
   /// working on it but hasn't completed yet. Best-effort.
   Future<void> markInProgress(String taskId) async {
     try {
-      await _supabase
+      await _supabase.retry(() => _supabase
           .from('followup_tasks')
           .update({'status': 'in_progress'})
           .eq('id', taskId)
-          .inFilter('status', const ['pending', 'overdue']);
+          .inFilter('status', const ['pending', 'overdue']));
       ref.invalidateSelf();
     } catch (e) {
       debugPrint('followup markInProgress error: $e');
@@ -221,19 +240,23 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
     String? extDoctorPhone,
     String? completionNotes,
   }) async {
-    await _supabase.from('followup_tasks').update({
-      'status': 'completed',
-      'completed_at': DateTime.now().toIso8601String(),
-      'is_external_doctor': isExternalDoctor,
-      'ext_doctor_name': isExternalDoctor ? extDoctorName : null,
-      'ext_doctor_specialization':
-          isExternalDoctor ? extDoctorSpecialization : null,
-      'ext_doctor_hospital': isExternalDoctor ? extDoctorHospital : null,
-      'ext_doctor_phone': isExternalDoctor ? extDoctorPhone : null,
-      'completion_notes': completionNotes,
-    }).eq('id', taskId);
+    try {
+      await _supabase.retry(() => _supabase.from('followup_tasks').update({
+            'status': 'completed',
+            'completed_at': DateTime.now().toIso8601String(),
+            'is_external_doctor': isExternalDoctor,
+            'ext_doctor_name': isExternalDoctor ? extDoctorName : null,
+            'ext_doctor_specialization':
+                isExternalDoctor ? extDoctorSpecialization : null,
+            'ext_doctor_hospital': isExternalDoctor ? extDoctorHospital : null,
+            'ext_doctor_phone': isExternalDoctor ? extDoctorPhone : null,
+            'completion_notes': completionNotes,
+          }).eq('id', taskId));
 
-    ref.invalidateSelf();
+      ref.invalidateSelf();
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   Future<void> createTask({
@@ -277,8 +300,12 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
         'scheduled_visit_date': _dateOnly(scheduledVisitDate),
     };
 
-    await _supabase.from('followup_tasks').insert(payload);
-    ref.invalidateSelf();
+    try {
+      await _supabase.retry(() => _supabase.from('followup_tasks').insert(payload));
+      ref.invalidateSelf();
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   /// Doctor acknowledges a completed follow-up task. Records who reviewed
@@ -290,14 +317,18 @@ class FollowupTasksNotifier extends AsyncNotifier<List<FollowupTask>> {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
 
-    await _supabase.from('followup_tasks').update({
-      'reviewed_by': user.id,
-      'reviewed_at': DateTime.now().toIso8601String(),
-      if (reviewNotes != null && reviewNotes.isNotEmpty)
-        'doctor_review_notes': reviewNotes,
-    }).eq('id', taskId);
+    try {
+      await _supabase.retry(() => _supabase.from('followup_tasks').update({
+            'reviewed_by': user.id,
+            'reviewed_at': DateTime.now().toIso8601String(),
+            if (reviewNotes != null && reviewNotes.isNotEmpty)
+              'doctor_review_notes': reviewNotes,
+          }).eq('id', taskId));
 
-    ref.invalidateSelf();
+      ref.invalidateSelf();
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 }
 
@@ -311,25 +342,33 @@ final doctorAssignedFollowupsProvider =
   final user = supabase.auth.currentUser;
   if (user == null) return const [];
 
-  final response = await supabase
-      .from('followup_tasks')
-      .select('*, patients(full_name)')
-      .eq('created_by', user.id)
-      .order('due_date', ascending: true)
-      .order('created_at', ascending: false);
+  try {
+    final response = await supabase.retry(() => supabase
+        .from('followup_tasks')
+        .select('*, patients(full_name)')
+        .eq('created_by', user.id)
+        .order('due_date', ascending: true)
+        .order('created_at', ascending: false));
 
-  return (response as List)
-      .map((json) =>
-          FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
-      .toList();
+    return (response as List)
+        .map((json) =>
+            FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
+        .toList();
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
 });
 
 /// Lightweight count of completed-but-unreviewed tasks the current doctor
 /// assigned. Powers the "pending reviews" banner on the Dr Visit screen.
 final pendingFollowupReviewCountProvider =
     FutureProvider.autoDispose<int>((ref) async {
-  final tasks = await ref.watch(doctorAssignedFollowupsProvider.future);
-  return tasks.where((t) => t.needsReview).length;
+  try {
+    final tasks = await ref.read(doctorAssignedFollowupsProvider.future);
+    return tasks.where((t) => t.needsReview).length;
+  } catch (e) {
+    rethrow;
+  }
 });
 
 /// Single-task fetch for the review screen (loaded by id when the doctor
@@ -338,11 +377,15 @@ final followupTaskByIdProvider =
     FutureProvider.autoDispose.family<FollowupTask?, String>((ref, id) async {
   if (id.isEmpty) return null;
   final supabase = ref.watch(supabaseClientProvider);
-  final response = await supabase
-      .from('followup_tasks')
-      .select('*, patients(full_name)')
-      .eq('id', id)
-      .maybeSingle();
-  if (response == null) return null;
-  return FollowupTask.fromJson(Map<String, dynamic>.from(response));
+  try {
+    final response = await supabase.retry(() => supabase
+        .from('followup_tasks')
+        .select('*, patients(full_name)')
+        .eq('id', id)
+        .maybeSingle());
+    if (response == null) return null;
+    return FollowupTask.fromJson(Map<String, dynamic>.from(response));
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
 });
