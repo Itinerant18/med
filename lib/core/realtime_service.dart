@@ -16,6 +16,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:mediflow/core/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_service.dart';
@@ -269,8 +270,8 @@ class RealtimeService {
     try {
       final row = payload.newRecord;
       final assignedAgentId = row['assigned_agent_id']?.toString();
-      final currentUserId =
-          Supabase.instance.client.auth.currentUser?.id;
+      final client = Supabase.instance.client;
+      final currentUserId = client.auth.currentUser?.id;
 
       if (assignedAgentId != null && assignedAgentId == currentUserId) {
         _addNotification(
@@ -304,8 +305,8 @@ class RealtimeService {
   void _handleFollowupTaskInsert(PostgresChangePayload payload) {
     final row = payload.newRecord;
     final assignedTo = row['assigned_to']?.toString();
-    final currentUserId =
-        Supabase.instance.client.auth.currentUser?.id;
+    final client = Supabase.instance.client;
+    final currentUserId = client.auth.currentUser?.id;
     final patientId = row['patient_id']?.toString();
     final dueDate = row['due_date']?.toString() ?? 'soon';
     final taskId = row['id']?.toString() ?? '';
@@ -315,11 +316,11 @@ class RealtimeService {
       String patientName = 'a patient';
       if (patientId != null && patientId.isNotEmpty) {
         try {
-          final res = await Supabase.instance.client
+          final res = await client.retry(() => client
               .from('patients')
               .select('full_name')
               .eq('id', patientId)
-              .maybeSingle();
+              .maybeSingle());
           final name = res?['full_name']?.toString();
           if (name != null && name.isNotEmpty) patientName = name;
         } catch (e) {
