@@ -76,9 +76,13 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => AddFollowupSheet(
+    builder: (_) => AddFollowupSheet(
         preselectedPatientId: task.patientId,
         preselectedPatientName: task.patientName,
+        prefillExtDocName: task.targetExtDoctorName,
+        prefillExtDocHospital: task.targetExtDoctorHospital,
+        prefillExtDocSpec: task.targetExtDoctorSpecialization,
+        prefillExtDocPhone: task.targetExtDoctorPhone,
       ),
     );
     if (created == true && mounted) {
@@ -291,7 +295,7 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
                     child: Text(
                       task.isReviewed ? 'UPDATE REVIEW' : 'ACKNOWLEDGE & CLOSE',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppTheme.surfaceWhite,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.8,
                       ),
@@ -337,7 +341,7 @@ class _OutsideVisitCard extends StatelessWidget {
           Row(
             children: [
               const Icon(AppIcons.local_hospital_rounded,
-                  color: Color(0xFF3182CE)),
+                  color: AppTheme.doctorAccent),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(

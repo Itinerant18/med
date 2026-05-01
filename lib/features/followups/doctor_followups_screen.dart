@@ -16,8 +16,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/shared/widgets/skeleton_loader.dart';
 import 'package:mediflow/features/dr_visits/agents_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 enum _DoctorFollowupTab { all, pending, needsReview, reviewed }
 
@@ -126,25 +129,13 @@ class _DoctorFollowupsScreenState extends ConsumerState<DoctorFollowupsScreen> {
                   ),
                 );
               },
-              loading: () => ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: 4,
-                itemBuilder: (_, __) => const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: NeuShimmer(
-                      width: double.infinity, height: 96, borderRadius: 16),
-                ),
-              ),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: NeuCard(
-                    child: Text(
-                      'Failed to load follow-ups: $e',
-                      style: const TextStyle(color: AppTheme.errorColor),
-                    ),
-                  ),
-                ),
+              loading: () => const FollowupListSkeleton(),
+              error: (error, stack) => ErrorBoundary(
+                error: error,
+                stackTrace: stack,
+                contextLabel: 'doctor_followups',
+                title: 'Failed to load follow-ups',
+                onRetry: () => ref.invalidate(doctorAssignedFollowupsProvider),
               ),
             ),
           ),
@@ -154,30 +145,12 @@ class _DoctorFollowupsScreenState extends ConsumerState<DoctorFollowupsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(AppIcons.fact_check_outlined,
-              size: 64, color: AppTheme.textMuted),
-          const SizedBox(height: 12),
-          Text(
-            _tab == _DoctorFollowupTab.all
-                ? "You haven't assigned any follow-ups yet"
-                : 'Nothing in "${_tab.label}"',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Use the + button on the Dr Visit tab to assign one.',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: AppIcons.fact_check_outlined,
+      title: _tab == _DoctorFollowupTab.all
+          ? "You haven't assigned any follow-ups yet"
+          : 'Nothing in "${_tab.label}"',
+      subtitle: 'Use the + button on the Dr Visit tab to assign one.',
     );
   }
 }

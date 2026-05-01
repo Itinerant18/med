@@ -12,6 +12,8 @@ import 'package:mediflow/features/followups/add_followup_sheet.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:mediflow/models/visit_model.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 class DrVisitScreen extends ConsumerWidget {
   const DrVisitScreen({super.key});
@@ -30,7 +32,15 @@ class DrVisitScreen extends ConsumerWidget {
         ),
         backgroundColor: Colors.transparent,
       ),
-      body: visitsAsync.when(
+      body: visitsAsync.whenWithBoundary(
+        contextLabel: 'dr_visits',
+        errorTitle: 'Failed to load visits',
+        onRetry: () async {
+          ref.invalidate(drVisitsProvider);
+          ref.invalidate(allAgentOutsideVisitsProvider);
+          await ref.read(drVisitsProvider.future);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
         data: (visits) {
           final groupedVisits = <String, List<DrVisit>>{};
           for (final visit in visits) {
@@ -78,8 +88,6 @@ class DrVisitScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
       floatingActionButton: isAdmin
           ? Column(
@@ -136,30 +144,10 @@ class DrVisitScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(AppIcons.health_and_safety_rounded,
-              size: 72, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          const Text(
-            'No visits recorded',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Referral leads and patient visits will appear here.',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return const EmptyState(
+      icon: AppIcons.health_and_safety_rounded,
+      title: 'No visits recorded',
+      subtitle: 'Referral leads and patient visits will appear here.',
     );
   }
 }

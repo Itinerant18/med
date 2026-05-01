@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/approval/approval_provider.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 
 class PendingApprovalsScreen extends ConsumerStatefulWidget {
   const PendingApprovalsScreen({super.key});
@@ -31,14 +33,17 @@ class _PendingApprovalsScreenState
       appBar: AppBar(
         title: const Text('Pending Approvals'),
       ),
-      body: pendingAsync.when(
+      body: pendingAsync.whenWithBoundary(
+        contextLabel: 'pending_approvals',
+        errorTitle: 'Failed to load pending approvals',
+        onRetry: () => ref.invalidate(pendingApprovalsProvider),
+        loading: () => const Center(child: CircularProgressIndicator()),
         data: (doctors) {
           if (doctors.isEmpty) {
-            return const Center(
-              child: Text(
-                'No pending approvals',
-                style: TextStyle(color: AppTheme.textMuted),
-              ),
+            return const EmptyState(
+              icon: AppIcons.inbox_outlined,
+              title: 'No pending approvals',
+              subtitle: 'New registrations will appear here for review.',
             );
           }
           return ListView.builder(
@@ -132,8 +137,6 @@ class _PendingApprovalsScreenState
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }

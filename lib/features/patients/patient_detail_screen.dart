@@ -10,6 +10,9 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
 import 'package:mediflow/features/patients/patient_permissions.dart';
 import 'package:mediflow/features/patients/visit_history_provider.dart';
+import 'package:mediflow/models/patient_model.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/followups/add_followup_sheet.dart';
@@ -24,19 +27,19 @@ class PatientDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientAsync = ref.watch(patientDetailProvider(patientId));
-    final visitsAsync = ref.watch(visitHistoryProvider(patientId));
+    final visitsAsync = ref.watch(
+      visitHistoryProvider(
+        VisitHistoryQuery(patientId: patientId),
+      ),
+    );
     final authState = ref.watch(authNotifierProvider).value;
-
-    // Permission checks live in PatientPermissions so the patient list,
-    // patient card, and this detail screen can't drift out of sync with the
-    // role matrix in feature-list-implementation-plan.md.
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
         title: patientAsync.when(
           data: (p) => Text(
-            p?['full_name'] ?? 'Patient Details',
+            p?.fullName ?? 'Patient Details',
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
           loading: () => const Text('Loading...'),
@@ -84,7 +87,7 @@ class PatientDetailScreen extends ConsumerWidget {
                   if (canDelete)
                     IconButton(
                       icon: const Icon(AppIcons.delete_outline_rounded,
-                          color: Colors.red),
+                          color: AppTheme.errorColor),
                       onPressed: () => _confirmDelete(context, ref),
                       tooltip: 'Delete patient',
                     ),
@@ -125,15 +128,15 @@ class PatientDetailScreen extends ConsumerWidget {
           ? FloatingActionButton.extended(
               heroTag: 'patient-detail-new-visit',
               backgroundColor: AppTheme.primaryTeal,
-              foregroundColor: Colors.white,
+              foregroundColor: AppTheme.surfaceWhite,
               onPressed: () {
                 context.push('/clinical/new', extra: {
                   'patientId': patientId,
-                  'patientName': patientAsync.value?['full_name'] ?? 'Unknown',
+                  'patientName': patientAsync.value?.fullName ?? 'Unknown',
                 });
               },
               icon: const Icon(AppIcons.add_rounded, size: 20),
-              label: const Text('New Visit',
+              label: const Text('Log Visit',
                   style: TextStyle(fontWeight: FontWeight.w700)),
             )
           : null,
@@ -143,13 +146,13 @@ class PatientDetailScreen extends ConsumerWidget {
   Widget _buildContent(
     BuildContext context,
     WidgetRef ref,
-    Map<String, dynamic> patient,
+    PatientModel patient,
     AsyncValue<List<Map<String, dynamic>>> visitsAsync,
   ) {
-    final int age = patient['date_of_birth'] != null
-        ? DateTime.now().year -
-            (parseDbDate(patient['date_of_birth']) ?? DateTime.now()).year
-        : 0;
+    final patientMap = patient.toJson();
+    final dob = patient.dateOfBirth;
+    final String ageLabel =
+        dob != null ? '${DateTime.now().year - dob.year} yrs' : 'N/A';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -169,17 +172,17 @@ class PatientDetailScreen extends ConsumerWidget {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: (patient['is_high_priority'] == true)
-                            ? Colors.red.withValues(alpha: 0.1)
+                        color: (patient.isHighPriority == true)
+                            ? AppTheme.errorColor.withValues(alpha: 0.1)
                             : AppTheme.primaryTeal.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        patient['is_high_priority'] == true
+                        patient.isHighPriority == true
                             ? AppIcons.priority_high_rounded
                             : AppIcons.person_rounded,
-                        color: patient['is_high_priority'] == true
-                            ? Colors.red
+                        color: patient.isHighPriority == true
+                            ? AppTheme.errorColor
                             : AppTheme.primaryTeal,
                         size: 26,
                       ),
@@ -190,7 +193,7 @@ class PatientDetailScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            patient['full_name'] ?? 'Unknown',
+                            patient.fullName,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -200,10 +203,10 @@ class PatientDetailScreen extends ConsumerWidget {
                           const SizedBox(height: 3),
                           Text(
                             [
-                              if (age > 0) '$age yrs',
-                              if (patient['gender'] != null) patient['gender'],
-                              if (patient['blood_group'] != null)
-                                patient['blood_group'],
+                              ageLabel,
+                              if (patient.gender != null) patient.gender!,
+                              if (patient.bloodGroup != null)
+                                patient.bloodGroup!,
                             ].join(' • '),
                             style: const TextStyle(
                                 fontSize: 13, color: AppTheme.textMuted),
@@ -211,42 +214,42 @@ class PatientDetailScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    if (patient['health_scheme'] != null)
-                      _SchemeBadge(scheme: patient['health_scheme']),
+                    if (patient.healthScheme != null)
+                      _SchemeBadge(scheme: patient.healthScheme!),
                   ],
                 ),
-                if (patient['is_high_priority'] == true) ...[
+                if (patient.isHighPriority == true) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.06),
+                      color: AppTheme.errorColor.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
+                      border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.2)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(AppIcons.warning_amber_rounded,
-                            size: 14, color: Colors.red),
+                            size: 14, color: AppTheme.errorColor),
                         SizedBox(width: 6),
                         Text('HIGH PRIORITY',
                             style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.red)),
+                                color: AppTheme.errorColor)),
                       ],
                     ),
                   ),
                 ],
                 const Divider(height: 24),
-                _infoRow(AppIcons.phone_rounded, 'Phone', patient['phone']),
+                _infoRow(AppIcons.phone_rounded, 'Phone', patient.phone),
                 _infoRow(AppIcons.emergency_rounded, 'Emergency',
-                    patient['emergency_contact_number']),
-                if (patient['email']?.isNotEmpty == true)
-                  _infoRow(AppIcons.email_outlined, 'Email', patient['email']),
-                if (patient['staff_comments']?.isNotEmpty == true) ...[
+                    patientMap['emergency_contact_number']?.toString()),
+                if (patient.email?.isNotEmpty == true)
+                  _infoRow(AppIcons.email_outlined, 'Email', patient.email),
+                if (patient.staffComments?.isNotEmpty == true) ...[
                   const Divider(height: 20),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +267,7 @@ class PatientDetailScreen extends ConsumerWidget {
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.textMuted)),
                             const SizedBox(height: 3),
-                            Text(patient['staff_comments'],
+                            Text(patient.staffComments!,
                                 style: const TextStyle(fontSize: 13)),
                           ],
                         ),
@@ -285,25 +288,25 @@ class PatientDetailScreen extends ConsumerWidget {
                 const SectionTitle(
                     title: 'Clinical Information',
                     icon: AppIcons.medical_services_outlined),
-                if (patient['symptoms']?.isNotEmpty == true)
-                  _clinicalRow('Symptoms', patient['symptoms']),
-                if (patient['area_affected']?.isNotEmpty == true)
-                  _clinicalRow('Area Affected', patient['area_affected']),
-                if (patient['addictions']?.isNotEmpty == true)
-                  _clinicalRow('Addictions', patient['addictions']),
-                if (patient['allergies']?.isNotEmpty == true)
-                  _clinicalRow('Allergies', patient['allergies']),
-                if (patient['existing_conditions']?.isNotEmpty == true)
+                if (patient.symptoms?.isNotEmpty == true)
+                  _clinicalRow('Symptoms', patient.symptoms),
+                if (patient.areaAffected?.isNotEmpty == true)
+                  _clinicalRow('Area Affected', patient.areaAffected),
+                if (patient.addictions?.isNotEmpty == true)
+                  _clinicalRow('Addictions', patient.addictions),
+                if (patient.allergies?.isNotEmpty == true)
+                  _clinicalRow('Allergies', patient.allergies),
+                if (patient.existingConditions?.isNotEmpty == true)
                   _clinicalRow(
-                      'Existing Conditions', patient['existing_conditions']),
-                if (patient['current_medications']?.isNotEmpty == true)
+                      'Existing Conditions', patient.existingConditions),
+                if (patient.currentMedications?.isNotEmpty == true)
                   _clinicalRow(
-                      'Current Medications', patient['current_medications']),
-                if (patient['last_updated_by'] != null) ...[
+                      'Current Medications', patient.currentMedications),
+                if (patient.lastUpdatedBy != null) ...[
                   const Divider(height: 16),
                   Text(
-                    'Last updated by Dr. ${patient['last_updated_by']}'
-                    '${patient['last_updated_at'] != null ? ' on ${DateFormat('MMM d, yyyy HH:mm').format(parseDbDateOr(patient['last_updated_at'], DateTime.now()))}' : ''}',
+                    'Last updated by Dr. ${patient.lastUpdatedBy}'
+                    '${patient.lastUpdatedAt != null ? ' on ${DateFormat('MMM d, yyyy HH:mm').format(patient.lastUpdatedAt!)}' : ''}',
                     style: const TextStyle(
                         fontSize: 11,
                         color: AppTheme.textMuted,
@@ -342,17 +345,11 @@ class PatientDetailScreen extends ConsumerWidget {
             ),
             data: (visits) {
               if (visits.isEmpty) {
-                return NeuCard(
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(AppIcons.history_rounded,
-                            size: 40, color: Colors.grey.shade400),
-                        const SizedBox(height: 8),
-                        const Text('No visits recorded yet',
-                            style: TextStyle(color: AppTheme.textMuted)),
-                      ],
-                    ),
+                return const NeuCard(
+                  child: EmptyState(
+                    icon: AppIcons.document_empty,
+                    title: 'No visits recorded yet',
+                    compact: true,
                   ),
                 );
               }
@@ -443,33 +440,18 @@ class PatientDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Patient'),
-        content: const Text(
-          'Are you sure you want to permanently delete this patient record? '
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style:
-                    TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Delete Patient',
+      message:
+          'Are you sure you want to permanently delete this patient record? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
 
     if (confirmed == true) {
       try {
-        await ref.read(patientProvider).deletePatient(patientId);
+        await ref.read(patientProvider.notifier).deletePatient(patientId);
         if (context.mounted) {
           AppSnackbar.showSuccess(context, 'Patient deleted successfully');
           context.pop();
@@ -541,7 +523,7 @@ class _TimelineItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: dotColor,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: AppTheme.surfaceWhite, width: 2),
                     boxShadow: [
                       BoxShadow(
                         color: dotColor.withValues(alpha: 0.4),
@@ -556,7 +538,7 @@ class _TimelineItem extends StatelessWidget {
                     child: Container(
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 2),
-                      color: Colors.grey.shade200,
+                      color: AppTheme.neutralDivider,
                     ),
                   ),
               ],
@@ -581,7 +563,7 @@ class _TimelineItem extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
+                            color: AppTheme.neutralLight,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -613,16 +595,16 @@ class _TimelineItem extends StatelessWidget {
                                 ? 'Done'
                                 : 'Pending',
                             visit['tests_performed'] == true
-                                ? Colors.blue
-                                : Colors.grey),
+                                ? AppTheme.doctorAccent
+                                : AppTheme.textMuted),
                         _statusChip(
                             'OT',
                             visit['ot_required'] == true
                                 ? 'Required'
                                 : 'Not needed',
                             visit['ot_required'] == true
-                                ? Colors.red
-                                : Colors.grey),
+                                ? AppTheme.errorColor
+                                : AppTheme.textMuted),
                         if (status.isNotEmpty)
                           _statusChip('Status', status, AppTheme.primaryTeal),
                       ],
@@ -689,9 +671,9 @@ class _TimelineItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: AppTheme.neutralLight),
       ),
       child: Wrap(
         spacing: 12,
@@ -727,9 +709,9 @@ class _TimelineItem extends StatelessWidget {
 
   Color _dotColor(String status, String? visitType) {
     final s = status.toLowerCase();
-    if (s == 'discharged') return Colors.green;
-    if (s == 'admitted' || s == 'under observation') return Colors.amber;
-    if (visitType?.toLowerCase() == 'emergency') return Colors.red;
-    return Colors.grey;
+    if (s == 'discharged') return AppTheme.successColor;
+    if (s == 'admitted' || s == 'under observation') return AppTheme.warningColor;
+    if (visitType?.toLowerCase() == 'emergency') return AppTheme.errorColor;
+    return AppTheme.textMuted;
   }
 }

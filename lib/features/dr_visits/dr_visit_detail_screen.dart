@@ -11,6 +11,8 @@ import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
 import 'package:mediflow/features/dr_visits/log_contact_sheet.dart';
 import 'package:mediflow/models/visit_model.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
+import 'package:mediflow/shared/widgets/service_status_badge.dart';
 
 class DrVisitDetailScreen extends ConsumerStatefulWidget {
   final String visitId;
@@ -204,23 +206,13 @@ class _DrVisitDetailScreenState extends ConsumerState<DrVisitDetailScreen> {
                 builder: (_) => LogContactSheet(visitId: visit.id),
               ),
               onMarkNotInterested: () async {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    title: const Text('Mark Not Interested'),
-                    content: const Text(
-                        'Mark this lead as not interested? This can be changed later.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(false),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
-                        child: const Text('Confirm'),
-                      ),
-                    ],
-                  ),
+                final ok = await ConfirmDialog.show(
+                  context,
+                  title: 'Mark Not Interested',
+                  message:
+                      'Mark this lead as not interested? This can be changed later.',
+                  confirmLabel: 'Confirm',
+                  isDestructive: true,
                 );
                 if (ok != true) return;
                 try {
@@ -650,22 +642,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status.toLowerCase() == 'completed'
-        ? AppTheme.successColor
-        : AppTheme.warningColor;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color, width: 0.8),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style:
-            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
+    return ServiceStatusBadge(status: status);
   }
 }
 
@@ -676,25 +653,6 @@ class _LeadStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      'contacted' => AppTheme.doctorAccent,
-      'converted' => AppTheme.successColor,
-      'not_interested' => AppTheme.textMuted,
-      _ => AppTheme.warningColor,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color, width: 1),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style:
-            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
+    return ServiceStatusBadge(status: status);
   }
 }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/shared/widgets/skeleton_loader.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
 import 'package:mediflow/shared/widgets/empty_state.dart';
@@ -128,21 +128,12 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
                           ],
                         ),
                       ),
-                      ...filtered
-                          .map((task) => FollowupTaskWidget(task: task)),
+                      ...filtered.map((task) => FollowupTaskWidget(task: task)),
                     ],
                   ),
                 );
               },
-              loading: () => ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: 4,
-                itemBuilder: (_, __) => const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: NeuShimmer(
-                      width: double.infinity, height: 110, borderRadius: 16),
-                ),
-              ),
+              loading: () => const FollowupListSkeleton(),
               error: (error, stack) => ErrorBoundary(
                 error: error,
                 stackTrace: stack,
@@ -159,8 +150,8 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
         heroTag: 'view-external-visits',
         backgroundColor: AppTheme.primaryTeal,
         onPressed: () => context.push('/agent-visits'),
-        icon: const Icon(AppIcons.history_rounded,
-            color: Colors.white, size: 18),
+        icon:
+            const Icon(AppIcons.history_rounded, color: Colors.white, size: 18),
         label: const Text(
           'My External Visits',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -173,12 +164,9 @@ class _MyFollowupsScreenState extends ConsumerState<MyFollowupsScreen> {
     final isAll = _filter == _FollowupFilter.all;
     return EmptyState(
       icon: AppIcons.add_task_rounded,
-      title: isAll
-          ? 'No tasks assigned yet'
-          : 'No tasks in "${_filter.label}"',
+      title: isAll ? 'No tasks assigned yet' : 'No tasks in "${_filter.label}"',
       subtitle:
           'The doctor assigns you tasks — like taking a patient to a specialist or following up on a referred patient. They will appear here.',
     );
   }
-
 }

@@ -10,6 +10,7 @@ import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/string_utils.dart';
 import 'package:mediflow/core/theme.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/dashboard_screen.dart';
@@ -50,32 +51,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 
   Future<void> _confirmLogout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(AppIcons.logout_rounded, color: Colors.red, size: 20),
-            SizedBox(width: 10),
-            Text('Sign Out', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: const Text('Are you sure you want to sign out of MediFlow?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
+    final shouldLogout = await ConfirmDialog.show(
+      context,
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out of MediFlow?',
+      confirmLabel: 'Sign Out',
+      isDestructive: true,
     );
 
     if (shouldLogout != true || !mounted) return;

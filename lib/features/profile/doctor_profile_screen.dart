@@ -8,8 +8,10 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/core/role_provider.dart';
+import 'package:mediflow/features/profile/change_password_dialog.dart';
 
 class DoctorProfileScreen extends ConsumerStatefulWidget {
   const DoctorProfileScreen({super.key});
@@ -63,20 +65,12 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
   }
 
   Future<void> _logout() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Logout', style: TextStyle(color: AppTheme.errorColor))),
-        ],
-      ),
+    final ok = await ConfirmDialog.show(
+      context,
+      title: 'Logout',
+      message: 'Are you sure?',
+      confirmLabel: 'Logout',
+      isDestructive: true,
     );
     if (ok == true) {
       await ref.read(authNotifierProvider.notifier).signOut();
@@ -176,7 +170,8 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(AppIcons.verified,
-                                    size: 18, color: AppTheme.primaryForeground),
+                                    size: 18,
+                                    color: AppTheme.primaryForeground),
                               ),
                             ],
                           ),
@@ -185,7 +180,8 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                               style: const TextStyle(
                                   fontSize: 22, fontWeight: FontWeight.bold)),
                           Text(data['specialization'] ?? 'Specialist',
-                              style: const TextStyle(color: AppTheme.textMuted)),
+                              style:
+                                  const TextStyle(color: AppTheme.textMuted)),
                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -421,10 +417,11 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             AppIcons.lock_outline,
                             'Change Password',
                             AppTheme.primaryTeal,
-                            () {},
+                            () => ChangePasswordDialog.show(context),
                           ),
                           const Divider(height: 1),
-                          _tile(AppIcons.logout, 'Logout', AppTheme.errorColor, _logout),
+                          _tile(AppIcons.logout, 'Logout', AppTheme.errorColor,
+                              _logout),
                         ],
                       ),
                     ),
@@ -474,7 +471,8 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.primaryTeal)),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          Text(label,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       );
 
@@ -540,14 +538,16 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                    style: const TextStyle(
+                        fontSize: 10, color: AppTheme.textMuted)),
                 Text(value.isEmpty ? 'Not set' : value,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
               ],
             )),
             if (locked)
-              const Icon(AppIcons.lock_outline, size: 14, color: AppTheme.textMuted),
+              const Icon(AppIcons.lock_outline,
+                  size: 14, color: AppTheme.textMuted),
           ],
         ),
       );
@@ -561,7 +561,10 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
               fontWeight: color == AppTheme.errorColor ? FontWeight.bold : null,
             )),
         trailing: Icon(AppIcons.chevron_right,
-            size: 18, color: color == AppTheme.errorColor ? AppTheme.errorColor : AppTheme.textMuted),
+            size: 18,
+            color: color == AppTheme.errorColor
+                ? AppTheme.errorColor
+                : AppTheme.textMuted),
         onTap: onTap,
       );
 }

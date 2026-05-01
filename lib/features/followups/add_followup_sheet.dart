@@ -10,17 +10,26 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dr_visits/agents_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
-import 'package:mediflow/features/patients/patient_list_provider.dart';
+
+import 'package:mediflow/shared/widgets/patient_picker_bottom_sheet.dart';
 
 class AddFollowupSheet extends ConsumerStatefulWidget {
   const AddFollowupSheet({
     super.key,
     this.preselectedPatientId,
     this.preselectedPatientName,
+    this.prefillExtDocName,
+    this.prefillExtDocHospital,
+    this.prefillExtDocSpec,
+    this.prefillExtDocPhone,
   });
 
   final String? preselectedPatientId;
   final String? preselectedPatientName;
+  final String? prefillExtDocName;
+  final String? prefillExtDocHospital;
+  final String? prefillExtDocSpec;
+  final String? prefillExtDocPhone;
 
   @override
   ConsumerState<AddFollowupSheet> createState() => _AddFollowupSheetState();
@@ -51,6 +60,10 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
     super.initState();
     _selectedPatientId = widget.preselectedPatientId;
     _selectedPatientName = widget.preselectedPatientName;
+    _targetDocNameCtrl.text = widget.prefillExtDocName ?? '';
+    _targetDocHospitalCtrl.text = widget.prefillExtDocHospital ?? '';
+    _targetDocSpecCtrl.text = widget.prefillExtDocSpec ?? '';
+    _targetDocPhoneCtrl.text = widget.prefillExtDocPhone ?? '';
   }
 
   @override
@@ -128,7 +141,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => const _PatientPickerSheet(),
+      builder: (_) => const PatientPickerBottomSheet(),
     ).then((result) {
       if (result is Map) {
         setState(() {
@@ -504,7 +517,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
                   child: const Text(
                     'CREATE FOLLOW-UP',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppTheme.surfaceWhite,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1,
                     ),
@@ -546,76 +559,6 @@ class _SectionDivider extends StatelessWidget {
           child: Divider(color: Color(0xFFD1D9E6), thickness: 0.8),
         ),
       ],
-    );
-  }
-}
-
-class _PatientPickerSheet extends ConsumerStatefulWidget {
-  const _PatientPickerSheet();
-
-  @override
-  ConsumerState<_PatientPickerSheet> createState() =>
-      _PatientPickerSheetState();
-}
-
-class _PatientPickerSheetState extends ConsumerState<_PatientPickerSheet> {
-  String _query = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final patientsAsync = ref.watch(
-      roleAwarePatientsProvider(
-        SearchFilter(
-          query: _query,
-          healthScheme: HealthSchemeFilter.all,
-          priority: PriorityFilter.all,
-          dateRange: DateRangeFilter.allTime,
-          visitType: VisitTypeFilter.all,
-          sortOption: SortOption.nameAsc,
-        ),
-      ),
-    );
-
-    return Container(
-      width: double.infinity,
-      height: MediaQuery.of(context).size.height * 0.8,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Select Patient',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          NeuTextField(
-            label: 'Search Patient',
-            prefixIcon: const Icon(AppIcons.search),
-            onChanged: (value) => setState(() => _query = value),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: patientsAsync.when(
-              data: (patients) => ListView.builder(
-                itemCount: patients.length,
-                itemBuilder: (context, index) {
-                  final patient = patients[index];
-                  return ListTile(
-                    title: Text(patient['full_name'] ?? 'Unknown'),
-                    subtitle: Text(patient['phone'] ?? ''),
-                    onTap: () => Navigator.pop(context, {
-                      'id': patient['id'],
-                      'name': patient['full_name'],
-                    }),
-                  );
-                },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('Error: $error')),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -10,7 +10,9 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/staff/staff_provider.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
 import 'package:mediflow/models/user_role.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 
 class StaffManagementScreen extends ConsumerStatefulWidget {
   const StaffManagementScreen({super.key});
@@ -37,6 +39,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
   }
 
   Future<void> _refresh() {
+    ref.invalidate(filteredStaffProvider(_filter));
     return ref.read(staffListProvider.notifier).refresh();
   }
 
@@ -110,11 +113,10 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     Expanded(
                       child: Consumer(
                         builder: (context, ref, child) {
-                          final staffAsync = ref.watch(staffListProvider);
-                          final filtered =
+                          final filteredAsync =
                               ref.watch(filteredStaffProvider(_filter));
 
-                          return staffAsync.when(
+                          return filteredAsync.when(
                             loading: () => ListView.separated(
                               physics: const AlwaysScrollableScrollPhysics(),
                               itemCount: 6,
@@ -152,7 +154,9 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                                         onPressed: _refresh,
                                         child: const Text(
                                           'Retry',
-                                          style: TextStyle(color: AppTheme.primaryForeground),
+                                          style: TextStyle(
+                                              color:
+                                                  AppTheme.primaryForeground),
                                         ),
                                       ),
                                     ],
@@ -160,14 +164,19 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                                 ),
                               ],
                             ),
-                            data: (_) {
+                            data: (filtered) {
                               if (filtered.isEmpty) {
                                 return ListView(
                                   physics:
                                       const AlwaysScrollableScrollPhysics(),
                                   children: const [
                                     SizedBox(height: 80),
-                                    _EmptyState(),
+                                    EmptyState(
+                                      icon: AppIcons.group_off_rounded,
+                                      title: 'No staff found',
+                                      subtitle:
+                                          'No team members match the current filters.',
+                                    ),
                                   ],
                                 );
                               }
@@ -360,20 +369,20 @@ class _SummaryChips extends ConsumerWidget {
       child: Row(
         children: [
           _CountChip(
-            label: 'Head Doctor',
-            count: counts['head_doctor'] ?? 0,
+            label: 'Head Dr',
+            roleCount: counts['head_doctor'] ?? const RoleCount(),
             color: AppTheme.primaryTeal,
           ),
           const SizedBox(width: 10),
           _CountChip(
             label: 'Doctors',
-            count: counts['doctor'] ?? 0,
+            roleCount: counts['doctor'] ?? const RoleCount(),
             color: AppTheme.doctorAccent,
           ),
           const SizedBox(width: 10),
           _CountChip(
             label: 'Assistants',
-            count: counts['assistant'] ?? 0,
+            roleCount: counts['assistant'] ?? const RoleCount(),
             color: AppTheme.assistantAccent,
           ),
         ],
@@ -385,12 +394,12 @@ class _SummaryChips extends ConsumerWidget {
 class _CountChip extends StatelessWidget {
   const _CountChip({
     required this.label,
-    required this.count,
+    required this.roleCount,
     required this.color,
   });
 
   final String label;
-  final int count;
+  final RoleCount roleCount;
   final Color color;
 
   @override
@@ -406,13 +415,28 @@ class _CountChip extends StatelessWidget {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Text(
-            '$label: $count',
-            style: const TextStyle(
-              color: AppTheme.textColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$label: ${roleCount.total}',
+                style: const TextStyle(
+                  color: AppTheme.textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (roleCount.pending > 0)
+                Text(
+                  '${roleCount.active} active · ${roleCount.pending} pending',
+                  style: const TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -732,7 +756,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                                     ),
                             child: const Text(
                               'Update Role',
-                              style: TextStyle(color: AppTheme.primaryForeground),
+                              style:
+                                  TextStyle(color: AppTheme.primaryForeground),
                             ),
                           ),
                         ),
@@ -825,30 +850,15 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   }
 
   Future<bool> _confirmAction(String description) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Confirm action'),
-          content: Text(description),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Proceed',
-                style: TextStyle(color: AppTheme.errorColor),
-              ),
-            ),
-          ],
-        );
-      },
+    final result = await ConfirmDialog.show(
+      context,
+      title: 'Confirm action',
+      message: description,
+      confirmLabel: 'Proceed',
+      isDestructive: true,
     );
 
-    return result ?? false;
+    return result;
   }
 }
 
@@ -962,26 +972,65 @@ class _RolePill extends StatelessWidget {
 class _RestrictedView extends StatelessWidget {
   const _RestrictedView();
 
+  void _showRequestAccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Text('Request Access', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text(
+          'Staff management is restricted to the Head Doctor. If you believe your role should be updated, please contact the hospital administration or your department lead.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: NeuCard(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               AppIcons.lock_outline_rounded,
               color: AppTheme.warningColor,
-              size: 28,
+              size: 42,
             ),
-            SizedBox(height: 12),
-            Text(
-              'Access restricted to Head Doctor only.',
+            const SizedBox(height: 16),
+            const Text(
+              'Access Restricted',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppTheme.textColor,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Only the Head Doctor can manage staff accounts and roles.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppTheme.textMuted,
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: NeuButton(
+                onPressed: () => _showRequestAccessDialog(context),
+                child: const Text(
+                  'Request Access',
+                  style: TextStyle(color: AppTheme.surfaceWhite, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -991,33 +1040,6 @@ class _RestrictedView extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        children: [
-          Icon(
-            AppIcons.group_off_rounded,
-            size: 48,
-            color: AppTheme.textMuted,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'No staff found',
-            style: TextStyle(
-              color: AppTheme.textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 enum _FilterKind { role, status }
 

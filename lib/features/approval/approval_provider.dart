@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/notification_service.dart';
 import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/supabase_client.dart';
@@ -56,17 +57,21 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
   }
 
   Future<List<PendingDoctor>> _fetchPending() async {
-    final response = await _supabase
-        .from('doctors')
-        .select(
-            'id, full_name, specialization, email, role, created_at, approval_status')
-        .eq('approval_status', 'pending')
-        .order('created_at');
+    try {
+      final response = await _supabase.retry(() => _supabase
+          .from('doctors')
+          .select(
+              'id, full_name, specialization, email, role, created_at, approval_status')
+          .eq('approval_status', 'pending')
+          .order('created_at'));
 
-    return (response as List)
-        .map((json) =>
-            PendingDoctor.fromJson(Map<String, dynamic>.from(json as Map)))
-        .toList();
+      return (response as List)
+          .map((json) =>
+              PendingDoctor.fromJson(Map<String, dynamic>.from(json as Map)))
+          .toList();
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   Future<void> approve(String doctorId) async {
@@ -75,15 +80,19 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
       throw Exception('Only the head doctor can approve registrations.');
     }
 
-    final adminId = _supabase.auth.currentUser?.id;
-    await _supabase.from('doctors').update({
-      'approval_status': 'approved',
-      'approved_by': adminId,
-      'approved_at': DateTime.now().toIso8601String(),
-    }).eq('id', doctorId);
+    try {
+      final adminId = _supabase.auth.currentUser?.id;
+      await _supabase.retry(() => _supabase.from('doctors').update({
+            'approval_status': 'approved',
+            'approved_by': adminId,
+            'approved_at': DateTime.now().toIso8601String(),
+          }).eq('id', doctorId));
 
-    state =
-        AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
+      state =
+          AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   Future<void> reject(String doctorId, String reason) async {
@@ -92,16 +101,20 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
       throw Exception('Only the head doctor can reject registrations.');
     }
 
-    final adminId = _supabase.auth.currentUser?.id;
-    await _supabase.from('doctors').update({
-      'approval_status': 'rejected',
-      'approved_by': adminId,
-      'approved_at': DateTime.now().toIso8601String(),
-      'rejection_reason': reason,
-    }).eq('id', doctorId);
+    try {
+      final adminId = _supabase.auth.currentUser?.id;
+      await _supabase.retry(() => _supabase.from('doctors').update({
+            'approval_status': 'rejected',
+            'approved_by': adminId,
+            'approved_at': DateTime.now().toIso8601String(),
+            'rejection_reason': reason,
+          }).eq('id', doctorId));
 
-    state =
-        AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
+      state =
+          AsyncData(state.value?.where((d) => d.id != doctorId).toList() ?? []);
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
 
   /// Subscribes to approval-status flips on the doctors table so the head

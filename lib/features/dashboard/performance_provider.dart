@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
 
 class AssistantKpi {
@@ -50,8 +51,12 @@ class AssistantKpi {
 final assistantPerformanceProvider =
     FutureProvider.autoDispose<List<AssistantKpi>>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
-  final response = await supabase.from('assistant_performance').select();
-  return (response as List)
-      .map((json) => AssistantKpi.fromJson(Map<String, dynamic>.from(json)))
-      .toList();
+  try {
+    final response = await supabase.retry(() => supabase.from('assistant_performance').select());
+    return (response as List)
+        .map((json) => AssistantKpi.fromJson(Map<String, dynamic>.from(json)))
+        .toList();
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
 });

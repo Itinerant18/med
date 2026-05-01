@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 // lib/core/parse_utils.dart
 //
 // Tiny helpers for tolerantly parsing values that come back from Supabase
@@ -36,7 +38,11 @@ DateTime? parseDbDate(dynamic value) {
     }
   }
 
-  return DateTime.tryParse(str);
+  final parsed = DateTime.tryParse(str);
+  if (parsed == null) {
+    debugPrint('parseDbDate failed for raw value: $str');
+  }
+  return parsed;
 }
 
 /// Same as [parseDbDate] but falls back to [fallback] when parsing fails.

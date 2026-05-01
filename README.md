@@ -41,11 +41,13 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 ## ✨ Key Features
 
 ### 🔐 Multi-Role System
+
 - **Three distinct user roles** with clearly defined permissions
 - **Pending approval workflow** for all new registrations
 - **Role-based access control (RBAC)** enforced at every level
 
 ### 👥 Head Doctor (Administrator)
+
 - Approval dashboard for new Doctor and Agent registrations
 - Real-time registration alerts
 - User management console (activate/deactivate accounts)
@@ -53,6 +55,7 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 - Comprehensive audit logging
 
 ### 🩺 Doctor (Clinical Professional)
+
 - Unified dashboard for patient data access
 - Full patient database search and management
 - Medical record management with clinical notes
@@ -60,6 +63,7 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 - Patient record finalization capabilities
 
 ### 🧑‍💼 Agent (Data Entry)
+
 - Private patient view (only their uploaded records)
 - Structured patient data entry portal
 - Follow-up task inbox with status management
@@ -67,6 +71,7 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 - Real-time notification system
 
 ### 🌍 Platform-Wide Capabilities
+
 - **Role-Based Access Control**: Every user sees only permitted data
 - **Patient Ownership Tracking**: Permanent attribution to uploading Agent
 - **Smart Notification Routing**: Alerts delivered to correct recipients
@@ -79,12 +84,14 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 ## 🏗️ Architecture
 
 ### Frontend
+
 - **Framework**: Flutter (Dart)
 - **State Management**: Riverpod
 - **Routing**: GoRouter for navigation
 - **UI Components**: Custom skeuomorphic design system
 
 ### Backend & Services
+
 - **Authentication**: Firebase Auth + Supabase
 - **Database**: Supabase PostgreSQL
 - **Cloud Functions**: Supabase Edge Functions
@@ -92,6 +99,7 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 - **Notifications**: flutter_local_notifications
 
 ### Key Architectural Patterns
+
 - **Provider Pattern**: Riverpod for state management
 - **Repository Pattern**: Separation of data access logic
 - **Clean Architecture**: Clear separation of concerns
@@ -122,6 +130,7 @@ For detailed role specifications, see [user_roles_permissions.md](user_roles_per
 ## 💻 Tech Stack
 
 ### Mobile & Frontend
+
 ```
 Flutter/Dart 3.2.0+
 ├── flutter_riverpod: ^2.5.1        (State management)
@@ -132,6 +141,7 @@ Flutter/Dart 3.2.0+
 ```
 
 ### Backend Services
+
 ```
 Supabase
 ├── PostgreSQL Database
@@ -144,6 +154,7 @@ Firebase
 ```
 
 ### Notifications & Connectivity
+
 ```
 ├── firebase_core: ^3.6.0
 ├── firebase_auth: ^5.3.0
@@ -154,6 +165,7 @@ Firebase
 ```
 
 ### UI & Design
+
 ```
 ├── google_fonts: ^6.2.1
 ├── font_awesome_flutter: ^10.7.0
@@ -162,6 +174,7 @@ Firebase
 ```
 
 ### Utilities
+
 ```
 ├── http: ^1.2.0                (HTTP client for Edge Functions)
 ├── share_plus: ^12.0.2         (Share functionality)
@@ -174,6 +187,7 @@ Firebase
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Flutter SDK (3.2.0+)
 - Dart SDK (included with Flutter)
 - XCode (for iOS development)
@@ -183,19 +197,22 @@ Firebase
 ### Installation
 
 1. **Clone the repository**
+
 ```bash
 git clone https://github.com/Itinerant18/med.git
 cd med
 ```
 
-2. **Install dependencies**
+1. **Install dependencies**
+
 ```bash
 flutter pub get
 ```
 
-3. **Configure environment variables**
+1. **Configure environment variables**
 
 Create a `.env.local` file in the root directory with your configuration:
+
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -203,9 +220,10 @@ FIREBASE_PROJECT_ID=your_firebase_project_id
 # Additional configuration as needed
 ```
 
-4. **Setup Firebase** (for iOS and Android)
+1. **Setup Firebase** (for iOS and Android)
 
 For iOS:
+
 ```bash
 cd ios
 pod install
@@ -213,11 +231,12 @@ cd ..
 ```
 
 Run FlutterFire CLI:
+
 ```bash
 flutterfire configure
 ```
 
-5. **Run the application**
+1. **Run the application**
 
 ```bash
 # Development
@@ -229,6 +248,7 @@ flutter run -d android    # Android device/emulator
 ```
 
 ### Initial Setup Checklist
+
 - [ ] Flutter SDK installed and in PATH
 - [ ] Firebase project created and configured
 - [ ] Supabase project created and credentials obtained
@@ -275,24 +295,28 @@ med/
 ## 🛠️ Development Guidelines
 
 ### Code Style & Standards
+
 - Follow [Dart Style Guide](https://dart.dev/guides/language/effective-dart/style)
 - Use meaningful variable and function names
 - Keep functions small and focused
 - Document public APIs with dartdoc comments
 
 ### File Organization
+
 - **Models**: Define data structures
 - **Services**: Handle business logic and API calls
 - **Providers**: Riverpod state management
 - **Widgets**: UI components
 
 ### Naming Conventions
+
 - Classes: PascalCase (`UserModel`, `AuthService`)
 - Variables/Functions: camelCase (`currentUser`, `fetchPatients()`)
 - Constants: camelCase with const keyword (`const maxRetries = 3`)
 - Files: snake_case (`user_model.dart`, `auth_service.dart`)
 
 ### Best Practices
+
 1. **State Management**: Use Riverpod providers for all state
 2. **Error Handling**: Implement comprehensive try-catch blocks
 3. **Async Operations**: Use async/await, avoid callback chains
@@ -300,6 +324,7 @@ med/
 5. **Performance**: Use const constructors and cache images
 
 ### Example Provider Structure
+
 ```dart
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref.watch(supabaseProvider));
@@ -317,6 +342,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 MediFlow implements a **skeuomorphic design system** emphasizing warmth, natural forms, and human connection.
 
 ### Design Philosophy
+
 - **Core Signature**: Soft, amorphous blob shapes with organic border radii
 - **Texture**: Paper-like quality with subtle grain overlay (3-4% opacity)
 - **Color Palette**: Earth-inspired palette (moss green, terracotta, stone)
@@ -324,6 +350,7 @@ MediFlow implements a **skeuomorphic design system** emphasizing warmth, natural
 - **Typography**: Fraunces serif (headings) + Nunito (body)
 
 ### Color Palette (Light Mode)
+
 ```dart
 // Core Colors
 const background = Color(0xFFFDFCF8);        // Off-white, Rice Paper
@@ -335,16 +362,19 @@ const destructive = Color(0xFFA85448);       // Burnt Sienna
 ```
 
 ### Component Styling
+
 - **Buttons**: Fully rounded pills with moss green primary style
 - **Cards**: Rounded containers with soft shadows and grain texture
 - **Inputs**: Pill-shaped with semi-transparent backgrounds
 - **Navigation**: Sticky floating pill with glassmorphism effect
 
 ### Design Resources
+
 - Full design system documentation: [DESIGNE.md](DESIGNE.md)
 - Color specs, typography, spacing, shadows, animations, icons, accessibility
 
 ### Responsive Strategy
+
 - **Mobile-first**: Base styles optimized for mobile
 - **Breakpoints**: sm (640px), md (768px), lg (1024px)
 - **Layout**: Single column on mobile, multi-column at larger breakpoints
@@ -357,6 +387,7 @@ const destructive = Color(0xFFA85448);       // Burnt Sienna
 ### Supabase PostgreSQL Schema
 
 Key tables structure:
+
 - **users**: User accounts with role assignments
 - **patients**: Patient records with ownership tracking
 - **medical_records**: Clinical notes and patient data
@@ -364,6 +395,7 @@ Key tables structure:
 - **audit_logs**: Activity tracking for compliance
 
 ### Authentication Flow
+
 1. User self-registers (Doctor or Agent)
 2. Account created in **"Pending"** state
 3. Head Doctor reviews in Approval Dashboard
@@ -371,11 +403,13 @@ Key tables structure:
 5. User gains role-specific access
 
 ### Real-Time Features
+
 - Supabase Realtime subscriptions for live updates
 - FCM for push notifications
 - Local notifications for critical alerts
 
 ### API Integration
+
 - Edge Functions for custom server logic
 - HTTP client for REST API calls
 - Automatic retry logic for failed requests
@@ -385,18 +419,21 @@ Key tables structure:
 ## 🔒 Security
 
 ### Authentication & Authorization
+
 - **Firebase Auth**: Secure user authentication
 - **Role-Based Access Control**: Fine-grained permission system
 - **JWT Tokens**: Secure API authentication
 - **Session Management**: Automatic session validation
 
 ### Data Protection
+
 - **HIPAA Compliance**: Healthcare data privacy standards
 - **Encryption**: Data encrypted in transit and at rest
 - **Audit Logging**: All actions logged for compliance
 - **Data Privacy Rules**: Applied to all user roles
 
 ### Security Best Practices
+
 1. Never commit API keys or secrets
 2. Use environment variables for sensitive data
 3. Validate all user inputs
@@ -404,6 +441,7 @@ Key tables structure:
 5. Regular security audits and updates
 
 ### Sensitive Data Handling
+
 ```dart
 // ✅ Good: Use environment variables
 final apiKey = AppConfig.supabaseAnonKey;
@@ -417,6 +455,7 @@ final apiKey = 'sk_live_...';
 ## ✅ Testing
 
 ### Running Tests
+
 ```bash
 # All tests
 flutter test
@@ -429,11 +468,13 @@ flutter test --coverage
 ```
 
 ### Test Structure
+
 - **Widget Tests**: UI component behavior
 - **Unit Tests**: Business logic and utilities
 - **Integration Tests**: End-to-end user flows
 
 ### Example Test
+
 ```dart
 void main() {
   group('Authentication', () {
@@ -458,38 +499,42 @@ void main() {
 ### iOS Deployment
 
 1. **Update version**
+
 ```bash
 # Update in pubspec.yaml
 version: 1.0.1+2
 ```
 
-2. **Create build**
+1. **Create build**
+
 ```bash
 flutter build ios --release
 ```
 
-3. **Submit to App Store**
+1. **Submit to App Store**
    - Use Xcode or Transporter
    - Requires Apple Developer Account
 
 ### Android Deployment
 
 1. **Generate signing key**
+
 ```bash
 keytool -genkey -v -keystore ~/key.jks \
   -keyalg RSA -keysize 2048 -validity 10000 \
   -alias upload
 ```
 
-2. **Configure signing in android/app/build.gradle**
+1. **Configure signing in android/app/build.gradle**
 
-3. **Build APK/AAB**
+2. **Build APK/AAB**
+
 ```bash
 flutter build apk --release
 flutter build appbundle --release
 ```
 
-4. **Upload to Google Play Store**
+1. **Upload to Google Play Store**
 
 ### Web Deployment
 
@@ -499,6 +544,7 @@ flutter build web --release
 ```
 
 ### Environment-Specific Configuration
+
 ```dart
 // Using flavor-specific configurations
 enum Flavor { development, staging, production }
@@ -518,37 +564,42 @@ class AppConfig {
 We welcome contributions! Please follow these steps:
 
 1. **Fork the repository**
+
 ```bash
 git clone https://github.com/yourusername/med.git
 cd med
 ```
 
-2. **Create a feature branch**
+1. **Create a feature branch**
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-3. **Make your changes**
+1. **Make your changes**
    - Follow code style guidelines
    - Write tests for new functionality
    - Update documentation as needed
 
-4. **Commit with clear messages**
+2. **Commit with clear messages**
+
 ```bash
 git commit -m "feat: Add patient follow-up notifications"
 ```
 
-5. **Push to your fork**
+1. **Push to your fork**
+
 ```bash
 git push origin feature/your-feature-name
 ```
 
-6. **Open a Pull Request**
+1. **Open a Pull Request**
    - Describe your changes clearly
    - Reference related issues
    - Request review from maintainers
 
 ### Commit Message Format
+
 ```
 <type>(<scope>): <subject>
 
@@ -573,12 +624,14 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 ## 🤝 Support
 
 ### Getting Help
+
 - **Documentation**: Review project documentation files
 - **Issues**: Check GitHub Issues for similar problems
 - **Discussions**: Use GitHub Discussions for questions
 - **Community**: Connect with other developers
 
 ### Reporting Bugs
+
 1. Check if issue already exists
 2. Provide detailed reproduction steps
 3. Include error messages and logs
@@ -586,6 +639,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 5. Attach screenshots if UI-related
 
 ### Feature Requests
+
 1. Describe the feature clearly
 2. Explain the use case
 3. Suggest implementation approach
@@ -610,6 +664,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## 🎯 Roadmap
 
 ### Current Version (1.0.0)
+
 - [x] Three-tier role system
 - [x] Patient data management
 - [x] Follow-up task system
@@ -617,6 +672,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 - [x] Skeuomorphic design
 
 ### Planned Features
+
 - [ ] Advanced analytics dashboard
 - [ ] Multi-language support
 - [ ] Voice-to-text patient notes
@@ -629,12 +685,12 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## 🔗 Quick Links
 
-- **GitHub Repository**: https://github.com/Itinerant18/med
-- **Issue Tracker**: https://github.com/Itinerant18/med/issues
-- **Discussions**: https://github.com/Itinerant18/med/discussions
-- **Flutter Documentation**: https://flutter.dev
-- **Supabase Documentation**: https://supabase.com/docs
-- **Firebase Documentation**: https://firebase.google.com/docs
+- **GitHub Repository**: <https://github.com/Itinerant18/med>
+- **Issue Tracker**: <https://github.com/Itinerant18/med/issues>
+- **Discussions**: <https://github.com/Itinerant18/med/discussions>
+- **Flutter Documentation**: <https://flutter.dev>
+- **Supabase Documentation**: <https://supabase.com/docs>
+- **Firebase Documentation**: <https://firebase.google.com/docs>
 
 ---
 
@@ -642,28 +698,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 **Version**: 1.0.3
 
 For questions or updates, please open an issue or discussion on GitHub.
-Auto commit 1 - 2026-04-30 16:26:55
-Auto commit 2 - 2026-04-30 16:26:55
-Auto commit 3 - 2026-04-30 16:26:55
-Auto commit 4 - 2026-04-30 16:26:56
-Auto commit 5 - 2026-04-30 16:26:56
-Auto commit 6 - 2026-04-30 16:26:56
-Auto commit 7 - 2026-04-30 16:26:56
-Auto commit 8 - 2026-04-30 16:26:56
-Auto commit 9 - 2026-04-30 16:26:56
-Auto commit 10 - 2026-04-30 16:26:56
-Auto commit 11 - 2026-04-30 16:26:56
-Auto commit 12 - 2026-04-30 16:26:56
-Auto commit 13 - 2026-04-30 16:26:57
-Auto commit 14 - 2026-04-30 16:26:57
-Auto commit 15 - 2026-04-30 16:26:57
-Auto commit 16 - 2026-04-30 16:26:57
-Auto commit 17 - 2026-04-30 16:26:57
-Auto commit 18 - 2026-04-30 16:26:57
-Auto commit 19 - 2026-04-30 16:26:57
-Auto commit 20 - 2026-04-30 16:26:57
-Auto commit 21 - 2026-04-30 16:26:57
-Auto commit 22 - 2026-04-30 16:26:58
-Auto commit 23 - 2026-04-30 16:26:58
-Auto commit 24 - 2026-04-30 16:26:58
-Auto commit 25 - 2026-04-30 16:26:58

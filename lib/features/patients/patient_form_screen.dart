@@ -6,10 +6,10 @@ import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/neu_widgets.dart';
-import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
+import 'package:mediflow/models/patient_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PatientFormScreen extends ConsumerStatefulWidget {
@@ -28,6 +28,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     'MRI',
     'HRCT Thorax',
     'Biopsy Report',
+    'Other',
   ];
 
   static const List<String> _genderOptions = [
@@ -72,6 +73,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   final _referredByController = TextEditingController();
   final _investigationPlaceController = TextEditingController();
   final _staffCommentsController = TextEditingController();
+  final _otherInvestigationController = TextEditingController();
 
   final Map<String, String> _investigationStatus = {
     'Blood Test': 'na',
@@ -79,6 +81,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     'MRI': 'na',
     'HRCT Thorax': 'na',
     'Biopsy Report': 'na',
+    'Other': 'na',
   };
 
   DateTime? _dob;
@@ -101,54 +104,52 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   Future<void> _loadExistingPatient() async {
     setState(() => _isLoading = true);
     try {
-      final patient =
+      final PatientModel? patient =
           await ref.read(patientDetailProvider(widget.patientId!).future);
       if (patient != null && mounted) {
         setState(() {
-          _nameController.text = patient['full_name']?.toString() ?? '';
-          _phoneController.text = patient['phone']?.toString() ?? '';
-          _emergencyContactController.text =
-              patient['emergency_contact_number']?.toString() ?? '';
-          _emailController.text = patient['email']?.toString() ?? '';
-          _symptomsController.text = patient['symptoms']?.toString() ?? '';
-          _areaAffectedController.text =
-              patient['area_affected']?.toString() ?? '';
-          _existingConditionsController.text =
-              patient['existing_conditions']?.toString() ?? '';
-          _currentMedicationsController.text =
-              patient['current_medications']?.toString() ?? '';
-          _allergiesController.text = patient['allergies']?.toString() ?? '';
-          _addictionsController.text = patient['addictions']?.toString() ?? '';
-          _addressController.text = patient['address']?.toString() ?? '';
-          _referredByController.text = patient['referred_by']?.toString() ?? '';
-          _investigationPlaceController.text =
-              patient['investigation_place']?.toString() ?? '';
-          _staffCommentsController.text =
-              patient['staff_comments']?.toString() ?? '';
+          _nameController.text = patient.fullName;
+          _phoneController.text = patient.phone ?? '';
+          _emailController.text = patient.email ?? '';
+          _symptomsController.text = patient.symptoms ?? '';
+          _areaAffectedController.text = patient.areaAffected ?? '';
+          _existingConditionsController.text = patient.existingConditions ?? '';
+          _currentMedicationsController.text = patient.currentMedications ?? '';
+          _allergiesController.text = patient.allergies ?? '';
+          _addictionsController.text = patient.addictions ?? '';
+          _addressController.text = patient.address ?? '';
+          _referredByController.text = patient.referredBy ?? '';
+          _investigationPlaceController.text = patient.investigationPlace ?? '';
+          _staffCommentsController.text = patient.staffComments ?? '';
 
-          _dob = parseDbDate(patient['date_of_birth']);
-          _gender = patient['gender']?.toString();
-          _bloodGroup = patient['blood_group']?.toString();
+          _dob = patient.dateOfBirth;
+          _gender = patient.gender;
+          _bloodGroup = patient.bloodGroup;
 
-          final scheme = patient['health_scheme']?.toString().toLowerCase();
+          final scheme = patient.healthScheme?.toLowerCase();
           _healthScheme = _healthSchemeOptions.contains(scheme) ? scheme : null;
 
-          _isHighPriority = patient['is_high_priority'] == true;
+          _isHighPriority = patient.isHighPriority;
 
           for (final name in _investigations) {
             _investigationStatus[name] = 'na';
           }
 
-          final savedStatus = patient['investigation_status'];
-          if (savedStatus is Map) {
-            savedStatus.forEach((k, v) {
-              final key = k.toString();
-              if (_investigationStatus.containsKey(key)) {
-                _investigationStatus[key] =
-                    v.toString().toLowerCase() == 'done' ? 'done' : 'na';
+          final savedStatus = patient.investigationStatus;
+          savedStatus.forEach((k, v) {
+            final key = k.toString();
+            if (key == 'Other' || !_investigations.contains(key)) {
+              if (key != 'Other') {
+                _otherInvestigationController.text = key;
+                _investigationStatus['Other'] = 'done';
+              } else if (v.toString().toLowerCase() == 'done') {
+                _investigationStatus['Other'] = 'done';
               }
-            });
-          }
+            } else if (_investigationStatus.containsKey(key)) {
+              _investigationStatus[key] =
+                  v.toString().toLowerCase() == 'done' ? 'done' : 'na';
+            }
+          });
         });
       }
     } catch (e) {
@@ -178,6 +179,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     _referredByController.dispose();
     _investigationPlaceController.dispose();
     _staffCommentsController.dispose();
+    _otherInvestigationController.dispose();
     super.dispose();
   }
 
@@ -223,10 +225,11 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         final existing =
             await ref.read(patientDetailProvider(widget.patientId!).future);
         if (existing != null) {
-          createdById = existing['created_by_id']?.toString() ?? createdById;
-          serviceStatus =
-              existing['service_status']?.toString() ?? serviceStatus;
-          createdAt = existing['created_at']?.toString() ?? createdAt;
+          createdById = existing.createdById.isNotEmpty
+              ? existing.createdById
+              : createdById;
+          serviceStatus = existing.serviceStatus;
+          createdAt = existing.createdAt?.toIso8601String() ?? createdAt;
         }
       }
 
@@ -250,7 +253,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         'address': _addressController.text.trim(),
         'referred_by': _referredByController.text.trim(),
         'investigation_place': _investigationPlaceController.text.trim(),
-        'investigation_status': Map<String, dynamic>.from(_investigationStatus),
+        'investigation_status': _buildInvestigationStatus(),
         'is_high_priority': _isHighPriority,
         'staff_comments': _staffCommentsController.text.trim(),
         'last_updated_by': doctorName,
@@ -291,6 +294,16 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Map<String, dynamic> _buildInvestigationStatus() {
+    final status = Map<String, dynamic>.from(_investigationStatus);
+    final otherName = _otherInvestigationController.text.trim();
+    if (status['Other'] == 'done' && otherName.isNotEmpty) {
+      status.remove('Other');
+      status[otherName] = 'done';
+    }
+    return status;
   }
 
   @override
@@ -633,34 +646,48 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           icon: AppIcons.biotech_rounded,
         ),
         ..._investigations.map(
-          (name) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+          (name) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
+                    ChoiceChip(
+                      label: const Text(' Done'),
+                      selected: _investigationStatus[name] == 'done',
+                      onSelected: (_) =>
+                          setState(() => _investigationStatus[name] = 'done'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('N/A'),
+                      selected: _investigationStatus[name] == 'na',
+                      onSelected: (_) =>
+                          setState(() => _investigationStatus[name] = 'na'),
+                    ),
+                  ],
+                ),
+              ),
+              if (name == 'Other' && _investigationStatus[name] == 'done')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: NeuTextField(
+                    controller: _otherInvestigationController,
+                    label: 'Specify Investigation',
+                    hint: 'e.g. ECG, X-Ray',
+                    textCapitalization: TextCapitalization.words,
                   ),
                 ),
-                ChoiceChip(
-                  label: const Text(' Done'),
-                  selected: _investigationStatus[name] == 'done',
-                  onSelected: (_) =>
-                      setState(() => _investigationStatus[name] = 'done'),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('N/A'),
-                  selected: _investigationStatus[name] == 'na',
-                  onSelected: (_) =>
-                      setState(() => _investigationStatus[name] = 'na'),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediflow/shared/widgets/empty_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/app_icons.dart';
@@ -83,27 +84,9 @@ class NotificationSheet extends ConsumerWidget {
                 const OrganicDivider(),
                 Expanded(
                   child: notifications.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                AppIcons.notifications_none_rounded,
-                                size: 64,
-                                color:
-                                    AppTheme.textMuted.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No notifications yet',
-                                style: TextStyle(
-                                  color: AppTheme.textMuted,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
+                      ? const EmptyState(
+                          icon: AppIcons.notifications_none_rounded,
+                          title: 'No notifications yet',
                         )
                       : ListView.builder(
                           controller: scrollController,

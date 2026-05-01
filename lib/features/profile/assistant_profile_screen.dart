@@ -8,7 +8,9 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
+import 'package:mediflow/features/profile/change_password_dialog.dart';
 
 class AssistantProfileScreen extends ConsumerStatefulWidget {
   const AssistantProfileScreen({super.key});
@@ -51,20 +53,12 @@ class _AssistantProfileScreenState
   }
 
   Future<void> _logout() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Logout', style: TextStyle(color: AppTheme.errorColor))),
-        ],
-      ),
+    final ok = await ConfirmDialog.show(
+      context,
+      title: 'Logout',
+      message: 'Are you sure?',
+      confirmLabel: 'Logout',
+      isDestructive: true,
     );
     if (ok == true) {
       await ref.read(authNotifierProvider.notifier).signOut();
@@ -166,15 +160,18 @@ class _AssistantProfileScreenState
                               style: const TextStyle(
                                   fontSize: 22, fontWeight: FontWeight.bold)),
                           Text(data['specialization'] ?? 'Field Agent',
-                              style: const TextStyle(color: AppTheme.textMuted)),
+                              style:
+                                  const TextStyle(color: AppTheme.textMuted)),
                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 5),
                             decoration: BoxDecoration(
-                              color: AppTheme.assistantAccent.withValues(alpha: 0.1),
+                              color: AppTheme.assistantAccent
+                                  .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.assistantAccent),
+                              border:
+                                  Border.all(color: AppTheme.assistantAccent),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -363,7 +360,9 @@ class _AssistantProfileScreenState
                       decoration: BoxDecoration(
                         color: AppTheme.warningColor.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color:
+                                AppTheme.warningColor.withValues(alpha: 0.3)),
                       ),
                       child: const Row(
                         children: [
@@ -414,7 +413,7 @@ class _AssistantProfileScreenState
                             title: const Text('Change Password'),
                             trailing: const Icon(AppIcons.chevron_right,
                                 size: 18, color: AppTheme.textMuted),
-                            onTap: () {},
+                            onTap: () => ChangePasswordDialog.show(context),
                           ),
                           const Divider(height: 1),
                           ListTile(
@@ -461,7 +460,8 @@ class _AssistantProfileScreenState
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.assistantAccent)),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          Text(label,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       );
 
@@ -514,14 +514,16 @@ class _AssistantProfileScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                    style: const TextStyle(
+                        fontSize: 10, color: AppTheme.textMuted)),
                 Text(value.isEmpty ? 'Not set' : value,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
               ],
             )),
             if (locked)
-              const Icon(AppIcons.lock_outline, size: 14, color: AppTheme.textMuted),
+              const Icon(AppIcons.lock_outline,
+                  size: 14, color: AppTheme.textMuted),
           ],
         ),
       );

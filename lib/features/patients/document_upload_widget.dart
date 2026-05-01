@@ -10,6 +10,7 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/patients/document_provider.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 
 class DocumentUploadWidget extends ConsumerStatefulWidget {
   final String patientId;
@@ -162,12 +163,13 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
                     return _buildLoadingSlot();
                   }
 
-                  final url = urls[index];
+                  final doc = urls[index];
+                  final url = doc.url;
                   return Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: GestureDetector(
-                      onLongPress: () => _confirmDelete(url),
-                      onTap: () => _viewImage(url),
+                      onLongPress: () => _confirmDelete(doc),
+                      onTap: () => _viewImage(doc),
                       child: NeuCard(
                         padding: EdgeInsets.zero,
                         borderRadius: 12,
@@ -217,47 +219,37 @@ class _DocumentUploadWidgetState extends ConsumerState<DocumentUploadWidget> {
     );
   }
 
-  void _confirmDelete(String url) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Document'),
-        content: const Text(
-            'Are you sure you want to permanently remove this document?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                await ref
-                    .read(documentNotifierProvider(widget.patientId).notifier)
-                    .deleteDocument(url);
-                if (mounted) {
-                  AppSnackbar.showSuccess(context, 'Document deleted');
-                }
-              } catch (e) {
-                if (mounted) {
-                  AppSnackbar.showError(context, AppError.getMessage(e));
-                }
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  void _confirmDelete(PatientDocument doc) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Delete Document',
+      message: 'Are you sure you want to permanently remove this document?',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
+    if (!confirmed) return;
+
+    try {
+      await ref
+          .read(documentNotifierProvider(widget.patientId).notifier)
+          .deleteDocument(doc);
+      if (mounted) {
+        AppSnackbar.showSuccess(context, 'Document deleted');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, AppError.getMessage(e));
+      }
+    }
   }
 
-  void _viewImage(String url) {
+  void _viewImage(PatientDocument doc) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => FullScreenImageViewer(
-          url: url,
-          onDelete: () => _confirmDelete(url),
+          url: doc.url,
+          onDelete: () => _confirmDelete(doc),
         ),
       ),
     );
