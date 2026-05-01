@@ -176,13 +176,50 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
   }
 
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
-    // We only want to verify the phone — we don't want Firebase as primary auth.
-    // Sign in temporarily, then immediately sign out from Firebase.
+    // Firebase Auth is used ONLY for OTP verification — Supabase is the sole
+    // session provider. We sign in to Firebase to prove the credential is
+    // valid, then immediately tear down the Firebase session so there's no
+    // dangling auth state.
     try {
       await FirebaseAuth.instance.signInWithCredential(credential);
-      await FirebaseAuth.instance.signOut(); // Keep Supabase as sole auth
-    } catch (_) {
-      // Credential valid even if temporary sign-in fails in some edge cases
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, _friendlyError(e.code, e.message));
+        setState(() => _isVerifying = false);
+      }
+      return;
+    } catch (e) {
+      final message = e.toString();
+      // Transient network errors — let the user retry.
+      if (message.contains('network') ||
+          message.contains('timeout') ||
+          message.contains('SocketException')) {
+        if (mounted) {
+          AppSnackbar.showError(
+            context,
+            'Network error. Please check your connection and try again.',
+          );
+          setState(() => _isVerifying = false);
+        }
+        return;
+      }
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          _friendlyError('unknown', message),
+        );
+        setState(() => _isVerifying = false);
+      }
+      return;
+    }
+
+    // OTP verified — tear down the Firebase session. This is best-effort:
+    // if signOut fails the Firebase session will expire on its own, and
+    // Supabase remains the authoritative auth provider.
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint('Firebase signOut after OTP verification failed: $e');
     }
 
     if (mounted) {

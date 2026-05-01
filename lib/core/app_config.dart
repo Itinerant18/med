@@ -1,24 +1,41 @@
 // lib/core/app_config.dart
 //
-// Centralised, build-time configuration. Keeps Supabase URL / anon key in
-// one place so `main.dart`, `fcm_service.dart`, and any other call site
-// stay in sync. Override at build time with --dart-define.
+// Centralised runtime configuration.  Reads Supabase credentials from
+// .env.local via flutter_dotenv — no secrets are compiled into the binary.
+//
+// Call [AppConfig.validate()] from main() after dotenv.load() to fail fast
+// with a clear message if any required key is missing.
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
   AppConfig._();
 
-  /// Supabase project URL. Override with --dart-define=SUPABASE_URL=...
-  static const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: 'https://dtmkzvptamydlgubmzlb.supabase.co',
-  );
+  /// Supabase project URL (from .env.local SUPABASE_URL).
+  static String get supabaseUrl =>
+      dotenv.env['SUPABASE_URL'] ?? _missing('SUPABASE_URL');
 
-  /// Supabase anon (publishable) key. Override with
-  /// --dart-define=SUPABASE_ANON_KEY=...
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: 'sb_publishable_30AYi1oyhTvuzqtcN-BsbQ_j4MnFKHv',
-  );
+  /// Supabase anonymous (publishable) key (from .env.local SUPABASE_ANON_KEY).
+  static String get supabaseAnonKey =>
+      dotenv.env['SUPABASE_ANON_KEY'] ?? _missing('SUPABASE_ANON_KEY');
+
+  /// Call after [dotenv.load()] to throw immediately if keys are absent.
+  static void validate() {
+    final missing = <String>[];
+    if ((dotenv.env['SUPABASE_URL'] ?? '').isEmpty) {
+      missing.add('SUPABASE_URL');
+    }
+    if ((dotenv.env['SUPABASE_ANON_KEY'] ?? '').isEmpty) {
+      missing.add('SUPABASE_ANON_KEY');
+    }
+    if (missing.isNotEmpty) {
+      throw StateError(
+        'Missing required environment variables in .env.local: '
+        '${missing.join(', ')}.\n'
+        'Copy .env.example to .env.local and fill in your Supabase credentials.',
+      );
+    }
+  }
 
   /// Single source of truth for the Android notification channel used by
   /// both [FlutterLocalNotificationsPlugin] and FCM payloads.
@@ -26,4 +43,11 @@ class AppConfig {
   static const String notificationChannelName = 'MediFlow Alerts';
   static const String notificationChannelDescription =
       'Patient updates, visit assignments, and follow-up tasks.';
+
+  static Never _missing(String key) {
+    throw StateError(
+      '$key not found in .env.local. '
+      'Copy .env.example to .env.local and fill in your Supabase credentials.',
+    );
+  }
 }
