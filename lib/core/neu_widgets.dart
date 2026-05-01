@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mediflow/core/organic_tokens.dart';
@@ -10,7 +11,12 @@ enum NeuButtonVariant { primary, outline, ghost }
 // OrganicBackground
 class OrganicBackground extends StatelessWidget {
   final Widget child;
-  const OrganicBackground({super.key, required this.child});
+  final String? grainSeedTag;
+  const OrganicBackground({
+    super.key,
+    required this.child,
+    this.grainSeedTag,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +53,25 @@ class OrganicBackground extends StatelessWidget {
         ),
         Positioned.fill(
           child: IgnorePointer(
-            child: CustomPaint(
-              painter: OrganicGrainPainter(),
+            child: RepaintBoundary(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = Size(
+                    constraints.maxWidth,
+                    constraints.maxHeight,
+                  );
+                  final seed = Object.hash(
+                    key?.hashCode ?? runtimeType.hashCode,
+                    grainSeedTag ?? 'OrganicBackground',
+                  );
+                  return CustomPaint(
+                    painter: OrganicGrainPainter.cached(
+                      size: size,
+                      seed: seed,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -93,19 +116,55 @@ class OrganicBlob extends StatelessWidget {
 
 // OrganicGrainPainter
 class OrganicGrainPainter extends CustomPainter {
+  OrganicGrainPainter._({
+    required this.size,
+    required this.seed,
+  });
+
+  final Size size;
+  final int seed;
+
+  static final Map<String, OrganicGrainPainter> _painterCache = {};
+  static final Map<String, List<Offset>> _pointsCache = {};
+
+  factory OrganicGrainPainter.cached({
+    required Size size,
+    int? seed,
+  }) {
+    final resolvedSeed = seed ??
+        DateTime.now().millisecondsSinceEpoch ^
+            DateTime.now().microsecond ^
+            size.hashCode;
+    final key =
+        '${size.width.toStringAsFixed(1)}x${size.height.toStringAsFixed(1)}:$resolvedSeed';
+    return _painterCache.putIfAbsent(
+      key,
+      () => OrganicGrainPainter._(size: size, seed: resolvedSeed),
+    );
+  }
+
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(Canvas canvas, Size canvasSize) {
     final paint = Paint()
       ..color = AppTheme.foreground.withValues(alpha: 0.03)
       ..strokeWidth = 1.0
       ..strokeCap = StrokeCap.round;
 
-    final random = math.Random(42);
-    final points = <Offset>[];
-    for (int i = 0; i < (size.width * size.height * 0.02).toInt(); i++) {
-      points.add(Offset(
-          random.nextDouble() * size.width, random.nextDouble() * size.height));
-    }
+    final key =
+        '${size.width.toStringAsFixed(1)}x${size.height.toStringAsFixed(1)}:$seed';
+    final points = _pointsCache.putIfAbsent(key, () {
+      final random = math.Random(seed);
+      final generated = <Offset>[];
+      for (int i = 0; i < (size.width * size.height * 0.02).toInt(); i++) {
+        generated.add(
+          Offset(
+            random.nextDouble() * size.width,
+            random.nextDouble() * size.height,
+          ),
+        );
+      }
+      return generated;
+    });
     canvas.drawPoints(PointMode.points, points, paint);
   }
 
@@ -141,20 +200,9 @@ class NeuCard extends StatelessWidget {
             ? BorderRadius.circular(borderRadius ?? 24)
             : OrganicTokens.radiusOrganic[
                 asymmetricIndex! % OrganicTokens.radiusOrganic.length],
-        border: Border.all(color: const Color(0x80DED8CF), width: 1),
+        border: Border.all(color: AppTheme.neuShadowLight, width: 1),
         boxShadow: [
-          if (pressed)
-            const BoxShadow(
-                color: Color(0x33C18C5D),
-                blurRadius: 40,
-                offset: Offset(0, 10),
-                spreadRadius: -10)
-          else
-            const BoxShadow(
-                color: Color(0x265D7052),
-                blurRadius: 20,
-                offset: Offset(0, 4),
-                spreadRadius: -2),
+          if (pressed) AppTheme.shadowFloat else AppTheme.shadowSoft,
         ],
       ),
       child: child,
@@ -356,7 +404,27 @@ class _NeuTextFieldState extends State<NeuTextField> {
           children: [
             Positioned.fill(
               child: IgnorePointer(
-                  child: CustomPaint(painter: OrganicGrainPainter())),
+                child: RepaintBoundary(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      );
+                      final seed = Object.hash(
+                        widget.key?.hashCode ?? widget.label.hashCode,
+                        'NeuTextField',
+                      );
+                      return CustomPaint(
+                        painter: OrganicGrainPainter.cached(
+                          size: size,
+                          seed: seed,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
             TextFormField(
               controller: widget.controller,
@@ -411,7 +479,7 @@ class _NeuTextFieldState extends State<NeuTextField> {
                       width: 2),
                 ),
                 filled: true,
-                fillColor: const Color(0x80FFFFFF),
+                fillColor: AppTheme.surfaceFill,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 16,
@@ -577,33 +645,25 @@ class NeuShimmer extends StatefulWidget {
   State<NeuShimmer> createState() => _NeuShimmerState();
 }
 
-class _NeuShimmerState extends State<NeuShimmer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+class _NeuShimmerState extends State<NeuShimmer> {
+  late final _NeuShimmerClock _clock;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _clock = _NeuShimmerClock.instance..acquire();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _clock.release();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
+    return ListenableBuilder(
+      listenable: _clock,
       builder: (context, child) {
         return Container(
           width: widget.width,
@@ -611,13 +671,41 @@ class _NeuShimmerState extends State<NeuShimmer>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             color: Color.lerp(
-              const Color(0xFFF0EBE5), // Stone
-              const Color(0xFFE6DCCD), // Sand
-              _animation.value,
+              AppTheme.neutralLight,
+              AppTheme.accent,
+              _clock.value,
             ),
           ),
         );
       },
     );
+  }
+}
+
+class _NeuShimmerClock extends ChangeNotifier {
+  _NeuShimmerClock._();
+
+  static final _NeuShimmerClock instance = _NeuShimmerClock._();
+
+  Timer? _timer;
+  int _listeners = 0;
+  double _t = 0;
+  double value = 0;
+
+  void acquire() {
+    _listeners++;
+    _timer ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
+      _t += 0.016;
+      value = (math.sin(_t * (math.pi / 0.6)) + 1) * 0.5;
+      notifyListeners();
+    });
+  }
+
+  void release() {
+    if (_listeners > 0) _listeners--;
+    if (_listeners == 0) {
+      _timer?.cancel();
+      _timer = null;
+    }
   }
 }
