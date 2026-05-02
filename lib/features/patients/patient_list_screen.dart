@@ -9,6 +9,7 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/shared/widgets/skeleton_loader.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/features/patients/patient_provider.dart';
 import 'package:mediflow/shared/widgets/empty_state.dart';
 import 'package:mediflow/shared/widgets/error_boundary.dart';
 import 'package:mediflow/features/patients/patient_permissions.dart';
@@ -109,11 +110,11 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       );
 
   Future<void> _openPatientForm(String route) async {
-    final filter = _buildFilter();
     final changed = await context.push<bool>(route);
     if (changed == true && mounted) {
-      ref.invalidate(roleAwarePatientsProvider(filter));
+      ref.invalidate(roleAwarePatientsProvider);
       ref.invalidate(patientTotalCountProvider);
+      ref.invalidate(patientDetailProvider);
     }
   }
 

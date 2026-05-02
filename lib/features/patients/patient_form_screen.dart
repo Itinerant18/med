@@ -134,20 +134,26 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
           for (final name in _investigations) {
             _investigationStatus[name] = 'na';
           }
+          _otherInvestigationController.clear();
 
           final savedStatus = patient.investigationStatus;
+          var restoredCustomDone = false;
           savedStatus.forEach((k, v) {
             final key = k.toString();
+            final normalizedValue = v.toString().toLowerCase();
             if (key == 'Other' || !_investigations.contains(key)) {
-              if (key != 'Other') {
+              if (key != 'Other' &&
+                  normalizedValue == 'done' &&
+                  !restoredCustomDone) {
                 _otherInvestigationController.text = key;
                 _investigationStatus['Other'] = 'done';
-              } else if (v.toString().toLowerCase() == 'done') {
+                restoredCustomDone = true;
+              } else if (key == 'Other' && normalizedValue == 'done') {
                 _investigationStatus['Other'] = 'done';
               }
             } else if (_investigationStatus.containsKey(key)) {
               _investigationStatus[key] =
-                  v.toString().toLowerCase() == 'done' ? 'done' : 'na';
+                  normalizedValue == 'done' ? 'done' : 'na';
             }
           });
         });

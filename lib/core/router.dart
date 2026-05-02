@@ -186,6 +186,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/agent-visits/edit/:visitId',
+        builder: (context, state) {
+          final visitId = state.pathParameters['visitId'];
+          if (visitId == null || visitId.isEmpty) {
+            return const AgentOutsideVisitForm();
+          }
+          return AgentOutsideVisitForm(visitId: visitId);
+        },
+      ),
+      GoRoute(
         path: '/followups/doctor',
         redirect: (context, state) {
           // Doctor / head-doctor only.

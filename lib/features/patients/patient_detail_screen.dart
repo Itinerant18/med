@@ -153,6 +153,12 @@ class PatientDetailScreen extends ConsumerWidget {
     final dob = patient.dateOfBirth;
     final String ageLabel =
         dob != null ? '${DateTime.now().year - dob.year} yrs' : 'N/A';
+    final visibleInvestigations = patient.investigationStatus.entries.where((
+      entry,
+    ) {
+      final value = entry.value?.toString().trim().toLowerCase() ?? 'na';
+      return value != 'na';
+    }).toList(growable: false);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -302,6 +308,21 @@ class PatientDetailScreen extends ConsumerWidget {
                 if (patient.currentMedications?.isNotEmpty == true)
                   _clinicalRow(
                       'Current Medications', patient.currentMedications),
+                if (patient.investigationStatus.isNotEmpty &&
+                    visibleInvestigations.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  const SectionTitle(
+                    title: 'Investigations',
+                    icon: AppIcons.biotech_rounded,
+                  ),
+                  const SizedBox(height: 4),
+                  ...visibleInvestigations.map(
+                    (entry) => _investigationRow(
+                      entry.key,
+                      entry.value?.toString(),
+                    ),
+                  ),
+                ],
                 if (patient.lastUpdatedBy != null) ...[
                   const Divider(height: 16),
                   Text(
@@ -406,6 +427,44 @@ class PatientDetailScreen extends ConsumerWidget {
           ),
           Expanded(
             child: Text(value, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _investigationRow(String label, String? value) {
+    final normalizedValue = value?.trim().toLowerCase() ?? 'na';
+    final isDone = normalizedValue == 'done';
+    final chipColor = isDone ? AppTheme.successColor : AppTheme.textMuted;
+    final chipLabel = isDone ? 'Done' : 'N/A';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: AppTheme.textColor),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: chipColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: chipColor.withValues(alpha: 0.35)),
+            ),
+            child: Text(
+              chipLabel,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: chipColor,
+              ),
+            ),
           ),
         ],
       ),

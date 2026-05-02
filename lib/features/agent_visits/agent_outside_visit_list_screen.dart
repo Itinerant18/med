@@ -11,6 +11,9 @@ import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:mediflow/shared/widgets/empty_state.dart';
 import 'package:mediflow/shared/widgets/error_boundary.dart';
+import 'package:mediflow/core/app_snackbar.dart';
+import 'package:mediflow/core/error_handler.dart';
+import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 
 class AgentOutsideVisitListScreen extends ConsumerWidget {
   const AgentOutsideVisitListScreen({super.key});
@@ -117,12 +120,12 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
   }
 }
 
-class _VisitCard extends StatelessWidget {
+class _VisitCard extends ConsumerWidget {
   final AgentOutsideVisit visit;
   const _VisitCard({required this.visit});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: NeuCard(
@@ -184,6 +187,61 @@ class _VisitCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    AppIcons.menu_rounded,
+                    color: AppTheme.textMuted,
+                  ),
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      final result =
+                          await context.push<bool>('/agent-visits/edit/${visit.id}');
+                      if (result == true) {
+                        ref.read(agentOutsideVisitsProvider.notifier).refresh();
+                      }
+                      return;
+                    }
+
+                    final confirmed = await ConfirmDialog.show(
+                      context,
+                      title: 'Delete External Visit',
+                      message:
+                          'Are you sure you want to delete this external doctor visit?',
+                      confirmLabel: 'Delete',
+                      isDestructive: true,
+                    );
+                    if (confirmed != true || !context.mounted) return;
+
+                    try {
+                      await ref
+                          .read(agentOutsideVisitsProvider.notifier)
+                          .deleteVisit(visit.id);
+                      if (context.mounted) {
+                        AppSnackbar.showSuccess(
+                          context,
+                          'External doctor visit deleted successfully',
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        AppSnackbar.showError(
+                          context,
+                          AppError.getMessage(e),
+                        );
+                      }
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
                 ),
               ],
             ),
