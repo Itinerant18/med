@@ -49,7 +49,7 @@ class AgentOutsideVisitListScreen extends ConsumerWidget {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Visits recorded when taking patients to external specialists.',
+                      'Visits recorded when visiting external specialists for information or with patients referred by them.',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.primaryTeal,
@@ -147,14 +147,18 @@ class _VisitCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        visit.patientName ?? 'Unknown Patient',
+                        visit.patientName != null
+                            ? visit.patientName!
+                            : visit.extDoctorName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
                       ),
                       Text(
-                        DateFormat('MMM d, yyyy').format(visit.visitDate),
+                        visit.patientName != null
+                            ? DateFormat('MMM d, yyyy').format(visit.visitDate)
+                            : 'Info collection visit',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppTheme.textMuted,

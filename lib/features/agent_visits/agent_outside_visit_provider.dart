@@ -47,7 +47,7 @@ class AgentOutsideVisitsNotifier
   }
 
   Future<void> createVisit({
-    required String patientId,
+    String? patientId,
     String? followupTaskId,
     required String extDoctorName,
     String? extDoctorSpecialization,
@@ -71,7 +71,7 @@ class AgentOutsideVisitsNotifier
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
     final data = <String, dynamic>{
-      'patient_id': patientId,
+      if (patientId != null && patientId.isNotEmpty) 'patient_id': patientId,
       'agent_id': user.id,
       if (followupTaskId != null) 'followup_task_id': followupTaskId,
       'ext_doctor_name': extDoctorName,

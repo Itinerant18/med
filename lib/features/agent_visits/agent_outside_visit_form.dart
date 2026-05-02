@@ -12,7 +12,6 @@ import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
-import 'package:mediflow/shared/widgets/patient_picker_bottom_sheet.dart';
 
 class AgentOutsideVisitForm extends ConsumerStatefulWidget {
   /// Optional: pre-link to an existing followup task. When set, the
@@ -176,36 +175,16 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
     });
   }
 
-  void _showPatientPicker() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.bgColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => const PatientPickerBottomSheet(),
-    ).then((result) {
-      if (result is Map) {
-        setState(() {
-          _selectedPatientId = result['id']?.toString();
-          _selectedPatientName = result['name']?.toString();
-        });
-      }
-    });
-  }
+  // Patient picker has been removed from the standalone form.
+  // patientId is only populated when pre-filled from a task or referral.
 
   Future<void> _submit() async {
-    if (_selectedPatientId == null) {
-      AppSnackbar.showError(context, 'Please select a patient');
-      return;
-    }
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
       await ref.read(agentOutsideVisitsProvider.notifier).createVisit(
-            patientId: _selectedPatientId!,
+            patientId: _selectedPatientId,
             followupTaskId: widget.followupTaskId,
             extDoctorName: _extNameCtrl.text.trim(),
             extDoctorSpecialization: _extSpecCtrl.text.trim(),
@@ -296,7 +275,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                         child: Text(
                           widget.followupTaskId != null
                               ? 'This will complete the linked follow-up task and record the outside doctor visit.'
-                              : 'Record the outcome of accompanying a patient to an external specialist. Fill in what the specialist found and prescribed.',
+                              : 'Record your visit to an external doctor — collecting information, contact details, or outcomes. Link a patient if one was referred by this doctor.',
                           style: const TextStyle(
                               fontSize: 12, color: AppTheme.primaryTeal),
                         ),
@@ -305,9 +284,15 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                   ),
                 ),
 
+              // PATIENT SECTION
+              // – If the patient is pre-linked (from a task / referral by the
+              //   external doctor), display a read-only card.
+              // – If standalone (agent visiting for info collection only),
+              //   show an informational note — no picker needed.
               const SectionTitle(
                   title: 'Patient', icon: AppIcons.person_search_rounded),
-              if (isFromTask && widget.preselectedPatientId != null)
+              if (_selectedPatientId != null)
+                // Patient pre-linked — show read-only card
                 NeuCard(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -335,7 +320,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                               ),
                             ),
                             const Text(
-                              'Patient assigned by doctor',
+                              'Referred by this external doctor',
                               style: TextStyle(
                                   fontSize: 12, color: AppTheme.textMuted),
                             ),
@@ -346,15 +331,15 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.successColor.withValues(alpha: 0.1),
+                          color: AppTheme.primaryTeal.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                              color: AppTheme.successColor, width: 0.8),
+                              color: AppTheme.primaryTeal, width: 0.8),
                         ),
                         child: const Text(
-                          'PRE-ASSIGNED',
+                          'REFERRED',
                           style: TextStyle(
-                            color: AppTheme.successColor,
+                            color: AppTheme.primaryTeal,
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
                           ),
@@ -363,48 +348,32 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                     ],
                   ),
                 )
-              else ...[
-                GestureDetector(
-                  onTap: _showPatientPicker,
-                  child: NeuCard(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    child: Row(
-                      children: [
-                        Icon(
-                          AppIcons.person_rounded,
-                          color: _selectedPatientId == null
-                              ? AppTheme.textMuted
-                              : AppTheme.primaryTeal,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _selectedPatientName ??
-                                'Select patient you accompanied',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: _selectedPatientId == null
-                                  ? AppTheme.textMuted
-                                  : AppTheme.textColor,
-                              fontWeight: _selectedPatientId == null
-                                  ? FontWeight.normal
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Icon(AppIcons.arrow_drop_down_rounded,
-                            color: AppTheme.textMuted),
-                      ],
+              else
+                // No patient — agent is collecting doctor information only
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.textMuted.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.textMuted.withValues(alpha: 0.25),
                     ),
                   ),
+                  child: const Row(
+                    children: [
+                      Icon(AppIcons.info_outline_rounded,
+                          color: AppTheme.textMuted, size: 18),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'No patient linked — recording external doctor information only. If the doctor refers a patient later, the patient will appear here.',
+                          style: TextStyle(
+                              fontSize: 12, color: AppTheme.textMuted),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Select the patient you took to the external doctor.',
-                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-                ),
-              ],
               const SizedBox(height: 20),
               const SectionTitle(
                   title: 'Visit Date', icon: AppIcons.calendar_today_rounded),

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 class AgentOutsideVisit {
   const AgentOutsideVisit({
     required this.id,
-    required this.patientId,
+    this.patientId,
     this.followupTaskId,
     required this.agentId,
     required this.extDoctorName,
@@ -30,7 +30,7 @@ class AgentOutsideVisit {
   });
 
   final String id;
-  final String patientId;
+  final String? patientId;
   final String? followupTaskId;
   final String agentId;
   final String extDoctorName;
@@ -70,7 +70,7 @@ class AgentOutsideVisit {
   factory AgentOutsideVisit.fromJson(Map<String, dynamic> json) {
     return AgentOutsideVisit(
       id: json['id']?.toString() ?? '',
-      patientId: json['patient_id']?.toString() ?? '',
+      patientId: json['patient_id']?.toString(),
       followupTaskId: json['followup_task_id']?.toString(),
       agentId: json['agent_id']?.toString() ?? '',
       extDoctorName: json['ext_doctor_name']?.toString() ?? '',
