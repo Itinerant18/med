@@ -75,7 +75,6 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   //   1. widget.prefillVisitInstructions (passed via router `extra`)
   //   2. fetched task on init (followupTaskByIdProvider)
   String? _instructionsForBanner;
-  bool _instructionsLoading = false;
 
   bool get _isEdit => widget.visitId != null && widget.visitId!.isNotEmpty;
 
@@ -139,7 +138,6 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   }
 
   Future<void> _hydrateFromTask(String taskId) async {
-    setState(() => _instructionsLoading = true);
     try {
       final task = await ref.read(followupTaskByIdProvider(taskId).future);
       if (!mounted || task == null) return;
@@ -169,8 +167,6 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
       });
     } catch (_) {
       // best-effort
-    } finally {
-      if (mounted) setState(() => _instructionsLoading = false);
     }
   }
 
@@ -287,7 +283,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
         backgroundColor: Colors.transparent,
         title: Text(
           _isEdit ? 'Edit External Doctor Visit' : 'Record External Doctor Visit',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       body: SingleChildScrollView(
