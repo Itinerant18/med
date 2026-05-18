@@ -66,6 +66,8 @@ class RealtimeService {
   final Map<String, _TableSub> _subs = {};
 
   String? _currentDoctorName;
+  String? _currentUserId;
+  bool _isAssistant = false;
   OnNotificationCallback? _onNotification;
 
   // Status broadcasting.
@@ -90,10 +92,16 @@ class RealtimeService {
   /// notifications reach the UI layer without the service retaining a Ref.
   void subscribeToPatientChanges(
     String currentDoctorName,
+    bool isAssistant,
     OnNotificationCallback onNotification,
   ) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
+
     // Skip if already subscribed for this user.
-    if (_currentDoctorName == currentDoctorName && _allConnected) {
+    if (_currentDoctorName == currentDoctorName &&
+        _currentUserId == currentUserId &&
+        _isAssistant == isAssistant &&
+        _allConnected) {
       _onNotification = onNotification;
       return;
     }
@@ -102,6 +110,8 @@ class RealtimeService {
     _unsubscribeAll();
 
     _currentDoctorName = currentDoctorName;
+    _currentUserId = currentUserId;
+    _isAssistant = isAssistant;
     _onNotification = onNotification;
 
     for (final table in _tables) {
@@ -113,6 +123,8 @@ class RealtimeService {
   void dispose() {
     _unsubscribeAll();
     _currentDoctorName = null;
+    _currentUserId = null;
+    _isAssistant = false;
     _onNotification = null;
   }
 
@@ -124,15 +136,22 @@ class RealtimeService {
     sub.channel?.unsubscribe();
     _updateStatus(table, SubscriptionStatus.connecting);
 
-    final userId =
-        Supabase.instance.client.auth.currentUser?.id ?? 'anon';
+    final userId = _currentUserId ?? 'anon';
     final doctorName = _currentDoctorName ?? '';
+    final currentUserId = _currentUserId ?? '';
+    final isAssistant = _isAssistant;
 
     try {
       var builder = Supabase.instance.client
           .channel('mediflow:$table:$userId');
 
-      builder = _attachHandlers(builder, table, doctorName);
+      builder = _attachHandlers(
+        builder,
+        table,
+        doctorName,
+        currentUserId,
+        isAssistant,
+      );
 
       sub.channel = builder.subscribe((status, error) {
         if (error != null) {
@@ -203,6 +222,8 @@ class RealtimeService {
     RealtimeChannel builder,
     String table,
     String doctorName,
+    String currentUserId,
+    bool isAssistant,
   ) {
     switch (table) {
       case 'patients':
@@ -230,19 +251,33 @@ class RealtimeService {
               _handleVisitUpdate(p, doctorName)),
         );
       case 'dr_visits':
+        // Requires Realtime table row filters to be enabled in the Supabase
+        // dashboard so the server enforces this agent-scoped subscription.
         return builder.onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'dr_visits',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'assigned_agent_id',
+            value: currentUserId,
+          ),
           callback: (p) => _debounced(() =>
               _handleDrVisitInsert(p)),
         );
       case 'followup_tasks':
+        // Requires Realtime table row filters to be enabled in the Supabase
+        // dashboard so the server enforces these agent-scoped subscriptions.
         return builder
             .onPostgresChanges(
               event: PostgresChangeEvent.insert,
               schema: 'public',
               table: 'followup_tasks',
+              filter: PostgresChangeFilter(
+                type: PostgresChangeFilterType.eq,
+                column: 'assigned_to',
+                value: currentUserId,
+              ),
               callback: (p) => _debounced(() =>
                   _handleFollowupTaskInsert(p)),
             )
@@ -250,6 +285,13 @@ class RealtimeService {
               event: PostgresChangeEvent.update,
               schema: 'public',
               table: 'followup_tasks',
+              filter: isAssistant
+                  ? PostgresChangeFilter(
+                      type: PostgresChangeFilterType.eq,
+                      column: 'assigned_to',
+                      value: currentUserId,
+                    )
+                  : null,
               callback: (p) => _debounced(() =>
                   _handleFollowupUpdate(p)),
             );

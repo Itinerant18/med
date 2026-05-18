@@ -451,48 +451,50 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const SectionTitle(
-                          title: 'Clinical Information',
-                          icon: AppIcons.medical_information_outlined,
-                        ),
-                        NeuCard(
-                          child: Column(
-                            children: [
-                              NeuTextField(
-                                controller: _symptomsController,
-                                label: 'Symptoms',
-                                maxLines: 3,
-                              ),
-                              const SizedBox(height: 12),
-                              NeuTextField(
-                                controller: _areaAffectedController,
-                                label: 'Area Affected',
-                              ),
-                              const SizedBox(height: 12),
-                              NeuTextField(
-                                controller: _existingConditionsController,
-                                label: 'Existing Conditions',
-                                maxLines: 3,
-                              ),
-                              const SizedBox(height: 12),
-                              NeuTextField(
-                                controller: _currentMedicationsController,
-                                label: 'Current Medications',
-                                maxLines: 3,
-                              ),
-                              const SizedBox(height: 12),
-                              NeuTextField(
-                                controller: _allergiesController,
-                                label: 'Allergies',
-                              ),
-                              const SizedBox(height: 12),
-                              NeuTextField(
-                                controller: _addictionsController,
-                                label: 'Addictions',
-                              ),
-                            ],
+                        if (!_isEdit) ...[
+                          const SectionTitle(
+                            title: 'Clinical Information',
+                            icon: AppIcons.medical_information_outlined,
                           ),
-                        ),
+                          NeuCard(
+                            child: Column(
+                              children: [
+                                NeuTextField(
+                                  controller: _symptomsController,
+                                  label: 'Symptoms',
+                                  maxLines: 3,
+                                ),
+                                const SizedBox(height: 12),
+                                NeuTextField(
+                                  controller: _areaAffectedController,
+                                  label: 'Area Affected',
+                                ),
+                                const SizedBox(height: 12),
+                                NeuTextField(
+                                  controller: _existingConditionsController,
+                                  label: 'Existing Conditions',
+                                  maxLines: 3,
+                                ),
+                                const SizedBox(height: 12),
+                                NeuTextField(
+                                  controller: _currentMedicationsController,
+                                  label: 'Current Medications',
+                                  maxLines: 3,
+                                ),
+                                const SizedBox(height: 12),
+                                NeuTextField(
+                                  controller: _allergiesController,
+                                  label: 'Allergies',
+                                ),
+                                const SizedBox(height: 12),
+                                NeuTextField(
+                                  controller: _addictionsController,
+                                  label: 'Addictions',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         const SectionTitle(
                           title: 'Administrative',

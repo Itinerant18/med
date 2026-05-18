@@ -51,8 +51,10 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
 
   void _onSearchChanged(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
-      if (mounted) setState(() => _searchQuery = value.trim());
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      final trimmed = value.trim();
+      if (!mounted || trimmed == _searchQuery) return;
+      setState(() => _searchQuery = trimmed);
     });
   }
 
@@ -303,14 +305,124 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                   onRefresh: () async {
                     ref.invalidate(roleAwarePatientsProvider(filter));
                   },
-                  child: ListView.builder(
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                    itemCount: patients.length,
-                    itemBuilder: (context, index) => _PatientCard(
-                      patient: patients[index],
-                      searchQuery: _searchQuery,
-                      isAdmin: isAdmin,
-                      authState: authState,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.neuShadowLight,
+                          ),
+                        ),
+                        headingTextStyle: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textMuted,
+                          letterSpacing: 0.8,
+                        ),
+                        dataTextStyle: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        columnSpacing: 16,
+                        horizontalMargin: 14,
+                        dataRowMinHeight: 56,
+                        dataRowMaxHeight: 68,
+                        showCheckboxColumn: false,
+                        columns: [
+                          const DataColumn(label: Text('Patient')),
+                          const DataColumn(label: Text('Contact')),
+                          const DataColumn(label: Text('Scheme')),
+                          const DataColumn(label: Text('Status')),
+                          const DataColumn(label: Text('Priority')),
+                          const DataColumn(label: Text('Updated')),
+                          if (isAdmin) const DataColumn(label: Text('Edit')),
+                        ],
+                        rows: List<DataRow>.generate(patients.length, (index) {
+                          final patient = patients[index];
+                          final canEdit =
+                              isAdmin &&
+                              PatientPermissions.canEditPatient(
+                                authState,
+                                patient,
+                              );
+                          final lastUpdatedAt = patient.lastUpdatedAt;
+                          final lastUpdatedBy = patient.lastUpdatedBy;
+                          final scheme = patient.healthScheme;
+
+                          return DataRow.byIndex(
+                            index: index,
+                            color: WidgetStateProperty.resolveWith<Color?>(
+                              (_) => index.isEven
+                                  ? AppTheme.bgColor
+                                  : AppTheme.cardBg,
+                            ),
+                            onSelectChanged: (_) => context
+                                .push('/patients/${patient.id}/detail'),
+                            cells: [
+                              DataCell(
+                                _buildPatientNameCell(
+                                  patient: patient,
+                                  searchQuery: _searchQuery,
+                                ),
+                              ),
+                              DataCell(
+                                Text(patient.phone ?? '—'),
+                              ),
+                              DataCell(
+                                scheme == null || scheme.trim().isEmpty
+                                    ? const Text('—')
+                                    : _SchemeBadge(scheme: scheme),
+                              ),
+                              DataCell(
+                                ServiceStatusBadge(status: patient.serviceStatus),
+                              ),
+                              DataCell(
+                                patient.isHighPriority
+                                    ? const Icon(
+                                        AppIcons.warning_amber_rounded,
+                                        size: 16,
+                                        color: AppTheme.errorColor,
+                                      )
+                                    : const Text('—'),
+                              ),
+                              DataCell(
+                                _buildUpdatedCell(
+                                  lastUpdatedAt: lastUpdatedAt,
+                                  lastUpdatedBy: lastUpdatedBy,
+                                  isAdmin: isAdmin,
+                                ),
+                              ),
+                              if (isAdmin)
+                                DataCell(
+                                  canEdit
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            AppIcons.edit_outlined,
+                                            size: 18,
+                                            color: AppTheme.primaryTeal,
+                                          ),
+                                          onPressed: () => _openPatientForm(
+                                            '/patients/edit/${patient.id}',
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 36,
+                                            minHeight: 36,
+                                          ),
+                                          tooltip: 'Edit',
+                                        )
+                                      : const Text('—'),
+                                ),
+                            ],
+                          );
+                        }),
+                      ),
                     ),
                   ),
                 );
@@ -384,10 +496,99 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
       onCta: hasFilters ? _clearAllFilters : null,
     );
   }
+
+  Widget _buildPatientNameCell({
+    required PatientModel patient,
+    required String searchQuery,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: patient.isHighPriority
+                ? AppTheme.errorColor.withValues(alpha: 0.1)
+                : AppTheme.primaryTeal.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            patient.isHighPriority
+                ? AppIcons.priority_high_rounded
+                : AppIcons.person_rounded,
+            color: patient.isHighPriority
+                ? AppTheme.errorColor
+                : AppTheme.primaryTeal,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _HighlightedText(
+              text: patient.fullName,
+              query: searchQuery,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textColor,
+              ),
+              maxLines: 1,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'ID: ${patient.shortId}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUpdatedCell({
+    required DateTime? lastUpdatedAt,
+    required String? lastUpdatedBy,
+    required bool isAdmin,
+  }) {
+    if (lastUpdatedAt == null) {
+      return const Text('—');
+    }
+
+    final updatedText = DateFormat('MMM d').format(lastUpdatedAt);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(updatedText),
+        if (isAdmin &&
+            lastUpdatedBy != null &&
+            lastUpdatedBy.trim().isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            'by ${lastUpdatedBy.trim()}',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textMuted,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 // ── Patient Card ──────────────────────────────────────────────────────────────
 
+// ignore: unused_element
 class _PatientCard extends StatelessWidget {
   final PatientModel patient;
   final String searchQuery;

@@ -7,6 +7,7 @@ import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/patient_model.dart';
 import 'package:mediflow/models/user_role.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 
 enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, other }
@@ -89,7 +90,7 @@ class SearchFilter {
 const _patientListSelect =
     'id, full_name, phone, email, symptoms, health_scheme, service_status, '
     'is_high_priority, last_updated_by, last_updated_at, created_by_id, '
-    'created_at, area_affected, date_of_birth';
+    'created_at';
 
 // Role-aware filtered provider that respects RBAC:
 // Head doctors/doctors see everyone, agents see only patients they created.
@@ -98,6 +99,8 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
   final keepAliveLink = ref.keepAlive();
   final cacheTimer = Timer(const Duration(seconds: 30), keepAliveLink.close);
   ref.onDispose(cacheTimer.cancel);
+
+  if (filter.query.isNotEmpty && filter.query.length < 2) return [];
 
   if (filter.query.isNotEmpty) {
     await Future.delayed(const Duration(milliseconds: 300));
@@ -189,8 +192,8 @@ final patientTotalCountProvider = FutureProvider.autoDispose<int>((ref) async {
       query = query.eq('created_by_id', userState.session.user.id);
     }
 
-    final response = await supabase.retry(() => query);
-    return (response as List).length;
+    final response = await supabase.retry(() => query.count(CountOption.exact));
+    return response.count;
   } catch (e) {
     return 0;
   }

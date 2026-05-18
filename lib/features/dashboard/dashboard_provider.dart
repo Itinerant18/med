@@ -1,12 +1,15 @@
 // lib/features/dashboard/dashboard_provider.dart
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/core/realtime_service.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/models/user_role.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DashboardStats {
   final int todayVisitsCount;
@@ -63,16 +66,88 @@ class DashboardState {
 }
 
 class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
-  Timer? _timer;
   bool _disposed = false;
+  RealtimeChannel? _invalidateChannel;
+  Timer? _realtimeConnectCheckTimer;
+  Timer? _pollingTimer;
+  SubscriptionStatus _channelStatus = SubscriptionStatus.disconnected;
 
-  void _startRefreshTimer() {
-    // Prevent overlapping timers across rebuild/hot-reload.
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (_disposed) return;
-      if (!state.hasValue) return;
+  void _cancelInvalidateChannel() {
+    _realtimeConnectCheckTimer?.cancel();
+    _realtimeConnectCheckTimer = null;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+
+    try {
+      _invalidateChannel?.unsubscribe();
+    } catch (_) {}
+    _invalidateChannel = null;
+
+    _channelStatus = SubscriptionStatus.disconnected;
+  }
+
+  void _startFallbackPolling() {
+    if (_disposed || _pollingTimer != null) return;
+    _pollingTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (_disposed || !state.hasValue) return;
       refresh();
+    });
+  }
+
+  void _attachInvalidationChannel(String userId, String todayStart) {
+    _cancelInvalidateChannel();
+
+    final supabase = Supabase.instance.client;
+    final channel = supabase.channel('dashboard:invalidate:$userId');
+
+    _channelStatus = SubscriptionStatus.connecting;
+    _invalidateChannel = channel;
+
+    // Supabase Realtime row filters must be enabled in the dashboard for this
+    // server-side filter to be enforced.
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'visits',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.gte,
+        column: 'visit_date',
+        value: todayStart,
+      ),
+      callback: (_) {
+        if (_disposed) return;
+        refresh();
+      },
+    );
+
+    channel.subscribe((status, error) {
+      if (_disposed) return;
+
+      switch (status) {
+        case RealtimeSubscribeStatus.subscribed:
+          _channelStatus = SubscriptionStatus.connected;
+          _realtimeConnectCheckTimer?.cancel();
+          _realtimeConnectCheckTimer = null;
+          _pollingTimer?.cancel();
+          _pollingTimer = null;
+          break;
+        case RealtimeSubscribeStatus.channelError:
+        case RealtimeSubscribeStatus.timedOut:
+          _channelStatus = SubscriptionStatus.error;
+          debugPrint('Dashboard invalidate channel failed: $error');
+          break;
+        case RealtimeSubscribeStatus.closed:
+          _channelStatus = SubscriptionStatus.disconnected;
+          break;
+      }
+    });
+
+    _realtimeConnectCheckTimer =
+        Timer(const Duration(seconds: 5), () {
+      if (_disposed) return;
+      if (_channelStatus != SubscriptionStatus.connected) {
+        _startFallbackPolling();
+      }
     });
   }
 
@@ -87,17 +162,21 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
         ref.invalidateSelf();
       }
     });
-    _startRefreshTimer();
 
     ref.onDispose(() {
-      // Cancel timer first so no callback can run during teardown.
-      _timer?.cancel();
-      _timer = null;
+      _cancelInvalidateChannel();
       _disposed = true;
       cacheLink.close();
     });
 
-    return _fetch();
+    final initialState = await _fetch();
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId != null && userId.isNotEmpty) {
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day).toIso8601String();
+      _attachInvalidationChannel(userId, todayStart);
+    }
+    return initialState;
   }
 
   Future<void> refresh() async {
@@ -145,7 +224,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
       var priorityBuilder = supabase
           .from('patients')
           .select(
-              'id, full_name, service_status, last_updated_by, last_updated_at, is_high_priority, created_by_id')
+              'id, full_name, service_status, last_updated_by, last_updated_at, created_by_id')
           .eq('is_high_priority', true);
 
       if (isAgent && userState != null) {

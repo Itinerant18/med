@@ -24,7 +24,13 @@ final patientDetailProvider =
   final supabase = ref.read(supabaseClientProvider);
   try {
     final response = await supabase.retry(() =>
-        supabase.from('patients').select().eq('id', id).maybeSingle());
+        supabase
+            .from('patients')
+            .select(
+              'id, full_name, phone, email, date_of_birth, gender, blood_group, symptoms, area_affected, existing_conditions, current_medications, allergies, addictions, health_scheme, address, referred_by, investigation_place, investigation_status, staff_comments, created_at, last_updated_at, service_status, is_high_priority, last_updated_by, created_by_id, emergency_contact_number',
+            )
+            .eq('id', id)
+            .maybeSingle());
     if (response == null) return null;
     return PatientModel.fromJson(Map<String, dynamic>.from(response));
   } catch (e) {
@@ -79,13 +85,17 @@ class PatientNotifier extends AsyncNotifier<void> {
 
         newId = response['id'].toString();
 
-        await AuditService.instance.logFromAuth(
-          ref: ref,
-          action: 'INSERT',
-          targetTable: 'patients',
-          description:
-              'Patient registered: ${finalData['full_name'] ?? 'Unknown Patient'}',
-          newData: Map<String, dynamic>.from(finalData),
+        unawaited(
+          AuditService.instance.logFromAuth(
+            ref: ref,
+            action: 'INSERT',
+            targetTable: 'patients',
+            description:
+                'Patient registered: ${finalData['full_name'] ?? 'Unknown Patient'}',
+            newData: Map<String, dynamic>.from(finalData),
+          ).catchError((e) {
+            debugPrint('Audit log failed silently: $e');
+          }),
         );
       } catch (e) {
         throw Exception(AppError.getMessage(e));
@@ -156,17 +166,21 @@ class PatientNotifier extends AsyncNotifier<void> {
           );
         }
 
-        await AuditService.instance.logFromAuth(
-          ref: ref,
-          action: 'UPDATE',
-          targetTable: 'patients',
-          targetId: id,
-          description: 'Patient updated: $patientName',
-          oldData: Map<String, dynamic>.from(existing),
-          newData: {
-            ...Map<String, dynamic>.from(existing),
-            ...finalData,
-          },
+        unawaited(
+          AuditService.instance.logFromAuth(
+            ref: ref,
+            action: 'UPDATE',
+            targetTable: 'patients',
+            targetId: id,
+            description: 'Patient updated: $patientName',
+            oldData: Map<String, dynamic>.from(existing),
+            newData: {
+              ...Map<String, dynamic>.from(existing),
+              ...finalData,
+            },
+          ).catchError((e) {
+            debugPrint('Audit log failed silently: $e');
+          }),
         );
       } catch (e) {
         throw Exception(AppError.getMessage(e));
@@ -207,13 +221,17 @@ class PatientNotifier extends AsyncNotifier<void> {
         final patientName =
             (existing['full_name'] ?? 'Unknown Patient').toString();
 
-        await AuditService.instance.logFromAuth(
-          ref: ref,
-          action: 'DELETE',
-          targetTable: 'patients',
-          targetId: id,
-          description: 'Patient deleted: $patientName',
-          oldData: Map<String, dynamic>.from(existing),
+        unawaited(
+          AuditService.instance.logFromAuth(
+            ref: ref,
+            action: 'DELETE',
+            targetTable: 'patients',
+            targetId: id,
+            description: 'Patient deleted: $patientName',
+            oldData: Map<String, dynamic>.from(existing),
+          ).catchError((e) {
+            debugPrint('Audit log failed silently: $e');
+          }),
         );
       } catch (e) {
         throw Exception(AppError.getMessage(e));

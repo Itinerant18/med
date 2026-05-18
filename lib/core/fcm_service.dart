@@ -37,6 +37,7 @@ class FcmService {
   bool _quietHoursEnabled = false;
   int _quietStartHour = 22;
   int _quietEndHour = 7;
+  DateTime? _lastTokenSync;
 
   // ── Initialization ────────────────────────────────────────────────────────
 
@@ -99,11 +100,18 @@ class FcmService {
   /// Gets the current FCM token and stores it in the doctors table.
   Future<void> syncToken() async {
     try {
+      if (_lastTokenSync != null &&
+          DateTime.now().difference(_lastTokenSync!) <
+              const Duration(hours: 12)) {
+        return;
+      }
+
       final token = await _fcm.getToken();
       if (token == null) return;
       debugPrint(
           '[FCM] Token: ${token.length > 20 ? "${token.substring(0, 20)}..." : token}');
       await _saveTokenToSupabase(token);
+      _lastTokenSync = DateTime.now();
 
       // Replace any stale refresh subscription with a fresh one bound to the
       // current user, so token rotations always update the right doctor row.
@@ -148,6 +156,7 @@ class FcmService {
       }
 
       await _fcm.deleteToken();
+      _lastTokenSync = null;
     } catch (e) {
       debugPrint('[FCM] clearToken error: $e');
     }

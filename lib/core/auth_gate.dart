@@ -10,6 +10,7 @@ import '../features/auth/auth_provider.dart';
 import '../features/approval/approval_provider.dart';
 import '../features/approval/awaiting_approval_screen.dart';
 import '../features/approval/rejected_screen.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'notification_provider.dart';
 import 'realtime_service.dart';
 
@@ -56,6 +57,7 @@ class AuthGate extends ConsumerWidget {
             try {
               RealtimeService.instance.subscribeToPatientChanges(
                 doctorName,
+                userState.role == UserRole.assistant,
                 (notification) => container
                     .read(notificationProvider.notifier)
                     .addNotification(notification),
