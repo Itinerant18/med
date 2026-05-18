@@ -1,4 +1,5 @@
 // lib/features/dashboard/dashboard_screen.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,86 +100,198 @@ class DashboardScreen extends ConsumerWidget {
     AuthUserState? authState,
   ) {
     final displayName = role.isAdmin ? 'Dr. $name' : name;
+    final todayVisits = isAdmin
+        ? ref.read(dashboardProvider).valueOrNull?.stats.todayVisitsCount.toString() ?? '--'
+        : ref.read(dashboardProvider).valueOrNull?.assignedVisits.length.toString() ?? '--';
+    final pendingLabs = ref.read(dashboardProvider).valueOrNull?.stats.pendingLabsCount.toString() ?? '--';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: NeuCard(
-        borderRadius: 32,
-        padding: const EdgeInsets.all(20),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.primaryTeal.withValues(alpha: 0.12),
-                AppTheme.cardBg,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: AppTheme.heroGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryTeal.withValues(alpha: 0.35),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
+              spreadRadius: -4,
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            children: [
+              // Decorative background circles
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 20,
+                bottom: -40,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Welcome back',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textMuted,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.textColor,
-                              letterSpacing: -0.4,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isAdmin ? 'Clinical oversight mode' : 'Clinical care mode',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.textMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildLiveBadge(),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAdmin ? 'Clinical Oversight' : 'Clinical Care',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
                           ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryTeal.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(999),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _buildLiveBadgeWhite(),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Text(
+                                role.isAdmin ? 'DOCTOR' : 'STAFF',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Glassmorphic metric pills
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GlassMetricPill(
+                            label: "Today's Visits",
+                            value: todayVisits,
+                            icon: AppIcons.calendar_today_rounded,
                           ),
-                          child: Text(
-                            role.isAdmin ? 'Doctor' : 'Staff',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryTeal,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _GlassMetricPill(
+                            label: 'Pending Labs',
+                            value: pendingLabs,
+                            icon: AppIcons.biotech_rounded,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Action row
+                    Row(
+                      children: [
+                        if (PatientPermissions.canCreatePatient(authState)) ...[
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/patients/new'),
+                              child: Container(
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.12),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'New Patient',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.primaryTeal,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(
+                          child: Container(
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Real-time · Live data',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -186,88 +299,8 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _QuickMetricPill(
-                        label: 'Today\'s Visits',
-                        value: isAdmin
-                            ? ref
-                                    .read(dashboardProvider)
-                                    .valueOrNull
-                                    ?.stats
-                                    .todayVisitsCount
-                                    .toString() ??
-                                '--'
-                            : ref
-                                    .read(dashboardProvider)
-                                    .valueOrNull
-                                    ?.assignedVisits
-                                    .length
-                                    .toString() ??
-                                '--',
-                        icon: AppIcons.calendar_today_rounded,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _QuickMetricPill(
-                        label: 'Pending Labs',
-                        value: ref
-                                .read(dashboardProvider)
-                                .valueOrNull
-                                ?.stats
-                                .pendingLabsCount
-                                .toString() ??
-                            '--',
-                        icon: AppIcons.biotech_rounded,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    if (PatientPermissions.canCreatePatient(authState)) ...[
-                      Expanded(
-                        child: NeuButton(
-                          onPressed: () => context.push('/patients/new'),
-                          borderRadius: 32,
-                          child: const Text(
-                            'New Patient',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryForeground,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryTeal.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(32),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Soft surfaces · Real-time care',
-                            style: TextStyle(
-                              color: AppTheme.primaryTeal,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -394,6 +427,41 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildLiveBadgeWhite() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.greenAccent.shade400,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Text(
+            'LIVE',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatCards(DashboardState data, bool isAdmin) {
     final items = isAdmin
         ? <DashboardStatItem>[
@@ -475,13 +543,81 @@ class DashboardScreen extends ConsumerWidget {
     bool isAdmin,
     BuildContext context,
   ) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: visits.length,
-      itemBuilder: (_, i) =>
-          _VisitCard(visit: visits[i], isAdmin: isAdmin, context: context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.bgColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: AppTheme.surfaceWhite,
+              offset: Offset(-2, -2),
+              blurRadius: 6,
+            ),
+            BoxShadow(
+              color: AppTheme.neuShadowDark,
+              offset: Offset(2, 2),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: DataTable(
+            showCheckboxColumn: false,
+            headingRowColor: WidgetStateProperty.all(AppTheme.primaryTeal.withValues(alpha: 0.1)),
+            dataRowMinHeight: 60,
+            dataRowMaxHeight: 60,
+            columnSpacing: 24,
+            columns: [
+              const DataColumn(label: Text('Patient', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+              const DataColumn(label: Text('Time', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+              const DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+              const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+              if (isAdmin)
+                const DataColumn(label: Text('Added By', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+            ],
+            rows: visits.map((visit) {
+              final patientInfo = visit['patients'] as Map<String, dynamic>?;
+              final patientName = patientInfo?['full_name'] ?? visit['patient_name'] ?? 'Unknown';
+              final patientId = visit['patient_id'] as String?;
+              final visitTime = visit['visit_date'] != null
+                  ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+                  : '--:--';
+              final status = (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
+              final addedBy = visit['last_updated_by'] as String?;
+              final isHighPriority = patientInfo?['is_high_priority'] ?? false;
+
+              return DataRow(
+                onSelectChanged: patientId != null
+                    ? (_) => context.push('/patients/$patientId/detail')
+                    : null,
+                cells: [
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isHighPriority) ...[
+                          const Icon(AppIcons.warning_amber_rounded, size: 14, color: AppTheme.errorColor),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(patientName, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textColor)),
+                      ],
+                    ),
+                  ),
+                  DataCell(Text(visitTime, style: const TextStyle(color: AppTheme.textMuted))),
+                  DataCell(Text(visit['visit_type'] ?? 'OPD', style: const TextStyle(color: AppTheme.primaryTeal, fontWeight: FontWeight.w500))),
+                  DataCell(ServiceStatusBadge(status: status, size: 9)),
+                  if (isAdmin)
+                    DataCell(Text(addedBy != null ? 'Dr. $addedBy' : '--', style: const TextStyle(color: AppTheme.textMuted, fontStyle: FontStyle.italic))),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
     );
   }
 
@@ -489,13 +625,59 @@ class DashboardScreen extends ConsumerWidget {
     List<Map<String, dynamic>> visits,
     BuildContext context,
   ) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: visits.length,
-      itemBuilder: (_, i) =>
-          _AssignedVisitCard(visit: visits[i], context: context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.bgColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: AppTheme.surfaceWhite,
+              offset: Offset(-2, -2),
+              blurRadius: 6,
+            ),
+            BoxShadow(
+              color: AppTheme.neuShadowDark,
+              offset: Offset(2, 2),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: DataTable(
+            showCheckboxColumn: false,
+            headingRowColor: WidgetStateProperty.all(AppTheme.primaryTeal.withValues(alpha: 0.1)),
+            dataRowMinHeight: 60,
+            dataRowMaxHeight: 60,
+            columnSpacing: 24,
+            columns: const [
+              DataColumn(label: Text('Patient', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+              DataColumn(label: Text('Time', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
+            ],
+            rows: visits.map((visit) {
+              final patientInfo = visit['patients'] as Map<String, dynamic>?;
+              final patientName = patientInfo?['full_name'] ?? 'Unknown';
+              final visitTime = visit['visit_date'] != null
+                  ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+                  : '--:--';
+              final followupStatus = visit['followup_status'] ?? 'pending';
+
+              return DataRow(
+                onSelectChanged: (_) => context.push('/dr-visits/${visit['id']}'),
+                cells: [
+                  DataCell(Text(patientName, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textColor))),
+                  DataCell(Text(visitTime, style: const TextStyle(color: AppTheme.textMuted))),
+                  DataCell(ServiceStatusBadge(status: followupStatus, size: 9)),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
     );
   }
 
@@ -512,14 +694,28 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.textColor,
-          letterSpacing: 0.2,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryTeal,
+              borderRadius: BorderRadius.circular(2),
+              gradient: AppTheme.primaryGradient,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textColor,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -624,13 +820,27 @@ class _QuickMetricPill extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.cardBg,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppTheme.neuShadowLight),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: const [
+          BoxShadow(
+            color: AppTheme.neuShadowLight,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppTheme.primaryTeal),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryTeal.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: AppTheme.primaryTeal),
+          ),
           const SizedBox(height: 10),
           Text(
             value,
@@ -638,6 +848,7 @@ class _QuickMetricPill extends StatelessWidget {
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: AppTheme.textColor,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 2),
@@ -650,6 +861,67 @@ class _QuickMetricPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Glassmorphic metric pill for use on the gradient hero card.
+class _GlassMetricPill extends StatelessWidget {
+  const _GlassMetricPill({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -747,244 +1019,6 @@ class _PriorityCard extends StatelessWidget {
   }
 }
 
-class _AssignedVisitCard extends StatelessWidget {
-  final Map<String, dynamic> visit;
-  final BuildContext context;
-
-  const _AssignedVisitCard({required this.visit, required this.context});
-
-  @override
-  Widget build(BuildContext _) {
-    final patientInfo = visit['patients'] as Map<String, dynamic>?;
-    final patientName = patientInfo?['full_name'] ?? 'Unknown';
-    final visitTime = visit['visit_date'] != null
-        ? DateFormat.jm()
-            .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
-        : '--:--';
-    final followupStatus = visit['followup_status'] ?? 'pending';
-
-    return GestureDetector(
-      onTap: () => context.push('/dr-visits/${visit['id']}'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: AppTheme.bgColor,
-          borderRadius: BorderRadius.circular(16),
-          border: const Border(
-            left: BorderSide(color: AppTheme.primaryTeal, width: 4),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: AppTheme.surfaceWhite,
-              offset: Offset(-2, -2),
-              blurRadius: 6,
-            ),
-            BoxShadow(
-              color: AppTheme.neuShadowDark,
-              offset: Offset(2, 2),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      patientName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Visit at $visitTime',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ServiceStatusBadge(status: followupStatus, size: 9),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VisitCard extends StatelessWidget {
-  final Map<String, dynamic> visit;
-  final bool isAdmin;
-  final BuildContext context;
-
-  const _VisitCard({
-    required this.visit,
-    required this.isAdmin,
-    required this.context,
-  });
-
-  @override
-  Widget build(BuildContext _) {
-    final patientInfo = visit['patients'] as Map<String, dynamic>?;
-    final patientName =
-        patientInfo?['full_name'] ?? visit['patient_name'] ?? 'Unknown';
-    final isHighPriority = patientInfo?['is_high_priority'] ?? false;
-    final patientId = visit['patient_id'] as String?;
-    final visitTime = visit['visit_date'] != null
-        ? DateFormat.jm()
-            .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
-        : '--:--';
-    final status =
-        (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
-    final addedBy = visit['last_updated_by'] as String?;
-
-    return GestureDetector(
-      onTap: patientId != null
-          ? () => context.push('/patients/$patientId/detail')
-          : null,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: AppTheme.bgColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border(
-            left: BorderSide(
-              color: isHighPriority
-                  ? AppTheme.errorColor
-                  : AppTheme.primaryTeal.withValues(alpha: 0.4),
-              width: isHighPriority ? 4 : 2,
-            ),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: AppTheme.surfaceWhite,
-              offset: Offset(-2, -2),
-              blurRadius: 6,
-            ),
-            BoxShadow(
-              color: AppTheme.neuShadowDark,
-              offset: Offset(2, 2),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      patientName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppTheme.textColor,
-                      ),
-                    ),
-                  ),
-                  ServiceStatusBadge(status: status, size: 9),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 10,
-                runSpacing: 4,
-                children: [
-                  _MiniChip(
-                    icon: AppIcons.access_time_rounded,
-                    label: visitTime,
-                    color: AppTheme.textMuted,
-                  ),
-                  _MiniChip(
-                    icon: AppIcons.category_rounded,
-                    label: visit['visit_type'] ?? 'OPD',
-                    color: AppTheme.primaryTeal,
-                  ),
-                  if (visit['tests_performed'] != null)
-                    _MiniChip(
-                      icon: visit['tests_performed'] == true
-                          ? AppIcons.check_circle_rounded
-                          : AppIcons.pending_rounded,
-                      label: visit['tests_performed'] == true
-                          ? 'Labs Done'
-                          : 'Labs Pending',
-                      color: visit['tests_performed'] == true
-                          ? AppTheme.successColor
-                          : AppTheme.warningColor,
-                    ),
-                ],
-              ),
-              if (isAdmin && addedBy != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      AppIcons.person_outline_rounded,
-                      size: 12,
-                      color: AppTheme.textMuted,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Recorded by Dr. $addedBy',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textMuted,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _MiniChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 11, color: color),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: color,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _PulseDot extends StatefulWidget {
   const _PulseDot();
