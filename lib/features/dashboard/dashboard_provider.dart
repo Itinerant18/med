@@ -208,7 +208,8 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
     try {
       var visitsBuilder = supabase
           .from('visits')
-          .select('*, patients!inner(full_name, is_high_priority, created_by_id)')
+          .select(
+              'id, patient_id, patient_name, visit_date, visit_type, tests_performed, ot_required, patient_flow_status, last_updated_by, patients!inner(full_name, is_high_priority)')
           .gte('visit_date', startOfDay)
           .lte('visit_date', endOfDay);
 
@@ -223,8 +224,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
 
       var priorityBuilder = supabase
           .from('patients')
-          .select(
-              'id, full_name, service_status, last_updated_by, last_updated_at, created_by_id')
+          .select('id, full_name, service_status, last_updated_by, last_updated_at')
           .eq('is_high_priority', true);
 
       if (isAgent && userState != null) {
@@ -242,7 +242,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
           : supabase.retry(() => supabase
               .from('dr_visits')
               .select(
-                  '*, patients:patients!dr_visits_patient_id_fkey(full_name)')
+                  'id, visit_date, followup_status, patients:patients!dr_visits_patient_id_fkey(full_name)')
               .eq('assigned_agent_id', userState.session.user.id)
               .gte('visit_date', startOfDay)
               .lte('visit_date', endOfDay)
@@ -259,7 +259,36 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
               // Follow-ups tab opens; the dashboard just reads today's tasks.
               return supabase.retry(() => supabase
                   .from('followup_tasks')
-                  .select('*, patients(full_name)')
+                  .select('''
+                    id,
+                    patient_id,
+                    dr_visit_id,
+                    assigned_to,
+                    created_by,
+                    due_date,
+                    title,
+                    notes,
+                    priority,
+                    target_ext_doctor_name,
+                    target_ext_doctor_hospital,
+                    target_ext_doctor_specialization,
+                    target_ext_doctor_phone,
+                    visit_instructions,
+                    scheduled_visit_date,
+                    is_external_doctor,
+                    ext_doctor_name,
+                    ext_doctor_specialization,
+                    ext_doctor_hospital,
+                    ext_doctor_phone,
+                    completion_notes,
+                    reviewed_by,
+                    reviewed_at,
+                    doctor_review_notes,
+                    status,
+                    completed_at,
+                    created_at,
+                    patients(full_name)
+                  ''')
                   .eq('assigned_to', userState.session.user.id)
                   .or('due_date.eq.$todayStr,status.eq.overdue')
                   .neq('status', 'completed')

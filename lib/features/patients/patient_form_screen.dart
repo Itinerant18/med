@@ -239,6 +239,29 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         }
       }
 
+      final finalInvestigationStatus = _buildInvestigationStatus();
+      
+      final prescribedTests = finalInvestigationStatus.values
+          .map((v) => v.toString().trim().toLowerCase())
+          .where((v) => v != 'na')
+          .toList();
+      final hasPrescribedTests = prescribedTests.isNotEmpty;
+      final allTestsDone = hasPrescribedTests && prescribedTests.every((v) => v == 'done');
+      
+      final currentNormalized = serviceStatus.trim().toLowerCase();
+      if (currentNormalized == 'pending' ||
+          currentNormalized == 'test pending' ||
+          currentNormalized == 'test done' ||
+          currentNormalized == 'ot scheduled' ||
+          currentNormalized == 'done' ||
+          currentNormalized == 'completed') {
+        if (allTestsDone) {
+          serviceStatus = 'Test Done';
+        } else {
+          serviceStatus = 'Test Pending';
+        }
+      }
+
       final patientData = <String, dynamic>{
         'full_name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
@@ -259,7 +282,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
         'address': _addressController.text.trim(),
         'referred_by': _referredByController.text.trim(),
         'investigation_place': _investigationPlaceController.text.trim(),
-        'investigation_status': _buildInvestigationStatus(),
+        'investigation_status': finalInvestigationStatus,
         'is_high_priority': _isHighPriority,
         'staff_comments': _staffCommentsController.text.trim(),
         'last_updated_by': doctorName,

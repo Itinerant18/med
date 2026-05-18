@@ -159,44 +159,44 @@ final analyticsSummaryProvider =
 
   final patientsBuilder = isHeadDoctor
       ? supabase.from('patients').select(
-          'id, is_high_priority, health_scheme, created_by_id, created_at, last_updated_at')
+          'id, is_high_priority, health_scheme, created_by_id, last_updated_at')
       : supabase
           .from('patients')
           .select(
-              'id, is_high_priority, health_scheme, created_by_id, created_at, last_updated_at')
+              'id, is_high_priority, health_scheme, created_by_id, last_updated_at')
           .eq('created_by_id', userId);
 
   final visitsBuilder = isHeadDoctor
       ? supabase.from('visits').select(
-          'id, doctor_id, visit_type, tests_performed, ot_required, patient_flow_status, visit_date, created_by_id')
+          'id, visit_type, tests_performed, ot_required, patient_flow_status, visit_date')
       : supabase
           .from('visits')
           .select(
-              'id, doctor_id, visit_type, tests_performed, ot_required, patient_flow_status, visit_date, created_by_id')
+              'id, visit_type, tests_performed, ot_required, patient_flow_status, visit_date')
           .eq('doctor_id', userId);
 
   final drVisitsBuilder = isHeadDoctor
       ? supabase.from('dr_visits').select(
-          'id, doctor_id, assigned_agent_id, followup_status, status, visit_date')
+          'id, assigned_agent_id, followup_status, status, visit_date')
       : supabase
           .from('dr_visits')
           .select(
-              'id, doctor_id, assigned_agent_id, followup_status, status, visit_date')
+              'id, assigned_agent_id, followup_status, status, visit_date')
           .eq('doctor_id', userId);
 
   final followupsBuilder = isHeadDoctor
       ? supabase
           .from('followup_tasks')
-          .select('id, assigned_to, status, due_date, created_at')
+          .select('id, assigned_to, status, due_date')
       : supabase
           .from('followup_tasks')
-          .select('id, assigned_to, status, due_date, created_at')
+          .select('id, assigned_to, status, due_date')
           .eq('assigned_to', userId);
 
   final doctorsBuilder = isHeadDoctor
       ? supabase
           .from('doctors')
-          .select('id, full_name, role, approval_status, created_at')
+          .select('id, full_name, role, approval_status')
       : null;
 
   final recentVisitsBuilder = isHeadDoctor
@@ -351,11 +351,11 @@ final staffPerformanceProvider =
     final results = await Future.wait<dynamic>([
       supabase.retry(() => supabase
           .from('doctors')
-          .select('id, full_name, role, approval_status, created_at')),
-      supabase.retry(() => supabase.from('visits').select('id, doctor_id, created_by_id')),
-      supabase.retry(() => supabase.from('patients').select('id, created_by_id')),
-      supabase.retry(() => supabase.from('dr_visits').select('id, doctor_id')),
-      supabase.retry(() => supabase.from('followup_tasks').select('id, assigned_to, status')),
+          .select('id, full_name, role, approval_status')),
+      supabase.retry(() => supabase.from('visits').select('doctor_id, created_by_id')),
+      supabase.retry(() => supabase.from('patients').select('created_by_id')),
+      supabase.retry(() => supabase.from('dr_visits').select('doctor_id')),
+      supabase.retry(() => supabase.from('followup_tasks').select('assigned_to, status')),
     ]);
 
     final doctors = List<Map<String, dynamic>>.from(results[0] as List)

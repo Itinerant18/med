@@ -24,7 +24,7 @@ class DocumentNotifier
   Future<List<PatientDocument>> _fetchDocuments(String patientId) async {
     final response = await _supabase.retry(() => _supabase
         .from('patient_documents')
-        .select('public_url, storage_path, created_at')
+        .select('public_url, storage_path')
         .eq('patient_id', patientId)
         .order('created_at', ascending: false));
 

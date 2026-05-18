@@ -182,7 +182,36 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
     try {
       final response = await _supabase.retry(() => _supabase
           .from('followup_tasks')
-          .select('*, patients(full_name)')
+          .select('''
+            id,
+            patient_id,
+            dr_visit_id,
+            assigned_to,
+            created_by,
+            due_date,
+            title,
+            notes,
+            priority,
+            target_ext_doctor_name,
+            target_ext_doctor_hospital,
+            target_ext_doctor_specialization,
+            target_ext_doctor_phone,
+            visit_instructions,
+            scheduled_visit_date,
+            is_external_doctor,
+            ext_doctor_name,
+            ext_doctor_specialization,
+            ext_doctor_hospital,
+            ext_doctor_phone,
+            completion_notes,
+            reviewed_by,
+            reviewed_at,
+            doctor_review_notes,
+            status,
+            completed_at,
+            created_at,
+            patients(full_name)
+          ''')
           .eq('assigned_to', user.id)
           .order('due_date', ascending: true)
           .order('created_at', ascending: false));
@@ -345,7 +374,36 @@ final doctorAssignedFollowupsProvider =
   try {
     final response = await supabase.retry(() => supabase
         .from('followup_tasks')
-        .select('*, patients(full_name)')
+        .select('''
+          id,
+          patient_id,
+          dr_visit_id,
+          assigned_to,
+          created_by,
+          due_date,
+          title,
+          notes,
+          priority,
+          target_ext_doctor_name,
+          target_ext_doctor_hospital,
+          target_ext_doctor_specialization,
+          target_ext_doctor_phone,
+          visit_instructions,
+          scheduled_visit_date,
+          is_external_doctor,
+          ext_doctor_name,
+          ext_doctor_specialization,
+          ext_doctor_hospital,
+          ext_doctor_phone,
+          completion_notes,
+          reviewed_by,
+          reviewed_at,
+          doctor_review_notes,
+          status,
+          completed_at,
+          created_at,
+          patients(full_name)
+        ''')
         .eq('created_by', user.id)
         .order('due_date', ascending: true)
         .order('created_at', ascending: false));
@@ -380,7 +438,36 @@ final followupTaskByIdProvider =
   try {
     final response = await supabase.retry(() => supabase
         .from('followup_tasks')
-        .select('*, patients(full_name)')
+        .select('''
+          id,
+          patient_id,
+          dr_visit_id,
+          assigned_to,
+          created_by,
+          due_date,
+          title,
+          notes,
+          priority,
+          target_ext_doctor_name,
+          target_ext_doctor_hospital,
+          target_ext_doctor_specialization,
+          target_ext_doctor_phone,
+          visit_instructions,
+          scheduled_visit_date,
+          is_external_doctor,
+          ext_doctor_name,
+          ext_doctor_specialization,
+          ext_doctor_hospital,
+          ext_doctor_phone,
+          completion_notes,
+          reviewed_by,
+          reviewed_at,
+          doctor_review_notes,
+          status,
+          completed_at,
+          created_at,
+          patients(full_name)
+        ''')
         .eq('id', id)
         .maybeSingle());
     if (response == null) return null;

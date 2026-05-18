@@ -74,7 +74,9 @@ class PatientNotifier extends AsyncNotifier<void> {
         finalData['last_updated_by'] = _doctorName;
         finalData['last_updated_by_id'] = userId;
         finalData['last_updated_at'] = DateTime.now().toIso8601String();
-        finalData['service_status'] = 'pending';
+        // service_status is computed by the form based on investigation statuses;
+        // only fall back to 'pending' if the form did not supply one.
+        finalData['service_status'] ??= 'pending';
         finalData['created_at'] = DateTime.now().toIso8601String();
 
         final response = await _supabase.retry(() => _supabase

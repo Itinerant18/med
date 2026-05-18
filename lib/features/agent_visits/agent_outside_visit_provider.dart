@@ -30,7 +30,31 @@ class AgentOutsideVisitsNotifier
     try {
       final response = await _supabase.retry(() => _supabase
           .from('agent_outside_visits')
-          .select('*, patients(full_name)')
+          .select('''
+            id,
+            patient_id,
+            followup_task_id,
+            agent_id,
+            ext_doctor_name,
+            ext_doctor_specialization,
+            ext_doctor_hospital,
+            ext_doctor_phone,
+            visit_date,
+            chief_complaint,
+            diagnosis,
+            prescriptions,
+            visit_notes,
+            next_followup_date,
+            meet_dr_name,
+            meet_place,
+            meet_dr_type,
+            meet_times_visited,
+            status,
+            reviewed_by,
+            reviewed_at,
+            created_at,
+            patients(full_name)
+          ''')
           .eq('agent_id', user.id)
           .order('visit_date', ascending: false)
           .order('created_at', ascending: false));
@@ -195,7 +219,31 @@ final agentOutsideVisitForTaskProvider = FutureProvider.autoDispose
   try {
     final response = await supabase.retry(() => supabase
         .from('agent_outside_visits')
-        .select('*, patients(full_name)')
+        .select('''
+          id,
+          patient_id,
+          followup_task_id,
+          agent_id,
+          ext_doctor_name,
+          ext_doctor_specialization,
+          ext_doctor_hospital,
+          ext_doctor_phone,
+          visit_date,
+          chief_complaint,
+          diagnosis,
+          prescriptions,
+          visit_notes,
+          next_followup_date,
+          meet_dr_name,
+          meet_place,
+          meet_dr_type,
+          meet_times_visited,
+          status,
+          reviewed_by,
+          reviewed_at,
+          created_at,
+          patients(full_name)
+        ''')
         .eq('followup_task_id', taskId)
         .maybeSingle());
     if (response == null) return null;
@@ -209,10 +257,34 @@ final agentOutsideVisitForTaskProvider = FutureProvider.autoDispose
 final allAgentOutsideVisitsProvider =
     FutureProvider.autoDispose<List<AgentOutsideVisit>>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
-  try {
-    final response = await supabase.retry(() => supabase
-        .from('agent_outside_visits')
-        .select('*, patients(full_name)')
+    try {
+      final response = await supabase.retry(() => supabase
+          .from('agent_outside_visits')
+          .select('''
+            id,
+            patient_id,
+            followup_task_id,
+            agent_id,
+            ext_doctor_name,
+            ext_doctor_specialization,
+            ext_doctor_hospital,
+            ext_doctor_phone,
+            visit_date,
+            chief_complaint,
+            diagnosis,
+            prescriptions,
+            visit_notes,
+            next_followup_date,
+            meet_dr_name,
+            meet_place,
+            meet_dr_type,
+            meet_times_visited,
+            status,
+            reviewed_by,
+            reviewed_at,
+            created_at,
+            patients(full_name)
+          ''')
         .order('visit_date', ascending: false));
 
     return (response as List)
@@ -234,7 +306,31 @@ final agentOutsideVisitByIdProvider =
   try {
     final response = await supabase.retry(() => supabase
         .from('agent_outside_visits')
-        .select('*, patients(full_name)')
+        .select('''
+          id,
+          patient_id,
+          followup_task_id,
+          agent_id,
+          ext_doctor_name,
+          ext_doctor_specialization,
+          ext_doctor_hospital,
+          ext_doctor_phone,
+          visit_date,
+          chief_complaint,
+          diagnosis,
+          prescriptions,
+          visit_notes,
+          next_followup_date,
+          meet_dr_name,
+          meet_place,
+          meet_dr_type,
+          meet_times_visited,
+          status,
+          reviewed_by,
+          reviewed_at,
+          created_at,
+          patients(full_name)
+        ''')
         .eq('id', visitId)
         .maybeSingle());
     if (response == null) return null;

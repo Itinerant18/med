@@ -53,7 +53,33 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
 
     try {
       var query = supabase.from('dr_visits').select('''
-        *,
+        id,
+        patient_id,
+        doctor_id,
+        assigned_agent_id,
+        visit_notes,
+        diagnosis,
+        visit_date,
+        followup_date,
+        followup_notes,
+        followup_status,
+        status,
+        created_by_id,
+        last_updated_by,
+        last_updated_at,
+        created_at,
+        is_external_doctor,
+        ext_doctor_name,
+        ext_doctor_specialization,
+        ext_doctor_hospital,
+        ext_doctor_phone,
+        lead_patient_name,
+        lead_patient_phone,
+        lead_patient_address,
+        lead_notes,
+        lead_status,
+        converted_patient_id,
+        contact_attempts,
         patients:patients!dr_visits_patient_id_fkey(full_name)
       ''');
 
