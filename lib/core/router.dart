@@ -26,6 +26,7 @@ import 'package:mediflow/features/profile/assistant_profile_screen.dart';
 import 'package:mediflow/features/profile/doctor_profile_screen.dart';
 import 'package:mediflow/features/profile/notification_preferences_screen.dart';
 import 'package:mediflow/features/staff/staff_management_screen.dart';
+import 'package:mediflow/models/visit_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -147,7 +148,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/dr-visits/new',
-        builder: (context, state) => const DrVisitForm(),
+        builder: (context, state) {
+          final extra = state.extra;
+          final existingVisit = extra is DrVisit ? extra : null;
+          return DrVisitForm(existingVisit: existingVisit);
+        },
       ),
       GoRoute(
         path: '/dr-visits/:visitId',

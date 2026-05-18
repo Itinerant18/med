@@ -197,7 +197,7 @@ class NeuCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppTheme.cardBg,
         borderRadius: asymmetricIndex == null
-            ? BorderRadius.circular(borderRadius ?? 24)
+            ? BorderRadius.circular(borderRadius ?? 32)
             : OrganicTokens.radiusOrganic[
                 asymmetricIndex! % OrganicTokens.radiusOrganic.length],
         border: Border.all(color: AppTheme.neuShadowLight, width: 1),

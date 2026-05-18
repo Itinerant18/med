@@ -24,7 +24,7 @@ class DashboardStatCarousel extends StatelessWidget {
     this.cardWidth = 132,
     this.cardHeight = 100,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    this.borderRadius = 16,
+    this.borderRadius = 32,
     this.useNeuCard = false,
   });
 

@@ -12,6 +12,7 @@ import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
+import 'package:mediflow/features/patients/patient_permissions.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:mediflow/shared/widgets/dashboard_stat_carousel.dart';
 import 'package:mediflow/shared/widgets/service_status_badge.dart';
@@ -57,6 +58,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 data: (data) => SliverList(
                   delegate: SliverChildListDelegate([
+                    _buildHeroPanel(context, name, role, isAdmin, ref, authState),
                     _buildStatCards(data, isAdmin),
                     if (!isAdmin && data.assignedVisits.isNotEmpty) ...[
                       _buildSectionHeader('Assigned to me today'),
@@ -82,6 +84,190 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroPanel(
+    BuildContext context,
+    String name,
+    UserRole role,
+    bool isAdmin,
+    WidgetRef ref,
+    AuthUserState? authState,
+  ) {
+    final displayName = role.isAdmin ? 'Dr. $name' : name;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: NeuCard(
+        borderRadius: 32,
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.primaryTeal.withValues(alpha: 0.12),
+                AppTheme.cardBg,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Welcome back',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            displayName,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textColor,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isAdmin ? 'Clinical oversight mode' : 'Clinical care mode',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildLiveBadge(),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryTeal.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            role.isAdmin ? 'Doctor' : 'Staff',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryTeal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _QuickMetricPill(
+                        label: 'Today\'s Visits',
+                        value: isAdmin
+                            ? ref
+                                    .read(dashboardProvider)
+                                    .valueOrNull
+                                    ?.stats
+                                    .todayVisitsCount
+                                    .toString() ??
+                                '--'
+                            : ref
+                                    .read(dashboardProvider)
+                                    .valueOrNull
+                                    ?.assignedVisits
+                                    .length
+                                    .toString() ??
+                                '--',
+                        icon: AppIcons.calendar_today_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _QuickMetricPill(
+                        label: 'Pending Labs',
+                        value: ref
+                                .read(dashboardProvider)
+                                .valueOrNull
+                                ?.stats
+                                .pendingLabsCount
+                                .toString() ??
+                            '--',
+                        icon: AppIcons.biotech_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (PatientPermissions.canCreatePatient(authState)) ...[
+                      Expanded(
+                        child: NeuButton(
+                          onPressed: () => context.push('/patients/new'),
+                          borderRadius: 32,
+                          child: const Text(
+                            'New Patient',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryForeground,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryTeal.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Soft surfaces · Real-time care',
+                            style: TextStyle(
+                              color: AppTheme.primaryTeal,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -224,45 +410,45 @@ class DashboardScreen extends ConsumerWidget {
               color: AppTheme.warningColor,
             ),
             DashboardStatItem(
-              label: 'OT Scheduled',
-              value: data.stats.upcomingOTCount.toString(),
-              icon: AppIcons.medical_services_rounded,
-              color: AppTheme.errorColor,
-            ),
-            DashboardStatItem(
               label: 'High Priority',
               value: data.stats.highPriorityCount.toString(),
               icon: AppIcons.priority_high_rounded,
               color: AppTheme.analyticsAccent,
             ),
+            DashboardStatItem(
+              label: 'OT Scheduled',
+              value: data.stats.upcomingOTCount.toString(),
+              icon: AppIcons.medical_services_rounded,
+              color: AppTheme.errorColor,
+            ),
           ]
         : <DashboardStatItem>[
             DashboardStatItem(
-              label: 'My Patients',
-              value: '${data.todayVisits.length}',
-              icon: AppIcons.people_rounded,
+              label: 'Today\'s Visits',
+              value: '${data.assignedVisits.length}',
+              icon: AppIcons.calendar_today_rounded,
               color: AppTheme.primaryTeal,
+            ),
+            DashboardStatItem(
+              label: 'Pending Labs',
+              value: '${data.stats.pendingLabsCount}',
+              icon: AppIcons.biotech_rounded,
+              color: AppTheme.warningColor,
             ),
             DashboardStatItem(
               label: 'Follow-ups Due',
               value: '${data.followupTasks.length}',
               icon: AppIcons.add_task_rounded,
-              color: AppTheme.warningColor,
-            ),
-            DashboardStatItem(
-              label: 'Visits Today',
-              value: '${data.assignedVisits.length}',
-              icon: AppIcons.health_and_safety_rounded,
               color: AppTheme.doctorAccent,
             ),
           ];
 
     return DashboardStatCarousel(
       items: items,
-      height: 114,
-      cardWidth: 132,
-      cardHeight: 100,
-      borderRadius: 16,
+      height: 124,
+      cardWidth: 148,
+      cardHeight: 108,
+      borderRadius: 32,
       useNeuCard: false,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
@@ -418,6 +604,54 @@ class DashboardScreen extends ConsumerWidget {
     if (h < 12) return 'Good morning,';
     if (h < 17) return 'Good afternoon,';
     return 'Good evening,';
+  }
+}
+
+class _QuickMetricPill extends StatelessWidget {
+  const _QuickMetricPill({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBg,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppTheme.neuShadowLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppTheme.primaryTeal),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

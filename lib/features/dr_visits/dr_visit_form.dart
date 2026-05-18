@@ -8,11 +8,14 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/dr_visits/agents_provider.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
+import 'package:mediflow/models/visit_model.dart';
 
 import 'package:mediflow/shared/widgets/patient_picker_bottom_sheet.dart';
 
 class DrVisitForm extends ConsumerStatefulWidget {
-  const DrVisitForm({super.key});
+  const DrVisitForm({super.key, this.existingVisit});
+
+  final DrVisit? existingVisit;
 
   @override
   ConsumerState<DrVisitForm> createState() => _DrVisitFormState();
@@ -39,6 +42,30 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   final _leadAddrCtrl = TextEditingController();
   final _leadNotesCtrl = TextEditingController();
   DateTime? _followupDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final visit = widget.existingVisit;
+    if (visit == null) return;
+
+    _isExternal = visit.isExternalDoctor;
+    _selectedPatientId = visit.patientId;
+    _selectedPatientName = visit.patientName;
+    _selectedAgentId = visit.assignedAgentId;
+    _visitNotesController.text = visit.visitNotes ?? '';
+    _diagnosisController.text = visit.diagnosis ?? '';
+    _followupNotesController.text = visit.followupNotes ?? '';
+    _extNameCtrl.text = visit.extDoctorName ?? '';
+    _extSpecCtrl.text = visit.extDoctorSpecialization ?? '';
+    _extHospCtrl.text = visit.extDoctorHospital ?? '';
+    _extPhoneCtrl.text = visit.extDoctorPhone ?? '';
+    _leadNameCtrl.text = visit.leadPatientName ?? '';
+    _leadPhoneCtrl.text = visit.leadPatientPhone ?? '';
+    _leadAddrCtrl.text = visit.leadPatientAddress ?? '';
+    _leadNotesCtrl.text = visit.leadNotes ?? '';
+    _followupDate = visit.followupDate;
+  }
 
   void _onReferralLeadChanged(bool value) {
     setState(() {
@@ -79,7 +106,8 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   }
 
   Future<void> _submit() async {
-    if (!_isExternal && _selectedPatientId == null) {
+    final effectivePatientId = _selectedPatientId ?? widget.existingVisit?.patientId;
+    if (!_isExternal && effectivePatientId == null) {
       AppSnackbar.showError(context, 'Please select a patient');
       return;
     }
@@ -88,25 +116,52 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(drVisitsProvider.notifier).createVisit(
-            patientId: _selectedPatientId,
-            assignedAgentId: _selectedAgentId,
-            isExternal: _isExternal,
-            extDoctorName: _extNameCtrl.text.trim(),
-            extDoctorSpecialization: _extSpecCtrl.text.trim(),
-            extDoctorHospital: _extHospCtrl.text.trim(),
-            extDoctorPhone: _extPhoneCtrl.text.trim(),
-            leadPatientName: _leadNameCtrl.text.trim(),
-            leadPatientPhone: _leadPhoneCtrl.text.trim(),
-            leadPatientAddress: _leadAddrCtrl.text.trim(),
-            leadNotes: _leadNotesCtrl.text.trim(),
-            visitNotes: _visitNotesController.text.trim(),
-            diagnosis: _diagnosisController.text.trim(),
-            followupDate: _followupDate,
-            followupNotes: _followupNotesController.text.trim(),
-          );
+      final notifier = ref.read(drVisitsProvider.notifier);
+      if (widget.existingVisit == null) {
+        await notifier.createVisit(
+          patientId: effectivePatientId,
+          assignedAgentId: _selectedAgentId,
+          isExternal: _isExternal,
+          extDoctorName: _extNameCtrl.text.trim(),
+          extDoctorSpecialization: _extSpecCtrl.text.trim(),
+          extDoctorHospital: _extHospCtrl.text.trim(),
+          extDoctorPhone: _extPhoneCtrl.text.trim(),
+          leadPatientName: _leadNameCtrl.text.trim(),
+          leadPatientPhone: _leadPhoneCtrl.text.trim(),
+          leadPatientAddress: _leadAddrCtrl.text.trim(),
+          leadNotes: _leadNotesCtrl.text.trim(),
+          visitNotes: _visitNotesController.text.trim(),
+          diagnosis: _diagnosisController.text.trim(),
+          followupDate: _followupDate,
+          followupNotes: _followupNotesController.text.trim(),
+        );
+      } else {
+        await notifier.updateVisit(
+          visitId: widget.existingVisit!.id,
+          patientId: effectivePatientId,
+          assignedAgentId: _selectedAgentId,
+          isExternal: _isExternal,
+          extDoctorName: _extNameCtrl.text.trim(),
+          extDoctorSpecialization: _extSpecCtrl.text.trim(),
+          extDoctorHospital: _extHospCtrl.text.trim(),
+          extDoctorPhone: _extPhoneCtrl.text.trim(),
+          leadPatientName: _leadNameCtrl.text.trim(),
+          leadPatientPhone: _leadPhoneCtrl.text.trim(),
+          leadPatientAddress: _leadAddrCtrl.text.trim(),
+          leadNotes: _leadNotesCtrl.text.trim(),
+          visitNotes: _visitNotesController.text.trim(),
+          diagnosis: _diagnosisController.text.trim(),
+          followupDate: _followupDate,
+          followupNotes: _followupNotesController.text.trim(),
+        );
+      }
       if (mounted) {
-        AppSnackbar.showSuccess(context, 'Visit recorded successfully');
+        AppSnackbar.showSuccess(
+          context,
+          widget.existingVisit == null
+              ? 'Visit recorded successfully'
+              : 'Visit updated successfully',
+        );
         Navigator.pop(context);
       }
     } catch (e) {
@@ -139,12 +194,15 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
   @override
   Widget build(BuildContext context) {
     final assistantsAsync = ref.watch(agentsProvider);
+    final isEditing = widget.existingVisit != null;
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('New Dr Visit',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isEditing ? 'Edit Dr Visit' : 'New Dr Visit',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -372,7 +430,8 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
-                    initialDate: DateTime.now().add(const Duration(days: 7)),
+                    initialDate:
+                        _followupDate ?? DateTime.now().add(const Duration(days: 7)),
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
@@ -425,11 +484,13 @@ class _DrVisitFormState extends ConsumerState<DrVisitForm> {
                 child: NeuButton(
                   onPressed: _isLoading ? null : _submit,
                   isLoading: _isLoading,
-                  child: const Text('SAVE VISIT',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1)),
+                  child: Text(
+                    isEditing ? 'UPDATE VISIT' : 'SAVE VISIT',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1),
+                  ),
                 ),
               ),
               const SizedBox(height: 40),

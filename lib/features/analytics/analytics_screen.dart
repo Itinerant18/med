@@ -193,7 +193,7 @@ class _AnalyticsLoading extends StatelessWidget {
             itemCount: 6,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (_, __) =>
-                const NeuShimmer(width: 130, height: 100, borderRadius: 18),
+                const NeuShimmer(width: 130, height: 100, borderRadius: 32),
           ),
         ),
         const SizedBox(height: 20),
@@ -215,7 +215,7 @@ class _AnalyticsLoading extends StatelessWidget {
           title: 'Last 30 Days Activity',
           icon: AppIcons.show_chart_rounded,
         ),
-        const NeuShimmer(width: double.infinity, height: 200, borderRadius: 18),
+        const NeuShimmer(width: double.infinity, height: 200, borderRadius: 32),
         if (isHeadDoctor) ...[
           const SizedBox(height: 20),
           const SectionTitle(
@@ -225,7 +225,7 @@ class _AnalyticsLoading extends StatelessWidget {
           const NeuShimmer(
             width: double.infinity,
             height: 190,
-            borderRadius: 18,
+            borderRadius: 32,
           ),
           const SizedBox(height: 20),
           const SectionTitle(
@@ -235,7 +235,7 @@ class _AnalyticsLoading extends StatelessWidget {
           const NeuShimmer(
             width: double.infinity,
             height: 260,
-            borderRadius: 18,
+            borderRadius: 32,
           ),
         ],
       ],
@@ -343,7 +343,7 @@ class _OverviewRow extends StatelessWidget {
       height: 108,
       cardWidth: 130,
       cardHeight: 100,
-      borderRadius: 18,
+      borderRadius: 32,
       useNeuCard: true,
       padding: EdgeInsets.zero,
     );
@@ -401,7 +401,7 @@ class _TypeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NeuCard(
-      borderRadius: 18,
+      borderRadius: 32,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -449,7 +449,7 @@ class _ActivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NeuCard(
-      borderRadius: 18,
+      borderRadius: 32,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: SizedBox(
         height: 200,
@@ -478,7 +478,7 @@ class _SchemeBreakdown extends StatelessWidget {
     ];
 
     return NeuCard(
-      borderRadius: 18,
+      borderRadius: 32,
       child: Column(
         children: rows.map((row) {
           final count = summary.patientsByScheme[row.$1] ?? 0;
@@ -544,16 +544,16 @@ class _StaffPerformanceSection extends ConsumerWidget {
     final descending = ref.watch(_staffSortDescendingProvider);
     return ref.watch(staffPerformanceProvider).when(
           loading: () => const NeuCard(
-            borderRadius: 18,
+            borderRadius: 32,
             child: SizedBox(
-              height: 220,
+              height: 240,
               child: Center(
-                child: NeuShimmer(width: double.infinity, height: 180),
+                child: NeuShimmer(width: double.infinity, height: 200),
               ),
             ),
           ),
           error: (error, _) => NeuCard(
-            borderRadius: 18,
+            borderRadius: 32,
             child: Column(
               children: [
                 const Icon(
@@ -574,38 +574,145 @@ class _StaffPerformanceSection extends ConsumerWidget {
             final sortedRows = [...rows]..sort((a, b) => descending
                 ? b.visitsCount.compareTo(a.visitsCount)
                 : a.visitsCount.compareTo(b.visitsCount));
+            final maxVisits = sortedRows.isEmpty
+                ? 1
+                : sortedRows.map((e) => e.visitsCount).fold<int>(0, math.max);
 
             return NeuCard(
-              borderRadius: 18,
-              padding: const EdgeInsets.all(0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 720),
-                  child: Column(
+              borderRadius: 32,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      _TableHeader(
-                        descending: descending,
-                        onToggleSort: () => ref
+                      const Expanded(
+                        child: Text(
+                          'Assistant performance table',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textColor,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => ref
                             .read(_staffSortDescendingProvider.notifier)
                             .state = !descending,
-                      ),
-                      SizedBox(
-                        height: math.min(
-                          math.max(sortedRows.length * 52.0, 52.0),
-                          320.0,
+                        icon: Icon(
+                          descending
+                              ? AppIcons.arrow_downward_rounded
+                              : AppIcons.arrow_upward_rounded,
+                          size: 16,
+                          color: AppTheme.primaryTeal,
                         ),
-                        child: ListView.builder(
-                          itemCount: sortedRows.length,
-                          itemBuilder: (context, index) => _TableRow(
-                            item: sortedRows[index],
-                            useAlt: index.isOdd,
+                        label: Text(
+                          descending ? 'Top visits' : 'Lowest first',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryTeal,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 860),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBg,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppTheme.neuShadowLight),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: DataTable(
+                            showCheckboxColumn: false,
+                            columnSpacing: 16,
+                            horizontalMargin: 14,
+                            dataRowMinHeight: 68,
+                            dataRowMaxHeight: 84,
+                            headingRowHeight: 48,
+                            headingTextStyle: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textMuted,
+                              letterSpacing: 0.8,
+                            ),
+                            dataTextStyle: const TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.textColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            headingRowColor: const WidgetStatePropertyAll(
+                              AppTheme.bgColor,
+                            ),
+                            columns: const [
+                              DataColumn(label: Text('Assistant')),
+                              DataColumn(label: Text('Role')),
+                              DataColumn(label: Text('Patients')),
+                              DataColumn(label: Text('Visits')),
+                              DataColumn(label: Text('Follow-ups')),
+                              DataColumn(label: Text('Performance')),
+                            ],
+                            rows: sortedRows.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final item = entry.value;
+                              final visitShare = maxVisits == 0
+                                  ? 0.0
+                                  : item.visitsCount / maxVisits;
+                              final isHighPerformer =
+                                  item.visitsCount >= maxVisits * 0.8;
+
+                              return DataRow(
+                                color: WidgetStatePropertyAll<Color>(
+                                  index.isEven
+                                      ? AppTheme.bgColor
+                                      : AppTheme.cardBg,
+                                ),
+                                cells: [
+                                  DataCell(
+                                    _StaffNameCell(item: item),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      item.role.replaceAll('_', ' '),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(item.patientsCount.toString()),
+                                  ),
+                                  DataCell(
+                                    Text(item.visitsCount.toString()),
+                                  ),
+                                  DataCell(
+                                    Text(item.followupsCompleted.toString()),
+                                  ),
+                                  DataCell(
+                                    _StaffPerformanceCell(
+                                      visitShare: visitShare,
+                                      isHighPerformer: isHighPerformer,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -613,131 +720,122 @@ class _StaffPerformanceSection extends ConsumerWidget {
   }
 }
 
-class _TableHeader extends StatelessWidget {
-  const _TableHeader({
-    required this.descending,
-    required this.onToggleSort,
-  });
+class _StaffNameCell extends StatelessWidget {
+  const _StaffNameCell({required this.item});
 
-  final bool descending;
-  final VoidCallback onToggleSort;
+  final StaffPerformance item;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.35),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      child: Row(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: AppTheme.primaryTeal.withValues(alpha: 0.12),
+          child: Text(
+            _initials(item.doctorName),
+            style: const TextStyle(
+              color: AppTheme.primaryTeal,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 180),
+          child: Text(
+            item.doctorName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _initials(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'A';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+}
+
+class _StaffPerformanceCell extends StatelessWidget {
+  const _StaffPerformanceCell({
+    required this.visitShare,
+    required this.isHighPerformer,
+  });
+
+  final double visitShare;
+  final bool isHighPerformer;
+
+  @override
+  Widget build(BuildContext context) {
+    final percentage = (visitShare * 100).clamp(0, 100).toStringAsFixed(0);
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 160),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _HeaderCell('Name', 170),
-          const _HeaderCell('Role', 90),
-          const _HeaderCell('Patients', 80),
-          SizedBox(
-            width: 80,
-            child: InkWell(
-              onTap: onToggleSort,
-              child: Row(
-                children: [
-                  const Text(
-                    'Visits',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    descending
-                        ? AppIcons.arrow_downward_rounded
-                        : AppIcons.arrow_upward_rounded,
-                    size: 14,
-                    color: AppTheme.primaryTeal,
-                  ),
-                ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: visitShare,
+              backgroundColor: AppTheme.neutralLight,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isHighPerformer
+                    ? AppTheme.successColor
+                    : AppTheme.primaryTeal,
               ),
             ),
           ),
-          const _HeaderCell('Dr Visits', 90),
-          const _HeaderCell('Followups Done', 110),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Visits share $percentage%',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isHighPerformer)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'High Performer',
+                    style: TextStyle(
+                      color: AppTheme.successColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeaderCell extends StatelessWidget {
-  const _HeaderCell(this.label, this.width);
-
-  final String label;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.textMuted,
-        ),
-      ),
-    );
-  }
-}
-
-class _TableRow extends StatelessWidget {
-  const _TableRow({
-    required this.item,
-    required this.useAlt,
-  });
-
-  final StaffPerformance item;
-  final bool useAlt;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      color: useAlt ? Colors.white.withValues(alpha: 0.5) : AppTheme.bgColor,
-      child: Row(
-        children: [
-          _BodyCell(item.doctorName, 170, bold: true),
-          _BodyCell(item.role.replaceAll('_', ' '), 90),
-          _BodyCell('${item.patientsCount}', 80),
-          _BodyCell('${item.visitsCount}', 80),
-          _BodyCell('${item.drVisitsCount}', 90),
-          _BodyCell('${item.followupsCompleted}', 110),
-        ],
-      ),
-    );
-  }
-}
-
-class _BodyCell extends StatelessWidget {
-  const _BodyCell(this.label, this.width, {this.bold = false});
-
-  final String label;
-  final double width;
-  final bool bold;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: Text(
-        label,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-          color: AppTheme.textColor,
-        ),
       ),
     );
   }

@@ -9,20 +9,19 @@ MediFlow is a role-based healthcare management application built with Flutter, d
 ## 📋 Table of Contents
 
 - [Overview](#overview)
-- [Key Features](#key-features)
-- [Architecture](#architecture)
+- [Project Overview (Technical)](#project-overview-technical)
+- [Architecture & Data Flow](#architecture--data-flow)
 - [Role-Based Access Control](#role-based-access-control)
 - [Tech Stack](#tech-stack)
+- [Design Patterns](#design-patterns)
+- [File-by-File Reference](#file-by-file-reference)
+- [Risks, Bugs & Tech Debt](#risks-bugs--tech-debt)
 - [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
 - [Development Guidelines](#development-guidelines)
-- [Design System](#design-system)
 - [Database & Backend](#database--backend)
 - [Security](#security)
 - [Testing](#testing)
 - [Deployment](#deployment)
-- [Contributing](#contributing)
-- [Support](#support)
 
 ---
 
@@ -38,72 +37,101 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 
 ---
 
-## ✨ Key Features
+## 📊 Project Overview (Technical)
 
-### 🔐 Multi-Role System
-
-- **Three distinct user roles** with clearly defined permissions
-- **Pending approval workflow** for all new registrations
-- **Role-based access control (RBAC)** enforced at every level
-
-### 👥 Head Doctor (Administrator)
-
-- Approval dashboard for new Doctor and Agent registrations
-- Real-time registration alerts
-- User management console (activate/deactivate accounts)
-- Full access to Doctor features
-- Comprehensive audit logging
-
-### 🩺 Doctor (Clinical Professional)
-
-- Unified dashboard for patient data access
-- Full patient database search and management
-- Medical record management with clinical notes
-- Follow-up task assignment to Agents
-- Patient record finalization capabilities
-
-### 🧑‍💼 Agent (Data Entry)
-
-- Private patient view (only their uploaded records)
-- Structured patient data entry portal
-- Follow-up task inbox with status management
-- Task completion tracking (In Progress / Completed)
-- Real-time notification system
-
-### 🌍 Platform-Wide Capabilities
-
-- **Role-Based Access Control**: Every user sees only permitted data
-- **Patient Ownership Tracking**: Permanent attribution to uploading Agent
-- **Smart Notification Routing**: Alerts delivered to correct recipients
-- **Real-Time Updates**: Live task status and notifications
-- **Offline Support**: Connectivity awareness and offline mode
-- **Push Notifications**: Firebase Cloud Messaging integration
+| Aspect | Detail |
+|---|---|
+| **Domain** | Clinical workflow management (patients, visits, follow-ups, staff). |
+| **Frontend** | Flutter (mobile + desktop + web) using Riverpod for state, GoRouter for navigation, a custom “Serene Clinical” UI theme. |
+| **Backend** | Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions). |
+| **Push** | Firebase Cloud Messaging (FCM) ↔ Supabase Edge Functions ↔ Flutter (local notifications). |
+| **Auth** | Supabase Auth with email/password, phone-OTP, and Google Sign-In; role-based access (`assistant`, `doctor`, `head_doctor`). |
+| **Key Packages** | `supabase_flutter`, `flutter_riverpod`, `go_router`, `firebase_messaging`, `flutter_local_notifications`, `google_sign_in`, `intl`, `cached_network_image`, `fl_chart`, `font_awesome_flutter`, `shared_preferences`. |
+| **Configuration** | Runtime secrets loaded from `.env.local` via `flutter_dotenv`; must stay out of Git (`.gitignore` contains `*.env*`). |
+| **Testing** | Only a placeholder widget test (`test/widget_test.dart`). |
+| **Generated Artifacts** | Android/ios/web build folders, Gradle/Gradle-wrapper, Xcode project files – excluded from source analysis. |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Data Flow
 
-### Frontend
+### Architecture Diagram
 
-- **Framework**: Flutter (Dart)
-- **State Management**: Riverpod
-- **Routing**: GoRouter for navigation
-- **UI Components**: Custom skeuomorphic design system
+```
++-------------------+       Riverpod (providers)        +-------------------+
+|   UI Layer        | <------------------------------>  |   Provider Layer  |
+| (Screens/Widgets) |   (ref.watch, ref.read, notify)   | (AsyncNotifier,   |
++--------+----------+                                   |  StateNotifier)   |
+         |                                              +--------+----------+
+         | (Triggers actions: CRUD, Auth)                        |
+         v                                                       |
++-------------------+      Supabase Client (Dart)                |
+|   SupabaseClient  | <------------------------------------------+
+|   (Singleton)     |   (Retry Extension, Auth Session Mgmt)
++--------+----------+
+         |
+         | (REST / RPC / Realtime Subscriptions)
+         v
++-------------------+    Edge Functions (Deno/TS)    +---------------------------+
+|   Supabase DB     | <--------------------------->  |  notify-status-change.ts  |
+|   (PostgreSQL)    |   (Triggers / HTTP calls)      |  stale-patient-reminder.ts|
+| - doctors         |                                +-------------+-------------+
+| - patients        |                                              |
+| - visits          |   (Sends Push Payload via HTTP)              |
++-------------------+                                              v
+                                                     +---------------------------+
+                                                     |   Firebase Cloud Msg (FCM)|
+                                                     +-------------+-------------+
+                                                                   |
+                                                                   v
+                                                     +---------------------------+
+                                                     |   FcmService (Dart)       |
+                                                     | - Foreground handler      |
+                                                     | - Token sync              |
+                                                     | - Quiet hours logic       |
+                                                     +-------------+-------------+
+                                                                   |
+                                                                   v
+                                                     +---------------------------+
+                                                     |   Local Notification Svc  |
+                                                     | (flutter_local_notif)     |
+                                                     +-------------+-------------+
+                                                                   |
+                                                                   v (Tap)
+                                                     +---------------------------+
+                                                     |   Navigation Service      |
+                                                     | (appNavigatorKey -> Route)|
+                                                     +---------------------------+
+```
 
-### Backend & Services
+### Typical User Flow: Patient Status Update
 
-- **Authentication**: Firebase Auth + Supabase
-- **Database**: Supabase PostgreSQL
-- **Cloud Functions**: Supabase Edge Functions
-- **Messaging**: Firebase Cloud Messaging (FCM)
-- **Notifications**: flutter_local_notifications
+1. **UI Action**: Doctor taps "Discharge" on `patient_detail_screen.dart`.
+2. **Provider Call**: `patient_provider.dart` calls `updatePatientStatus(patientId, 'Discharged')`.
+3. **Supabase Update**: SupabaseClient executes `UPDATE patients SET service_status = 'Discharged'`.
+4. **DB Trigger**: Supabase Edge Function `notify-status-change` is triggered (via webhook or polling).
+5. **Edge Logic**: Function queries `doctors` table for relevant recipients (e.g., Head Doctor, assigned agent).
+6. **FCM Dispatch**: Function calls `send-fcm-notification` with payload `{ type: 'status_change', patientId: '...' }`.
+7. **Device Receipt**:
+   - **Background**: System tray notification appears.
+   - **Foreground**: `FcmService._onForegroundMessage` receives message, checks quiet hours, shows local notification via `NotificationService`.
+8. **User Tap**: User taps notification.
+9. **Navigation**: `FcmService._onMessageOpenedApp` extracts `patientId` and calls `NavigationService.openPatientDetailFromNotification`.
+10. **Route Change**: GoRouter pushes `/patients/:id/detail`, showing updated status.
 
-### Key Architectural Patterns
+---
 
-- **Provider Pattern**: Riverpod for state management
-- **Repository Pattern**: Separation of data access logic
-- **Clean Architecture**: Clear separation of concerns
-- **MVVM**: Model-View-ViewModel for UI layers
+## 🧩 Design Patterns
+
+| Pattern | Usage |
+|---------|-------|
+| **Provider Pattern** | Riverpod used extensively for state management (`AsyncNotifierProvider`, `StateNotifierProvider`). |
+| **Repository Pattern** | Implicitly used via `SupabaseClient` extension; providers act as repositories for UI. |
+| **Singleton** | `FcmService`, `NotificationService`, `SupabaseClient` are singletons. |
+| **Retry Pattern** | `SupabaseRetry` extension automatically retries transient network errors (3 attempts). |
+| **RBAC** | Role-Based Access Control enforced at DB level via RLS policies and in UI via `role_provider`. |
+| **Observer Pattern** | Supabase Realtime subscriptions notify providers of DB changes. |
+| **Strategy Pattern** | `AppError` handles different error types (Socket, Postgrest, Auth) with specific messages. |
 
 ---
 
@@ -111,19 +139,111 @@ The application features a **skeuomorphic design** with organic shapes, natural 
 
 ### Access Matrix
 
-| Feature | Head Doctor | Doctor | Agent |
-|---------|:-----------:|:------:|:-----:|
-| Approve Registrations | ✅ | ❌ | ❌ |
-| View All Patients | ✅ | ✅ | ❌ |
-| View Own Patients | ✅ | ✅ | ✅ |
-| Add Clinical Notes | ✅ | ✅ | ❌ |
-| Assign Follow-Up Tasks | ✅ | ✅ | ❌ |
-| Receive Follow-Up Tasks | ❌ | ❌ | ✅ |
-| Upload Patient Data | ❌ | ❌ | ✅ |
-| Deactivate Users | ✅ | ❌ | ❌ |
-| View Registration Alerts | ✅ | ❌ | ❌ |
+| Feature                  | Head Doctor  | Doctor | Agent |
+| ------------------------ | :----------: | :----: | :---: |
+| Approve Registrations    |      ✅      |   ❌   |  ❌   |
+| View All Patients        |      ✅      |   ✅   |  ❌   |
+| View Own Patients        |      ✅      |   ✅   |  ✅   |
+| Add Clinical Notes       |      ✅      |   ✅   |  ❌   |
+| Assign Follow-Up Tasks   |      ✅      |   ✅   |  ❌   |
+| Receive Follow-Up Tasks  |      ❌      |   ❌   |  ✅   |
+| Upload Patient Data      |      ❌      |   ❌   |  ✅   |
+| Deactivate Users         |      ✅      |   ❌   |  ❌   |
+| View Registration Alerts |      ✅      |   ❌   |  ❌   |
 
-For detailed role specifications, see [user_roles_permissions.md](user_roles_permissions.md) and [feature-list-implementation-plan.md](feature-list-implementation-plan.md).
+---
+
+## 📁 File-by-File Reference
+
+### Core Infrastructure (`lib/core/`)
+
+- **`app_config.dart`**: Centralized config loader (`SUPABASE_URL` & `ANON_KEY` from `.env.local`).
+- **`app_icons.dart`**: Maps `AppIcons` to `MaterialIcons`.
+- **`app_snackbar.dart`**: UI feedback utility (`showSuccess`, `showError`, `showWarning`).
+- **`auth_gate.dart`**: Widget that checks `authStateProvider` and redirects to `/login` if null.
+- **`connectivity_wrapper.dart`**: Network status monitor showing offline banner if disconnected.
+- **`error_handler.dart`**: `AppError` class to extract user-friendly messages from Supabase/Socket errors.
+- **`fcm_service.dart`**: Singleton handling FCM token sync, messages, quiet hours.
+- **`google_auth_config.dart`**: Holds Google Client IDs for `google_sign_in`.
+- **`navigation_service.dart`**: Deep linking helper using GoRouter via a global key.
+- **`neu_widgets.dart`**: UI component library (skeuomorphic style).
+- **`notification_provider.dart`**: StateNotifier managing list of in-app alerts.
+- **`notification_service.dart`**: Local notification builder (`flutter_local_notifications`).
+- **`organic_tokens.dart`**: Token management (unused?). Likely legacy or placeholder for token rotation logic.
+- **`parse_utils.dart`**: Data parsing helpers (`parseDbDate`, `parseDbString`, `parseDbMap`) to handle null/DB types safely.
+- **`realtime_service.dart`**: Supabase Realtime wrapper subscribing to table changes.
+- **`role_provider.dart`**: Role access control logic derived from auth.
+- **`router.dart`**: GoRouter configuration (routes like `/`, `/login`, `/patients/:id`).
+- **`string_utils.dart`**: String manipulation helpers for formatting names, phone numbers, or truncating text.
+- **`supabase_client.dart`**: Provides `SupabaseClient` instance + retry extension.
+- **`theme.dart`**: Defines `AppTheme` — "Serene Clinical" palette.
+
+### Data Models (`lib/models/`)
+
+- **`agent_outside_visit_model.dart`**: Model for external visits by agents.
+- **`app_notification.dart`**: Notification entity (`id`, `title`, `body`, `category`, `isRead`).
+- **`doctor_model.dart`**: Doctor profile data.
+- **`patient_model.dart`**: Comprehensive patient record model.
+- **`user_role.dart`**: `UserRole` enum (`headDoctor`, `doctor`, `assistant`).
+- **`visit_model.dart`**: `DrVisit` model for visit records.
+
+### Features (`lib/features/`)
+
+- **`auth/`**: `auth_provider.dart`, `login_screen.dart`, `phone_otp_screen.dart`, `register_screen.dart`. Handles auth and role lookup.
+- **`dashboard/`**: `dashboard_provider.dart`, `dashboard_screen.dart`, `main_screen.dart`. Shows stats, priority cards, visit lists.
+- **`analytics/`**: Overview cards, activity charts, scheme breakdown.
+- **`patients/`**: CRUD for patients, file uploads (`document_provider.dart`), detail views, history.
+- **`dr_visits/`**: Doctor visit tracking, agent assignments, contact logging.
+- **`followups/`**: Follow-up creation, review, and task completion flow.
+- **`staff/` & `approval/`**: Staff admin UI and approval workflows for new registrations.
+- **`audit/`**: Audit trail UI displaying log of user actions for compliance.
+- **`clinical/`**: Data entry for clinical notes and lab results.
+- **`profile/`**: User profiles, notification preferences, and clinic settings.
+- **`agent_visits/`**: Forms and lists for outside visits by agents.
+
+### Shared Widgets (`lib/shared/widgets/`)
+
+- **`confirm_dialog.dart`**: Confirmation prompt for destructive actions.
+- **`dashboard_stat_carousel.dart`**: Horizontal scrolling stat cards.
+- **`empty_state.dart`**: Standardized empty state widget.
+- **`error_boundary.dart`**: Error catching widget.
+- **`patient_picker_bottom_sheet.dart`**: Patient selection interface.
+- **`service_status_badge.dart`**: Colored status indicator badge.
+- **`skeleton_loader.dart`**: Shimmer and skeleton loading placeholders.
+
+### Supabase Backend (`supabase/`)
+
+- **`config.toml`**: Supabase CLI local dev settings.
+- **`migrations/*.sql`**: DB schema, RLS policies, indexes.
+- **Edge Functions**:
+  - `notify-status-change`: Sends FCM push when patient status changes.
+  - `stale-patient-reminder`: Cron job alerting about patients not updated in 2+ days.
+  - `send-fcm-notification`: Generic function to dispatch push payloads to FCM.
+
+---
+
+## ⚠️ Risks, Bugs & Tech Debt
+
+| Category | Issue | Impact | Recommendation |
+|----------|-------|--------|----------------|
+| 🔒 **Security** | `.env.local` may be committed. | **Critical**: Leaks Supabase keys. | Ensure `.env.local` is in `.gitignore` and removed from history. |
+| 🔒 **Security** | `service_role_key` in Edge Functions. | **High**: Full DB access if exposed. | Verify keys are stored in Supabase Secrets, not code. |
+| 🐛 **Bug** | `AuthNotifier.signUp` sets `phone_verified = true`. | **Medium**: Bypasses phone verification. | Verify OTP token before setting flag. |
+| 🐛 **Bug** | `FcmService` swallows errors silently. | **Low**: Failed notifications go unnoticed. | Add logging or retry logic for FCM failures. |
+| 🐛 **Bug** | `NotificationService` ID collision. | **Low**: Notifications may overwrite each other. | Use UUID or timestamp for notification IDs. |
+| 🏗️ **Tech Debt** | Duplicate provider patterns. | **Medium**: Hard to maintain. | Consolidate similar providers (e.g., `patient_provider` vs `patient_list_provider`). |
+| 🏗️ **Tech Debt** | Hardcoded role checks. | **Medium**: Fragile if roles change. | Use `UserRole` enum methods instead of string comparisons. |
+| 🏗️ **Tech Debt** | Minimal testing. | **High**: Regression risk. | Add unit tests for providers and integration tests for critical flows. |
+
+### Recommendations & Next Steps
+
+1. **Security Audit**: Immediately verify `.env.local` is not in Git. Rotate keys if exposed.
+2. **Phone Verification**: Implement proper OTP verification before marking `phone_verified`.
+3. **Testing**: Write tests for `AuthNotifier`, `PatientProvider`, and critical UI flows.
+4. **Error Handling**: Improve error reporting in `FcmService` and Edge Functions.
+5. **Refactoring**: Consolidate providers and use `UserRole` enum consistently.
+6. **Documentation**: Add comments to complex providers and Edge Functions.
+7. **Monitoring**: Add Sentry or similar for crash reporting and error tracking.
 
 ---
 
@@ -151,35 +271,6 @@ Firebase
 ├── Firebase Auth
 ├── Firebase Messaging (FCM)
 └── Cloud Functions
-```
-
-### Notifications & Connectivity
-
-```
-├── firebase_core: ^3.6.0
-├── firebase_auth: ^5.3.0
-├── firebase_messaging: ^15.1.3
-├── flutter_local_notifications: ^17.1.2
-├── connectivity_plus: ^6.0.3
-└── permission_handler: ^12.0.1
-```
-
-### UI & Design
-
-```
-├── google_fonts: ^6.2.1
-├── font_awesome_flutter: ^10.7.0
-├── fl_chart: ^0.69.0
-└── Custom Skeuomorphic Design System
-```
-
-### Utilities
-
-```
-├── http: ^1.2.0                (HTTP client for Edge Functions)
-├── share_plus: ^12.0.2         (Share functionality)
-├── url_launcher: ^6.3.2        (Deep linking)
-└── intl: ^0.19.0               (Internationalization)
 ```
 
 ---
@@ -210,129 +301,29 @@ flutter pub get
 ```
 
 1. **Configure environment variables**
-
-Create a `.env.local` file in the root directory with your configuration:
+Create a `.env.local` file in the root directory:
 
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 FIREBASE_PROJECT_ID=your_firebase_project_id
-# Additional configuration as needed
 ```
 
-1. **Setup Firebase** (for iOS and Android)
-
-For iOS:
+1. **Setup Firebase**
 
 ```bash
-cd ios
-pod install
-cd ..
-```
+# For iOS:
+cd ios && pod install && cd ..
 
-Run FlutterFire CLI:
-
-```bash
+# Run FlutterFire CLI:
 flutterfire configure
 ```
 
 1. **Run the application**
 
 ```bash
-# Development
 flutter run
-
-# Specific platform
-flutter run -d ios        # iOS device/simulator
-flutter run -d android    # Android device/emulator
-```
-
-### Initial Setup Checklist
-
-- [ ] Flutter SDK installed and in PATH
-- [ ] Firebase project created and configured
-- [ ] Supabase project created and credentials obtained
-- [ ] `.env.local` configured with API keys
-- [ ] FlutterFire configured for your platform
-- [ ] Emulator/physical device available
-- [ ] Dependencies installed (`flutter pub get`)
-
----
-
-## 📁 Project Structure
-
-```
-med/
-├── lib/
-│   ├── main.dart                 # App entry point
-│   ├── core/
-│   │   ├── app_config.dart       # Configuration management
-│   │   ├── router.dart           # GoRouter setup
-│   │   ├── theme.dart            # Theme definitions
-│   │   ├── fcm_service.dart      # Firebase messaging
-│   │   ├── notification_service.dart
-│   │   └── connectivity_wrapper.dart
-│   ├── features/
-│   │   ├── auth/                 # Authentication flows
-│   │   ├── head_doctor/          # Admin dashboard
-│   │   ├── doctor/               # Doctor features
-│   │   ├── agent/                # Agent features
-│   │   └── shared/               # Common components
-│   └── models/                   # Data models
-├── test/
-│   └── widget_test.dart          # Widget tests
-├── ios/                          # iOS native code
-├── android/                      # Android native code
-├── web/                          # Web platform support
-├── pubspec.yaml                  # Dependencies
-├── pubspec.lock                  # Locked versions
-├── firebase.json                 # Firebase config
-└── analysis_options.yaml         # Dart analysis rules
-```
-
----
-
-## 🛠️ Development Guidelines
-
-### Code Style & Standards
-
-- Follow [Dart Style Guide](https://dart.dev/guides/language/effective-dart/style)
-- Use meaningful variable and function names
-- Keep functions small and focused
-- Document public APIs with dartdoc comments
-
-### File Organization
-
-- **Models**: Define data structures
-- **Services**: Handle business logic and API calls
-- **Providers**: Riverpod state management
-- **Widgets**: UI components
-
-### Naming Conventions
-
-- Classes: PascalCase (`UserModel`, `AuthService`)
-- Variables/Functions: camelCase (`currentUser`, `fetchPatients()`)
-- Constants: camelCase with const keyword (`const maxRetries = 3`)
-- Files: snake_case (`user_model.dart`, `auth_service.dart`)
-
-### Best Practices
-
-1. **State Management**: Use Riverpod providers for all state
-2. **Error Handling**: Implement comprehensive try-catch blocks
-3. **Async Operations**: Use async/await, avoid callback chains
-4. **Widget Rebuilds**: Leverage Riverpod's selector to prevent unnecessary rebuilds
-5. **Performance**: Use const constructors and cache images
-
-### Example Provider Structure
-
-```dart
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(supabaseProvider));
-});
-
-class AuthNotifier extends StateNotifier<AuthState> {
-  // Implementation
-}
+# Or specifically: flutter run -d ios / flutter run -d android
 ```
 
 ---
@@ -341,120 +332,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 MediFlow implements a **skeuomorphic design system** emphasizing warmth, natural forms, and human connection.
 
-### Design Philosophy
-
 - **Core Signature**: Soft, amorphous blob shapes with organic border radii
 - **Texture**: Paper-like quality with subtle grain overlay (3-4% opacity)
 - **Color Palette**: Earth-inspired palette (moss green, terracotta, stone)
 - **Shadow Philosophy**: Soft, diffused shadows with natural color tints
 - **Typography**: Fraunces serif (headings) + Nunito (body)
 
-### Color Palette (Light Mode)
-
-```dart
-// Core Colors
-const background = Color(0xFFFDFCF8);        // Off-white, Rice Paper
-const foreground = Color(0xFF2C2C24);        // Deep Loam
-const primary = Color(0xFF5D7052);           // Moss Green
-const secondary = Color(0xFFC18C5D);         // Terracotta
-const accent = Color(0xFFE6DCCD);            // Sand/Beige
-const destructive = Color(0xFFA85448);       // Burnt Sienna
-```
-
-### Component Styling
-
-- **Buttons**: Fully rounded pills with moss green primary style
-- **Cards**: Rounded containers with soft shadows and grain texture
-- **Inputs**: Pill-shaped with semi-transparent backgrounds
-- **Navigation**: Sticky floating pill with glassmorphism effect
-
-### Design Resources
-
-- Full design system documentation: [DESIGNE.md](DESIGNE.md)
-- Color specs, typography, spacing, shadows, animations, icons, accessibility
-
-### Responsive Strategy
-
-- **Mobile-first**: Base styles optimized for mobile
-- **Breakpoints**: sm (640px), md (768px), lg (1024px)
-- **Layout**: Single column on mobile, multi-column at larger breakpoints
-- **Text Scaling**: Responsive typography adjustments
-
----
-
-## 🗄️ Database & Backend
-
-### Supabase PostgreSQL Schema
-
-Key tables structure:
-
-- **users**: User accounts with role assignments
-- **patients**: Patient records with ownership tracking
-- **medical_records**: Clinical notes and patient data
-- **follow_up_tasks**: Task assignments and tracking
-- **audit_logs**: Activity tracking for compliance
-
-### Authentication Flow
-
-1. User self-registers (Doctor or Agent)
-2. Account created in **"Pending"** state
-3. Head Doctor reviews in Approval Dashboard
-4. Head Doctor approves → Account activated
-5. User gains role-specific access
-
-### Real-Time Features
-
-- Supabase Realtime subscriptions for live updates
-- FCM for push notifications
-- Local notifications for critical alerts
-
-### API Integration
-
-- Edge Functions for custom server logic
-- HTTP client for REST API calls
-- Automatic retry logic for failed requests
-
----
-
-## 🔒 Security
-
-### Authentication & Authorization
-
-- **Firebase Auth**: Secure user authentication
-- **Role-Based Access Control**: Fine-grained permission system
-- **JWT Tokens**: Secure API authentication
-- **Session Management**: Automatic session validation
-
-### Data Protection
-
-- **HIPAA Compliance**: Healthcare data privacy standards
-- **Encryption**: Data encrypted in transit and at rest
-- **Audit Logging**: All actions logged for compliance
-- **Data Privacy Rules**: Applied to all user roles
-
-### Security Best Practices
-
-1. Never commit API keys or secrets
-2. Use environment variables for sensitive data
-3. Validate all user inputs
-4. Implement rate limiting on API calls
-5. Regular security audits and updates
-
-### Sensitive Data Handling
-
-```dart
-// ✅ Good: Use environment variables
-final apiKey = AppConfig.supabaseAnonKey;
-
-// ❌ Avoid: Hardcoding secrets
-final apiKey = 'sk_live_...';
-```
-
 ---
 
 ## ✅ Testing
-
-### Running Tests
 
 ```bash
 # All tests
@@ -467,138 +353,13 @@ flutter test test/widget_test.dart
 flutter test --coverage
 ```
 
-### Test Structure
-
-- **Widget Tests**: UI component behavior
-- **Unit Tests**: Business logic and utilities
-- **Integration Tests**: End-to-end user flows
-
-### Example Test
-
-```dart
-void main() {
-  group('Authentication', () {
-    test('User login with valid credentials', () async {
-      // Arrange
-      final auth = AuthService();
-      
-      // Act
-      final result = await auth.login('user@example.com', 'password');
-      
-      // Assert
-      expect(result, isNotNull);
-    });
-  });
-}
-```
-
----
-
-## 🚢 Deployment
-
-### iOS Deployment
-
-1. **Update version**
-
-```bash
-# Update in pubspec.yaml
-version: 1.0.1+2
-```
-
-1. **Create build**
-
-```bash
-flutter build ios --release
-```
-
-1. **Submit to App Store**
-   - Use Xcode or Transporter
-   - Requires Apple Developer Account
-
-### Android Deployment
-
-1. **Generate signing key**
-
-```bash
-keytool -genkey -v -keystore ~/key.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias upload
-```
-
-1. **Configure signing in android/app/build.gradle**
-
-2. **Build APK/AAB**
-
-```bash
-flutter build apk --release
-flutter build appbundle --release
-```
-
-1. **Upload to Google Play Store**
-
-### Web Deployment
-
-```bash
-flutter build web --release
-# Deploy build/web/ to your hosting service
-```
-
-### Environment-Specific Configuration
-
-```dart
-// Using flavor-specific configurations
-enum Flavor { development, staging, production }
-
-class AppConfig {
-  static const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'development');
-  
-  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-}
-```
-
 ---
 
 ## 📝 Contributing
 
-We welcome contributions! Please follow these steps:
+We welcome contributions! Please fork the repository, create a feature branch, and open a Pull Request.
 
-1. **Fork the repository**
-
-```bash
-git clone https://github.com/yourusername/med.git
-cd med
-```
-
-1. **Create a feature branch**
-
-```bash
-git checkout -b feature/your-feature-name
-```
-
-1. **Make your changes**
-   - Follow code style guidelines
-   - Write tests for new functionality
-   - Update documentation as needed
-
-2. **Commit with clear messages**
-
-```bash
-git commit -m "feat: Add patient follow-up notifications"
-```
-
-1. **Push to your fork**
-
-```bash
-git push origin feature/your-feature-name
-```
-
-1. **Open a Pull Request**
-   - Describe your changes clearly
-   - Reference related issues
-   - Request review from maintainers
-
-### Commit Message Format
+**Commit Message Format:**
 
 ```
 <type>(<scope>): <subject>
@@ -614,36 +375,11 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ## 📚 Documentation
 
+- **[Codebase Analysis Report](CODEBASE_ANALYSIS_REPORT.md)** - In-depth technical architecture and file-by-file breakdown
 - **[User Roles & Permissions](user_roles_permissions.md)** - Detailed role specifications
 - **[Feature Implementation Plan](feature-list-implementation-plan.md)** - User flows and feature matrix
 - **[Design System](DESIGNE.md)** - Complete design specifications
 - **[Security Guidelines](SECURITY.md)** - Security policies and best practices
-
----
-
-## 🤝 Support
-
-### Getting Help
-
-- **Documentation**: Review project documentation files
-- **Issues**: Check GitHub Issues for similar problems
-- **Discussions**: Use GitHub Discussions for questions
-- **Community**: Connect with other developers
-
-### Reporting Bugs
-
-1. Check if issue already exists
-2. Provide detailed reproduction steps
-3. Include error messages and logs
-4. Specify device and Flutter version
-5. Attach screenshots if UI-related
-
-### Feature Requests
-
-1. Describe the feature clearly
-2. Explain the use case
-3. Suggest implementation approach
-4. Reference related issues
 
 ---
 
@@ -653,48 +389,6 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ---
 
-## 👨‍💻 Authors
-
-**Developed by**: Itinerant18
-
-**Repository**: [Itinerant18/med](https://github.com/Itinerant18/med)
-
----
-
-## 🎯 Roadmap
-
-### Current Version (1.0.0)
-
-- [x] Three-tier role system
-- [x] Patient data management
-- [x] Follow-up task system
-- [x] Push notifications
-- [x] Skeuomorphic design
-
-### Planned Features
-
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] Voice-to-text patient notes
-- [ ] Prescription management
-- [ ] Appointment scheduling integration
-- [ ] Video consultation capabilities
-- [ ] Mobile offline mode enhancement
-
----
-
-## 🔗 Quick Links
-
-- **GitHub Repository**: <https://github.com/Itinerant18/med>
-- **Issue Tracker**: <https://github.com/Itinerant18/med/issues>
-- **Discussions**: <https://github.com/Itinerant18/med/discussions>
-- **Flutter Documentation**: <https://flutter.dev>
-- **Supabase Documentation**: <https://supabase.com/docs>
-- **Firebase Documentation**: <https://firebase.google.com/docs>
-
----
-
-**Last Updated**: April 25, 2026  
-**Version**: 1.0.3
-
-For questions or updates, please open an issue or discussion on GitHub.
+**Developed by**: Itinerant18  
+**Repository**: [Itinerant18/med](https://github.com/Itinerant18/med)  
+**Last Updated**: May 18, 2026

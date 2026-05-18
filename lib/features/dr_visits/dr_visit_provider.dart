@@ -169,6 +169,67 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     });
   }
 
+  Future<void> updateVisit({
+    required String visitId,
+    String? patientId,
+    required String? assignedAgentId,
+    required bool isExternal,
+    String? extDoctorName,
+    String? extDoctorSpecialization,
+    String? extDoctorHospital,
+    String? extDoctorPhone,
+    String? leadPatientName,
+    String? leadPatientPhone,
+    String? leadPatientAddress,
+    String? leadNotes,
+    required String visitNotes,
+    required String diagnosis,
+    required DateTime? followupDate,
+    required String followupNotes,
+  }) async {
+    await _runAndReload(() async {
+      try {
+        final supabase = ref.read(supabaseClientProvider);
+        final user = supabase.auth.currentUser;
+        if (user == null) return;
+
+        await supabase.retry(() => supabase.from('dr_visits').update({
+              'patient_id': patientId,
+              'assigned_agent_id': assignedAgentId,
+              'visit_notes': visitNotes,
+              'diagnosis': diagnosis,
+              'followup_date': followupDate?.toIso8601String().split('T')[0],
+              'followup_notes': followupNotes,
+              'last_updated_by': user.id,
+              'last_updated_at': DateTime.now().toIso8601String(),
+              'is_external_doctor': isExternal,
+              'ext_doctor_name': isExternal ? extDoctorName : null,
+              'ext_doctor_specialization':
+                  isExternal ? extDoctorSpecialization : null,
+              'ext_doctor_hospital': isExternal ? extDoctorHospital : null,
+              'ext_doctor_phone': isExternal ? extDoctorPhone : null,
+              'lead_patient_name': isExternal ? leadPatientName : null,
+              'lead_patient_phone': isExternal ? leadPatientPhone : null,
+              'lead_patient_address': isExternal ? leadPatientAddress : null,
+              'lead_notes': isExternal ? leadNotes : null,
+            }).eq('id', visitId));
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
+      }
+    });
+  }
+
+  Future<void> deleteVisit(String visitId) async {
+    await _runAndReload(() async {
+      try {
+        final supabase = ref.read(supabaseClientProvider);
+        await supabase.retry(() => supabase.from('dr_visits').delete().eq('id', visitId));
+      } catch (e) {
+        throw Exception(AppError.getMessage(e));
+      }
+    });
+  }
+
   Future<void> updateStatus(String visitId, String status) async {
     await _runAndReload(() async {
       try {

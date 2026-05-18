@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/app_snackbar.dart';
@@ -26,6 +27,32 @@ class DrVisitDetailScreen extends ConsumerStatefulWidget {
 
 class _DrVisitDetailScreenState extends ConsumerState<DrVisitDetailScreen> {
   bool _isConverting = false;
+
+  Future<void> _editVisit(DrVisit visit) async {
+    context.push('/dr-visits/new', extra: visit);
+  }
+
+  Future<void> _deleteVisit(DrVisit visit) async {
+    final ok = await ConfirmDialog.show(
+      context,
+      title: 'Delete Visit',
+      message:
+          'Delete this external doctor visit? This will remove the record permanently.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+    if (ok != true) return;
+
+    try {
+      await ref.read(drVisitsProvider.notifier).deleteVisit(visit.id);
+      if (!mounted) return;
+      AppSnackbar.showSuccess(context, 'Visit deleted successfully');
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.showError(context, AppError.getMessage(e));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +94,8 @@ class _DrVisitDetailScreenState extends ConsumerState<DrVisitDetailScreen> {
     final canConvert =
         (visit.leadStatus == 'new_lead' || visit.leadStatus == 'contacted') &&
             (isAdmin || currentUserId == visit.assignedAgentId);
+    final canModifyVisit =
+        isAdmin || currentUserId == visit.createdById || currentUserId == visit.assignedAgentId;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -191,6 +220,39 @@ class _DrVisitDetailScreenState extends ConsumerState<DrVisitDetailScreen> {
                 ),
               ),
             ),
+            if (canModifyVisit) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: NeuButton(
+                      onPressed: () => _editVisit(visit),
+                      child: const Text(
+                        'EDIT',
+                        style: TextStyle(
+                          color: AppTheme.primaryForeground,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: NeuButton(
+                      onPressed: () => _deleteVisit(visit),
+                      color: AppTheme.errorColor,
+                      child: const Text(
+                        'DELETE',
+                        style: TextStyle(
+                          color: AppTheme.primaryForeground,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
             _LeadSection(
               visit: visit,

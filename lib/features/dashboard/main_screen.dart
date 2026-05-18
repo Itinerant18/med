@@ -150,43 +150,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         backgroundColor: AppTheme.bgColor,
         elevation: 0,
         scrolledUnderElevation: 0,
+        toolbarHeight: 72,
         leading: IconButton(
           icon: const Icon(AppIcons.menu_rounded, size: 24),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           tooltip: 'Menu',
         ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'MediFlow',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 20,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Consumer(
-              builder: (context, ref, _) {
-                final dotColor =
-                    switch (authAsync.valueOrNull?.role ?? UserRole.assistant) {
-                  UserRole.headDoctor => AppTheme.primaryTeal,
-                  UserRole.doctor => const Color(0xFF3182CE),
-                  UserRole.assistant => Colors.amber.shade600,
-                };
-                return Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+        title: const Text('MediFlow'),
         actions: [
           Consumer(
             builder: (context, ref, _) {
@@ -256,30 +226,32 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ],
       ),
       bottomNavigationBar: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         decoration: const BoxDecoration(
-          color: AppTheme.bgColor,
+          color: AppTheme.cardBg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFFA3B1C6),
-              offset: Offset(0, -2),
-              blurRadius: 8,
-            ),
-            BoxShadow(
-              color: Colors.white,
-              offset: Offset(0, -1),
-              blurRadius: 4,
+              color: Color(0x1A708269),
+              offset: Offset(0, -4),
+              blurRadius: 20,
             ),
           ],
         ),
-        child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            setState(() => _currentIndex = index);
-          },
-          backgroundColor: AppTheme.bgColor,
-          elevation: 0,
-          height: 68,
-          destinations: destinations,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) {
+              setState(() => _currentIndex = index);
+            },
+            backgroundColor: AppTheme.cardBg,
+            elevation: 0,
+            height: 72,
+            labelBehavior:
+                NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: destinations,
+          ),
         ),
       ),
     );
@@ -348,9 +320,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       ),
                     ),
                   ),
-                   const SizedBox(height: 14),
-                   Text(
-                     role == UserRole.assistant ? doctorName : 'Dr. $doctorName',
+              const SizedBox(height: 14),
+              Text(
+                   role == UserRole.assistant ? doctorName : 'Dr. $doctorName',
                      textAlign: TextAlign.center,
                      style: const TextStyle(
                        fontSize: 17,
@@ -452,8 +424,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             ),
             const Divider(height: 1),
             _buildDrawerItem(
-              icon: AppIcons.logout_rounded,
-              title: 'Sign Out',
+                    icon: AppIcons.logout_rounded,
+                    title: 'Sign Out',
               color: Colors.red,
               onTap: () {
                 Navigator.of(context).pop();

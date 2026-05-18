@@ -56,8 +56,33 @@ class PerformanceDashboardScreen extends ConsumerWidget {
       ),
       body: performanceAsync.when(
         loading: () => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: const [
+            NeuCard(
+              borderRadius: 32,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Staff efficiency at a glance',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Track workload, completion, and follow-up health for each assistant.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(child: NeuShimmer(width: double.infinity, height: 96)),
@@ -96,8 +121,33 @@ class PerformanceDashboardScreen extends ConsumerWidget {
               totalFollowups == 0 ? 0.0 : totalCompleted / totalFollowups * 100;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
+              const NeuCard(
+                borderRadius: 32,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Staff efficiency at a glance',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Track workload, completion, and follow-up health for each assistant.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -164,6 +214,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NeuCard(
+      borderRadius: 32,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -211,7 +262,7 @@ class _AssistantCard extends StatelessWidget {
         builder: (_) => _AssistantDetailSheet(kpi: kpi),
       ),
       child: NeuCard(
-        borderRadius: 18,
+        borderRadius: 32,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -332,7 +383,7 @@ class _AssistantCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: completionRate / 100,
                 minHeight: 10,
-                backgroundColor: Colors.white.withValues(alpha: 0.7),
+                backgroundColor: AppTheme.neutralLight,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   completionRate > 80
                       ? AppTheme.successColor
