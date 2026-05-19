@@ -183,7 +183,7 @@ class _DoctorFollowupCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      task.patientName ?? 'Unknown patient',
+                      task.displayLabel,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,

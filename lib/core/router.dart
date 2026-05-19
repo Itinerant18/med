@@ -11,12 +11,12 @@ import 'package:mediflow/features/agent_visits/agent_outside_visit_form.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_list_screen.dart';
 import 'package:mediflow/features/analytics/analytics_screen.dart';
 import 'package:mediflow/features/approval/pending_approvals_screen.dart';
-import 'package:mediflow/features/audit/audit_logs_screen.dart';
 import 'package:mediflow/features/auth/register_screen.dart';
 import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/performance_dashboard_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_detail_screen.dart';
 import 'package:mediflow/features/followups/doctor_followups_screen.dart';
+import 'package:mediflow/features/followups/assign_ext_doctor_screen.dart';
 import 'package:mediflow/features/followups/followup_review_screen.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_form.dart';
 import 'package:mediflow/features/patients/patient_detail_screen.dart';
@@ -101,10 +101,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/staff',
         builder: (context, state) => const StaffManagementScreen(),
-      ),
-      GoRoute(
-        path: '/audit-logs',
-        builder: (context, state) => const AuditLogsScreen(),
       ),
       GoRoute(
         path: '/performance',
@@ -208,6 +204,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           return container.read(isAdminProvider) ? null : '/';
         },
         builder: (context, state) => const DoctorFollowupsScreen(),
+      ),
+      GoRoute(
+        path: '/followups/assign-ext-doctor',
+        builder: (context, state) {
+          final extra = state.extra;
+          String? readStr(String key) {
+            if (extra is! Map) return null;
+            final v = extra[key];
+            return v?.toString();
+          }
+          return AssignExtDoctorScreen(
+            prefillExtDoctorName: readStr('prefillExtDoctorName'),
+            prefillExtDoctorHospital: readStr('prefillExtDoctorHospital'),
+            prefillExtDoctorSpecialization:
+                readStr('prefillExtDoctorSpecialization'),
+            prefillExtDoctorPhone: readStr('prefillExtDoctorPhone'),
+            prefillVisitInstructions: readStr('prefillVisitInstructions'),
+            prefillNotes: readStr('prefillNotes'),
+          );
+        },
       ),
       GoRoute(
         path: '/followups/review/:taskId',

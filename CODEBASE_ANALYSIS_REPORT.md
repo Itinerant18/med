@@ -197,13 +197,6 @@
 | `pending_approvals_screen.dart` | Approval dashboard. | Summary of pending approvals with quick action buttons. |
 | `rejected_screen.dart` | Rejected items. | List of rejected items with reasons and option to reinstate. |
 
-#### 🔍 Audit (`audit/`)
-
-| File | Purpose & Role | Key Contents |
-|------|----------------|--------------|
-| `audit_logs_screen.dart` | Audit trail UI. | Displays log of user actions (logins, data changes) for compliance. |
-| `audit_provider.dart` | Audit data. | Fetches audit logs from Supabase, filterable by user/date. |
-
 #### 🏥 Clinical (`clinical/`)
 
 | File | Purpose & Role | Key Contents |

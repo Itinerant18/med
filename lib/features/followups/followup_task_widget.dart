@@ -13,7 +13,7 @@ import 'package:mediflow/features/followups/followup_provider.dart';
 ///
 /// Surfaces, in order of importance to the assistant:
 ///   1. Patient name + status / priority badges + due date
-///   2. Target external doctor & hospital (where to take the patient)
+///   2. Target external doctor & hospital (visit destination)
 ///   3. Doctor's instructions (what to do at the visit)
 ///   4. Two explicit action buttons:
 ///        • Record Outside Visit  → opens AgentOutsideVisitForm pre-filled
@@ -79,16 +79,16 @@ class FollowupTaskWidget extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
 
-              // ── Patient name + optional title/notes ──
+              // ── Patient / visit label + optional notes ──
               Text(
-                task.patientName ?? 'Unknown Patient',
+                task.displayLabel,
                 style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
                   color: AppTheme.textColor,
                 ),
               ),
-              if ((task.title?.isNotEmpty ?? false)) ...[
+              if (task.hasPatient && (task.title?.isNotEmpty ?? false)) ...[
                 const SizedBox(height: 2),
                 Text(
                   task.title!,
@@ -362,7 +362,7 @@ class _MissionBriefBlockState extends State<_MissionBriefBlock>
                           (task.targetExtDoctorHospital?.isNotEmpty ?? false))
                         _briefRow(
                           AppIcons.local_hospital_outlined,
-                          'Take ${task.patientName ?? "patient"} to:',
+                          task.hasPatient ? 'Take patient to:' : 'Visit:',
                           [
                             if (task.targetExtDoctorName?.isNotEmpty ?? false)
                               task.targetExtDoctorName!,
@@ -516,7 +516,7 @@ class _TargetDoctorBlock extends StatelessWidget {
                   ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Take the patient to this doctor and record the outcome.',
+                  'Visit this doctor and record the outcome.',
                   style: TextStyle(
                     fontSize: 11,
                     color: AppTheme.textMuted,
@@ -675,7 +675,7 @@ class _CompleteFollowupSheetState
               ),
               const SizedBox(height: 8),
               Text(
-                widget.task.patientName ?? 'Unknown Patient',
+                widget.task.displayLabel,
                 style: const TextStyle(
                   fontSize: 13,
                   color: AppTheme.textMuted,

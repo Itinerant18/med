@@ -1,6 +1,7 @@
 // lib/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
+import 'package:mediflow/core/push_notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
@@ -128,8 +129,28 @@ class AgentOutsideVisitsNotifier
       if (meetTimesVisited != null) 'meet_times_visited': meetTimesVisited,
     };
 
+    // Query the task creator before insert (best-effort) for push notification.
+    String? taskCreatedBy;
+    if (followupTaskId != null) {
+      try {
+        final taskRes = await _supabase
+            .from('followup_tasks')
+            .select('created_by')
+            .eq('id', followupTaskId)
+            .maybeSingle();
+        taskCreatedBy = taskRes?['created_by']?.toString();
+      } catch (_) {
+        // Best-effort.
+      }
+    }
+
     try {
-      await _supabase.retry(() => _supabase.from('agent_outside_visits').insert(data));
+      final insertedVisit = await _supabase.retry(() => _supabase
+          .from('agent_outside_visits')
+          .insert(data)
+          .select('id')
+          .maybeSingle());
+      final createdVisitId = insertedVisit?['id']?.toString();
 
       // If tied to a follow-up task, mark it complete via the canonical
       // FollowupTasksNotifier so:
@@ -183,6 +204,26 @@ class AgentOutsideVisitsNotifier
       }
 
       ref.invalidateSelf();
+
+      // ── Push notification to task creator ──
+      if (taskCreatedBy != null) {
+        try {
+          await PushNotificationService.sendNotification(
+            ref: ref,
+            event: 'outside_visit_recorded',
+            recipientIds: [taskCreatedBy],
+            title: 'Visit recorded',
+            body: 'Agent recorded an external doctor visit for $extDoctorName',
+            data: {
+              'entityType': 'agent_outside_visit',
+              if (createdVisitId != null && createdVisitId.isNotEmpty)
+                'entityId': createdVisitId,
+            },
+          );
+        } catch (_) {
+          // Best-effort.
+        }
+      }
     } catch (e) {
       throw Exception(AppError.getMessage(e));
     }
@@ -198,6 +239,10 @@ class AgentOutsideVisitsNotifier
     String? areaDistrict,
     String? meetDrType,
     int? meetTimesVisited,
+    String? chiefComplaint,
+    String? diagnosis,
+    String? prescriptions,
+    String? visitNotes,
     DateTime? nextFollowupDate,
     bool scheduleNewTask = false,
     String? patientId,
@@ -226,6 +271,18 @@ class AgentOutsideVisitsNotifier
               : null,
       'meet_dr_type': meetDrType,
       'meet_times_visited': meetTimesVisited,
+      'chief_complaint':
+          chiefComplaint != null && chiefComplaint.isNotEmpty
+              ? chiefComplaint
+              : null,
+      'diagnosis':
+          diagnosis != null && diagnosis.isNotEmpty ? diagnosis : null,
+      'prescriptions':
+          prescriptions != null && prescriptions.isNotEmpty
+              ? prescriptions
+              : null,
+      'visit_notes':
+          visitNotes != null && visitNotes.isNotEmpty ? visitNotes : null,
       'next_followup_date': nextFollowupDate != null ? _dateStr(nextFollowupDate) : null,
     };
 
@@ -321,6 +378,25 @@ final allAgentOutsideVisitsProvider =
     return (response as List)
         .map((j) =>
             AgentOutsideVisit.fromJson(Map<String, dynamic>.from(j as Map)))
+        .toList();
+  } catch (e) {
+    throw Exception(AppError.getMessage(e));
+  }
+});
+
+// Reads the `known_external_doctors` view for the doctor to pick a previously
+// visited external doctor and pre-fill the assignment form.
+final knownExternalDoctorsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final supabase = ref.read(supabaseClientProvider);
+  try {
+    final response = await supabase.retry(() => supabase
+        .from('known_external_doctors')
+        .select(
+            'ext_doctor_name, ext_doctor_specialization, ext_doctor_hospital, ext_doctor_phone, area_district, visit_count, last_visit_date')
+        .order('last_visit_date', ascending: false));
+    return (response as List)
+        .map((j) => Map<String, dynamic>.from(j as Map))
         .toList();
   } catch (e) {
     throw Exception(AppError.getMessage(e));

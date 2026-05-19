@@ -382,6 +382,13 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                             AppTheme.analyticsAccent,
                             () => context.push('/analytics'),
                           ),
+                          const Divider(height: 1),
+                          _tile(
+                            AppIcons.local_hospital_outlined,
+                            'Assign External Doctor Visit',
+                            AppTheme.doctorAccent,
+                            () => context.push('/followups/assign-ext-doctor'),
+                          ),
                           if (isHeadDoctor) ...[
                             const Divider(height: 1),
                             _tile(
@@ -389,13 +396,6 @@ class _DoctorProfileScreenState extends ConsumerState<DoctorProfileScreen> {
                               'Manage Staff Accounts',
                               AppTheme.staffAccent,
                               () => context.push('/staff'),
-                            ),
-                            const Divider(height: 1),
-                            _tile(
-                              AppIcons.history_rounded,
-                              'Audit Logs',
-                              AppTheme.auditAccent,
-                              () => context.push('/audit-logs'),
                             ),
                           ],
                           const Divider(height: 1),

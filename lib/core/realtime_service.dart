@@ -16,7 +16,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:mediflow/core/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_service.dart';
@@ -345,55 +344,11 @@ class RealtimeService {
   }
 
   void _handleFollowupTaskInsert(PostgresChangePayload payload) {
-    final row = payload.newRecord;
-    final assignedTo = row['assigned_to']?.toString();
-    final client = Supabase.instance.client;
-    final currentUserId = client.auth.currentUser?.id;
-    final patientId = row['patient_id']?.toString();
-    final dueDate = row['due_date']?.toString() ?? 'soon';
-    final taskId = row['id']?.toString() ?? '';
-    final title = row['title']?.toString();
-
-    Future<void>(() async {
-      String patientName = 'a patient';
-      if (patientId != null && patientId.isNotEmpty) {
-        try {
-          final res = await client.retry(() => client
-              .from('patients')
-              .select('full_name')
-              .eq('id', patientId)
-              .maybeSingle());
-          final name = res?['full_name']?.toString();
-          if (name != null && name.isNotEmpty) patientName = name;
-        } catch (e) {
-          debugPrint('followup_task: patient lookup failed: $e');
-        }
-      }
-
-      if (assignedTo != null && assignedTo == currentUserId) {
-        _addNotification(
-          id: 'followup-$taskId',
-          title: 'New Follow-up Task',
-          body: title?.isNotEmpty == true
-              ? '$title · $patientName (due $dueDate)'
-              : 'Follow-up for $patientName due $dueDate',
-          type: 'followup_task',
-          category: 'followup',
-          priority: 'high',
-        );
-        NotificationService.instance.showFollowupNotification(
-          patientName: patientName,
-          dueDate: dueDate,
-        );
-      } else if (assignedTo != null) {
-        FcmService.sendToDoctor(
-          doctorId: assignedTo,
-          title: 'New Follow-up Task',
-          body: 'Follow-up for $patientName due $dueDate',
-          data: {'type': 'followup_task', 'task_id': taskId},
-        );
-      }
-    });
+    // Follow-up task notifications are now persisted through the
+    // `notifications` table and surfaced via `notificationProvider`.
+    // Keep the table subscription active for other side effects, but don't
+    // fan out a second in-app / push notification here.
+    return;
   }
 
   void _handlePatientUpdate(
@@ -460,74 +415,9 @@ class RealtimeService {
   }
 
   void _handleFollowupUpdate(PostgresChangePayload payload) {
-    try {
-      final row = payload.newRecord;
-      final oldStatus = payload.oldRecord['status']?.toString();
-      final newStatus = row['status']?.toString();
-      final currentUserId =
-          Supabase.instance.client.auth.currentUser?.id;
-      final createdBy = row['created_by']?.toString();
-      final assignedTo = row['assigned_to']?.toString();
-      final taskId = row['id']?.toString() ?? '';
-
-      if (newStatus == null ||
-          newStatus.isEmpty ||
-          oldStatus == newStatus) {
-        return;
-      }
-
-      // Assistant completed → notify assigning doctor.
-      if (newStatus == 'completed' &&
-          oldStatus != 'completed' &&
-          createdBy == currentUserId &&
-          assignedTo != currentUserId) {
-        _addNotification(
-          id: 'fu-completed-$taskId',
-          title: 'Follow-up completed',
-          body: 'An assistant completed a follow-up. Tap to review.',
-          type: 'followup_review_needed',
-          category: 'followup',
-          priority: 'urgent',
-        );
-        NotificationService.instance.showFollowupNotification(
-          patientName:
-              row['patient_name']?.toString() ?? 'a patient',
-          dueDate: 'completed',
-        );
-        if (createdBy != null && createdBy.isNotEmpty) {
-          FcmService.sendToDoctor(
-            doctorId: createdBy,
-            title: 'Follow-up completed',
-            body:
-                'An assistant completed a follow-up. Open MediFlow to review.',
-            data: {
-              'type': 'followup_review_needed',
-              'task_id': taskId,
-            },
-          );
-        }
-        return;
-      }
-
-      // Doctor reviewed → notify assistant.
-      if (createdBy == currentUserId) return;
-      if (assignedTo != currentUserId) return;
-
-      _addNotification(
-        id: 'fu-update-$taskId-${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Follow-up Updated',
-        body: 'A follow-up task is now: $newStatus',
-        type: 'followup_update',
-        category: 'followup',
-      );
-      NotificationService.instance.showFollowupNotification(
-        patientName:
-            row['patient_name']?.toString() ?? 'a patient',
-        dueDate: newStatus,
-      );
-    } catch (e) {
-      debugPrint('Realtime [followup_tasks/update] handler error: $e');
-    }
+    // Follow-up completion/review notifications are now sent through
+    // `PushNotificationService` so the notification table stays canonical.
+    return;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -2,13 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/parse_utils.dart';
+import 'package:mediflow/core/push_notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FollowupTask {
   final String id;
-  final String patientId;
+  final String? patientId;
   final String? drVisitId;
   final String assignedTo;
   final String createdBy;
@@ -17,7 +18,7 @@ class FollowupTask {
   final String? notes;
   final String priority;
 
-  // Doctor-supplied target external doctor info (where to take the patient).
+  // Doctor-supplied target external doctor info (visit destination/context).
   final String? targetExtDoctorName;
   final String? targetExtDoctorHospital;
   final String? targetExtDoctorSpecialization;
@@ -47,7 +48,7 @@ class FollowupTask {
 
   FollowupTask({
     required this.id,
-    required this.patientId,
+    this.patientId,
     this.drVisitId,
     required this.assignedTo,
     required this.createdBy,
@@ -80,7 +81,7 @@ class FollowupTask {
     final patients = parseDbMap(json['patients']);
     return FollowupTask(
       id: parseDbString(json['id']),
-      patientId: parseDbString(json['patient_id']),
+      patientId: json['patient_id']?.toString(),
       drVisitId: json['dr_visit_id']?.toString(),
       assignedTo: parseDbString(json['assigned_to']),
       createdBy: parseDbString(json['created_by']),
@@ -117,6 +118,8 @@ class FollowupTask {
       (targetExtDoctorName?.isNotEmpty ?? false) ||
       (targetExtDoctorHospital?.isNotEmpty ?? false);
 
+  bool get hasPatient => patientId?.trim().isNotEmpty ?? false;
+
   bool get isReviewed => reviewedAt != null;
 
   /// True when the assistant has finished the task but the assigning doctor
@@ -137,6 +140,15 @@ class FollowupTask {
     return dueDate.year == today.year &&
         dueDate.month == today.month &&
         dueDate.day == today.day;
+  }
+
+  String get displayLabel {
+    if (hasPatient && (patientName?.isNotEmpty ?? false)) {
+      return patientName!;
+    }
+    if (title?.isNotEmpty ?? false) return title!;
+    if (targetExtDoctorName?.isNotEmpty ?? false) return targetExtDoctorName!;
+    return 'External Doctor Visit';
   }
 }
 
@@ -283,13 +295,38 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
           }).eq('id', taskId));
 
       ref.invalidateSelf();
+
+      // ── Push notification to task creator ──
+      try {
+        final taskRes = await _supabase
+            .from('followup_tasks')
+            .select('created_by')
+            .eq('id', taskId)
+            .maybeSingle();
+        final createdBy = taskRes?['created_by']?.toString();
+        if (createdBy != null) {
+          await PushNotificationService.sendNotification(
+            ref: ref,
+            event: 'followup_completed',
+            recipientIds: [createdBy],
+            title: 'Task completed',
+            body: 'Your follow-up task has been completed by the agent',
+            data: {
+              'entityType': 'followup_task',
+              'entityId': taskId,
+            },
+          );
+        }
+      } catch (_) {
+        // Best-effort.
+      }
     } catch (e) {
       throw Exception(AppError.getMessage(e));
     }
   }
 
   Future<void> createTask({
-    required String patientId,
+    String? patientId,
     required String assignedTo,
     required DateTime dueDate,
     String? notes,
@@ -306,15 +343,25 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
 
+    final normalizedPatientId = patientId?.trim();
+    final normalizedTitle = title?.trim();
+    final effectiveTitle = (normalizedTitle?.isNotEmpty ?? false)
+        ? normalizedTitle
+        : (normalizedPatientId == null || normalizedPatientId.isEmpty)
+            ? _defaultVisitTitle(targetExtDoctorName)
+            : null;
+
     final payload = <String, dynamic>{
-      'patient_id': patientId,
       'assigned_to': assignedTo,
       'created_by': user.id,
       'due_date': _dateOnly(dueDate),
       'notes': notes,
-      'title': title,
       'priority': priority,
       'status': 'pending',
+      if (normalizedPatientId != null && normalizedPatientId.isNotEmpty)
+        'patient_id': normalizedPatientId,
+      if (effectiveTitle != null && effectiveTitle.isNotEmpty)
+        'title': effectiveTitle,
       if (targetExtDoctorName?.isNotEmpty == true)
         'target_ext_doctor_name': targetExtDoctorName,
       if (targetExtDoctorHospital?.isNotEmpty == true)
@@ -330,11 +377,55 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
     };
 
     try {
-      await _supabase.retry(() => _supabase.from('followup_tasks').insert(payload));
+      final insertedTask = await _supabase.retry(() => _supabase
+          .from('followup_tasks')
+          .insert(payload)
+          .select('id')
+          .maybeSingle());
+      final createdTaskId = insertedTask?['id']?.toString();
       ref.invalidateSelf();
+
+      // ── Push notification to assigned agent ──
+      try {
+        final hasPatient = normalizedPatientId != null && normalizedPatientId.isNotEmpty;
+        String? patientName;
+        if (hasPatient) {
+          final patientRes = await _supabase
+              .from('patients')
+              .select('full_name')
+              .eq('id', normalizedPatientId)
+              .maybeSingle();
+          patientName = patientRes?['full_name']?.toString();
+        }
+        await PushNotificationService.sendNotification(
+          ref: ref,
+          event: 'followup_assigned',
+          recipientIds: [assignedTo],
+          title: hasPatient ? 'New task assigned' : 'New visit assigned',
+          body: hasPatient
+              ? 'Take ${patientName ?? "patient"} to ${targetExtDoctorName ?? "external doctor"}'
+              : 'Visit ${targetExtDoctorName ?? "external doctor"}',
+          data: {
+            'entityType': 'followup_task',
+            if (createdTaskId != null && createdTaskId.isNotEmpty)
+              'entityId': createdTaskId,
+            'priority': priority,
+          },
+        );
+      } catch (_) {
+        // Best-effort — notification failure must not break task creation.
+      }
     } catch (e) {
       throw Exception(AppError.getMessage(e));
     }
+  }
+
+  String _defaultVisitTitle(String? targetExtDoctorName) {
+    final name = targetExtDoctorName?.trim();
+    if (name == null || name.isEmpty) {
+      return 'External Doctor Visit';
+    }
+    return 'External Doctor Visit - $name';
   }
 
   /// Doctor acknowledges a completed follow-up task. Records who reviewed
@@ -355,6 +446,31 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
           }).eq('id', taskId));
 
       ref.invalidateSelf();
+
+      // ── Push notification to assigned agent ──
+      try {
+        final taskRes = await _supabase
+            .from('followup_tasks')
+            .select('assigned_to')
+            .eq('id', taskId)
+            .maybeSingle();
+        final assignedTo = taskRes?['assigned_to']?.toString();
+        if (assignedTo != null) {
+          await PushNotificationService.sendNotification(
+            ref: ref,
+            event: 'followup_reviewed',
+            recipientIds: [assignedTo],
+            title: 'Task reviewed',
+            body: 'Your report has been reviewed by the doctor',
+            data: {
+              'entityType': 'followup_task',
+              'entityId': taskId,
+            },
+          );
+        }
+      } catch (_) {
+        // Best-effort.
+      }
     } catch (e) {
       throw Exception(AppError.getMessage(e));
     }

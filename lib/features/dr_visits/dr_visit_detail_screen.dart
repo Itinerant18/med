@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/app_icons.dart';
+import 'package:mediflow/features/work_log/work_log_widget.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/neu_widgets.dart';
@@ -378,7 +379,15 @@ class _DrVisitDetailScreenState extends ConsumerState<DrVisitDetailScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
+          const SectionTitle(title: 'Activity Log', icon: AppIcons.edit_note_rounded),
+          WorkLogWidget(
+            entityType: 'dr_visit',
+            entityId: visit.id,
+            title: 'Activity Log',
+          ),
+          const SizedBox(height: 20),
+
           if (visit.followupStatus == 'pending')
             SizedBox(
               width: double.infinity,

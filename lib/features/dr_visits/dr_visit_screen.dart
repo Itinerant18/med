@@ -113,6 +113,18 @@ class DrVisitScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                FloatingActionButton.small(
+                  heroTag: 'assign-ext-doctor',
+                  backgroundColor: AppTheme.doctorAccent,
+                  tooltip: 'Assign ext. doctor visit',
+                  onPressed: () =>
+                      context.push('/followups/assign-ext-doctor'),
+                  child: const Icon(
+                    AppIcons.assignment_ind_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 FloatingActionButton.extended(
                   heroTag: 'new-dr-visit',
                   backgroundColor: AppTheme.primaryTeal,

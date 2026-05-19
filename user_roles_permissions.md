@@ -154,7 +154,7 @@ Return the complete rewritten `DashboardNotifier` class.
 
 ```
 
-Fix `lib/features/audit/audit_provider.dart` → `AuditService.log()`.
+Fix the audit provider → `AuditService.log()`.
 
 CURRENT PROBLEM:
 The entire method body is wrapped in `try { ... } catch (_) {}` — all audit failures are silently swallowed. Also, `log()` requires a `Ref` parameter coupling it tightly to Riverpod.
@@ -168,7 +168,7 @@ WHAT TO DO:
    - Tries to write to `audit_logs` table; on failure, adds to `_pendingLogs` and calls `debugPrint('[AuditLogger] FAILED: $e — queued for retry')`
    - Has `static Future<void> flushQueue()` that retries all pending logs and clears on success
 
-2. Update `AuditService.log()` in `audit_provider.dart` to call `AuditLogger.log(...)` and forward all params. Keep backward compatibility.
+2. Update `AuditService.log()` in the audit provider to call `AuditLogger.log(...)` and forward all params. Keep backward compatibility.
 
 3. Update every call site that passes `ref` to `AuditService.log(ref, ...)`:
    - `lib/features/patients/patient_provider.dart`
@@ -586,7 +586,7 @@ Run `flutter analyze` and `flutter pub get`.
 
 ```
 
-In `lib/features/audit/audit_provider.dart`, the `auditActorsProvider` FutureProvider fetches actor data with duplicates.
+In the audit provider, the `auditActorsProvider` FutureProvider fetches actor data with duplicates.
 
 Current query:
   var query = supabase.from('audit_logs').select('actor_id, actor_name');
@@ -787,7 +787,7 @@ WHAT TO DO:
    - Look up the animation via `ShimmerAnimation.of(context)?.animation`
    - Fall back to a local controller if no `ShimmerAnimation` is found in the tree (backward compat)
 
-3. Wrap the `ListView.builder` in `PatientListScreen`, `DashboardScreen._buildLoadingList()`, and `AuditLogsScreen._AuditLoadingList` with `ShimmerAnimation(child: ...)` so all child shimmers share one ticker.
+3. Wrap the `ListView.builder` in `PatientListScreen`, `DashboardScreen._buildLoadingList()`, and the audit log loading list with `ShimmerAnimation(child: ...)` so all child shimmers share one ticker.
 
 Return the `ShimmerAnimation` class, the updated `NeuShimmer`, and the wrapper usage in `PatientListScreen`.
 
@@ -862,7 +862,7 @@ STEP 2 — Replace empty states in these files with `EmptyState(...)`:
 - `lib/features/followups/doctor_followups_screen.dart` → `_buildEmptyState()`
 - `lib/features/dr_visits/dr_visit_screen.dart` → `_buildEmptyState()`
 - `lib/features/agent_visits/agent_outside_visit_list_screen.dart` → empty visits block
-- `lib/features/audit/audit_logs_screen.dart` → `_EmptyAuditView` (fix icon to `AppIcons.description_outlined`)
+- audit log screen → `_EmptyAuditView` (fix icon to `AppIcons.description_outlined`)
 
 STEP 3 — Run `flutter analyze`.
 

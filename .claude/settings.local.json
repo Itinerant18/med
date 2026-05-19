@@ -1,0 +1,11 @@
+{
+  "disabledMcpjsonServers": [
+    "supabase",
+    "code-review-graph"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)"
+    ]
+  }
+}

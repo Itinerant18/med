@@ -104,10 +104,61 @@ class NotificationPreferencesState {
   }
 }
 
-// Single global notification provider (not family)
 final notificationProvider =
-    StateNotifierProvider<NotificationNotifier, List<AppNotification>>(
-  (ref) => NotificationNotifier(),
+    StateNotifierProvider.autoDispose<NotificationNotifier, List<AppNotification>>(
+  (ref) {
+    final supabase = ref.read(supabaseClientProvider);
+    final notifier = NotificationNotifier();
+    RealtimeChannel? channel;
+    var disposed = false;
+
+    Future<void> syncNotifications() async {
+      try {
+        await notifier.loadFromDatabase(supabase);
+        if (disposed) return;
+
+        final user = supabase.auth.currentUser;
+        if (user == null) {
+          channel?.unsubscribe();
+          channel = null;
+          return;
+        }
+
+        channel?.unsubscribe();
+        channel = supabase
+            .channel('notifications:${user.id}')
+            .onPostgresChanges(
+              event: PostgresChangeEvent.insert,
+              schema: 'public',
+              table: 'notifications',
+              filter: PostgresChangeFilter(
+                type: PostgresChangeFilterType.eq,
+                column: 'recipient_id',
+                value: user.id,
+              ),
+              callback: (payload) {
+                if (disposed) return;
+                final row = payload.newRecord;
+                final notif = AppNotification.fromJson(
+                    Map<String, dynamic>.from(row as Map));
+                notifier.addNotification(notif);
+              },
+            )
+            .subscribe();
+      } catch (e) {
+        debugPrint('Notification realtime setup failed: $e');
+      }
+    }
+
+    unawaited(syncNotifications());
+
+    ref.onDispose(() {
+      disposed = true;
+      channel?.unsubscribe();
+    });
+
+    return notifier;
+  },
 );
 
 final unreadCountProvider = Provider<int>((ref) {
@@ -300,6 +351,40 @@ class NotificationNotifier extends StateNotifier<List<AppNotification>> {
   NotificationNotifier() : super([]);
 
   Map<String, bool> _preferences = NotificationPreferencesState.defaultChannels;
+
+  /// Loads up to 50 most recent notifications from the `notifications` table.
+  /// Best-effort — failures are silently ignored.
+  Future<void> loadFromDatabase(SupabaseClient supabase) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final response = await supabase.retry(() => supabase
+          .from('notifications')
+          .select()
+          .eq('recipient_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(50));
+
+      final loaded = (response as List).map((json) =>
+          AppNotification.fromJson(
+              Map<String, dynamic>.from(json as Map))).toList();
+
+      final merged = <String, AppNotification>{};
+      for (final notif in state) {
+        merged[notif.id] = notif;
+      }
+      for (final notif in loaded) {
+        merged[notif.id] = notif;
+      }
+
+      final next = merged.values.toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      state = next;
+    } catch (e) {
+      debugPrint('loadFromDatabase: non-fatal error — $e');
+    }
+  }
 
   void updatePreferences(Map<String, bool> preferences) {
     _preferences = preferences;

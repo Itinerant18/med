@@ -13,6 +13,7 @@ import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
+import 'package:mediflow/features/work_log/work_log_widget.dart';
 
 /// Predefined list of West Bengal districts for the area dropdown.
 const List<String> _westBengalDistricts = [
@@ -283,6 +284,10 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               areaDistrict: _areaDistrict,
               meetDrType: _meetDrType,
               meetTimesVisited: int.tryParse(_meetTimesVisitedCtrl.text.trim()),
+              chiefComplaint: _chiefComplaintCtrl.text.trim(),
+              diagnosis: _diagnosisCtrl.text.trim(),
+              prescriptions: _prescriptionsCtrl.text.trim(),
+              visitNotes: _visitNotesCtrl.text.trim(),
               nextFollowupDate: _nextFollowupDate,
               scheduleNewTask: _isEdit &&
                   _nextFollowupDate != null &&
@@ -421,7 +426,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
 
                     // ── Area (District in West Bengal) ──
                     DropdownButtonFormField<String>(
-                      value: _areaDistrict,
+                      initialValue: _areaDistrict,
                       decoration: const InputDecoration(
                         labelText: 'Area (District)',
                         hintText: 'Select district',
@@ -434,7 +439,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                     const SizedBox(height: 12),
 
                     DropdownButtonFormField<String>(
-                      value: _meetDrType,
+                      initialValue: _meetDrType,
                       decoration:
                           const InputDecoration(labelText: 'Type of Doctor'),
                       hint: const Text('Select doctor type'),
@@ -457,6 +462,46 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                       label: 'How Many Times Visited This Doctor',
                       hint: 'e.g. 1',
                       keyboardType: TextInputType.number,
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Visit Outcome ──
+              const SizedBox(height: 24),
+              const SectionTitle(
+                title: 'Visit Outcome',
+                icon: AppIcons.note_alt_rounded,
+              ),
+              NeuCard(
+                child: Column(
+                  children: [
+                    NeuTextField(
+                      controller: _chiefComplaintCtrl,
+                      label: 'Chief Complaint',
+                      hint: "Patient's main complaint during visit",
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _diagnosisCtrl,
+                      label: 'Diagnosis',
+                      hint: 'What the doctor diagnosed',
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _prescriptionsCtrl,
+                      label: 'Prescriptions',
+                      hint: 'Medications / treatments prescribed',
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 12),
+                    NeuTextField(
+                      controller: _visitNotesCtrl,
+                      label: 'Visit Notes',
+                      hint: 'Any additional notes from the visit',
+                      maxLines: 3,
                     ),
                   ],
                 ),
@@ -542,6 +587,15 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                   ),
                 ),
 
+              if (_isEdit) ...[
+                const SizedBox(height: 24),
+                WorkLogWidget(
+                  entityType: 'agent_outside_visit',
+                  entityId: widget.visitId!,
+                  title: 'Visit Notes',
+                ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,

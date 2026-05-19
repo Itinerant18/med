@@ -134,7 +134,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               ? AppIcons.add_task_rounded
               : AppIcons.health_and_safety_rounded,
         ),
-        label: role == UserRole.assistant ? 'Follow-ups' : 'Dr Visit',
+        label: role == UserRole.assistant ? 'My Tasks' : 'Dr Visit',
       ),
     ];
 
@@ -379,6 +379,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   ),
                   if (ref.watch(isHeadDoctorProvider)) ...[
                     _buildDrawerItem(
+                      icon: AppIcons.how_to_reg_rounded,
+                      title: 'Pending Approvals',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/pending-approvals');
+                      },
+                    ),
+                    _buildDrawerItem(
                       icon: AppIcons.bar_chart_rounded,
                       title: 'Assistant Performance',
                       onTap: () {
@@ -392,14 +400,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       onTap: () {
                         Navigator.of(context).pop();
                         context.push('/staff');
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: AppIcons.history_rounded,
-                      title: 'Audit Logs',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        context.push('/audit-logs');
                       },
                     ),
                   ],

@@ -76,6 +76,14 @@ class PatientDetailScreen extends ConsumerWidget {
                             AddFollowupSheet(preselectedPatientId: patientId),
                       ),
                     ),
+                  if (canFollowup)
+                    IconButton(
+                      icon: const Icon(AppIcons.local_hospital_outlined,
+                          color: AppTheme.doctorAccent),
+                      tooltip: 'Assign external doctor visit',
+                      onPressed: () =>
+                          context.push('/followups/assign-ext-doctor'),
+                    ),
                   if (canEdit)
                     IconButton(
                       icon: const Icon(AppIcons.edit_outlined,

@@ -1,15 +1,54 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mediflow/shared/widgets/empty_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/notification_provider.dart';
+import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/models/app_notification.dart';
 
 class NotificationSheet extends ConsumerWidget {
   const NotificationSheet({super.key});
+
+  Future<void> _handleTap(
+    BuildContext context,
+    WidgetRef ref,
+    AppNotification notif,
+    NotificationNotifier notifier,
+  ) async {
+    // Mark as read in local state.
+    if (!notif.isRead) {
+      notifier.markOneRead(notif.id);
+    }
+
+    // Navigate if entity info is present (synchronous, before DB write).
+    if (notif.entityType != null && notif.entityId != null) {
+      final route = switch (notif.entityType) {
+        'followup_task' => '/followups/review/${notif.entityId}',
+        'agent_outside_visit' => '/agent-visits/edit/${notif.entityId}',
+        'dr_visit' => '/dr-visits/${notif.entityId}',
+        _ => null,
+      };
+      if (route != null) {
+        Navigator.pop(context);
+        context.push(route);
+      }
+    }
+
+    // Mark as read in the database (best-effort).
+    try {
+      await ref.read(supabaseClientProvider).from('notifications').update({
+        'is_read': true,
+      }).eq('id', notif.id);
+    } catch (e) {
+      debugPrint('Failed to mark notification read: $e');
+    }
+  }
 
   String _timeAgo(DateTime timestamp) {
     final now = DateTime.now();
@@ -115,9 +154,7 @@ class NotificationSheet extends ConsumerWidget {
                               timeAgo: _timeAgo(notif.timestamp),
                               onDismiss: () => notifier.dismiss(notif.id),
                               onTap: () {
-                                if (!notif.isRead) {
-                                  notifier.markOneRead(notif.id);
-                                }
+                                unawaited(_handleTap(context, ref, notif, notifier));
                               },
                             );
                           },

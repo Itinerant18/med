@@ -79,8 +79,10 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
   }
 
   Future<void> _submit() async {
-    if (_selectedPatientId == null) {
-      AppSnackbar.showError(context, 'Please select a patient');
+    final hasExtDoctor = _targetDocNameCtrl.text.trim().isNotEmpty;
+    if (_selectedPatientId == null && !hasExtDoctor) {
+      AppSnackbar.showError(
+          context, 'Select a patient or enter an external doctor name');
       return;
     }
     if (_dueDate == null) {
@@ -107,7 +109,7 @@ class _AddFollowupSheetState extends ConsumerState<AddFollowupSheet> {
       }
 
       await ref.read(followupTasksProvider.notifier).createTask(
-            patientId: _selectedPatientId!,
+            patientId: _selectedPatientId,
             assignedTo: assignedTo,
             dueDate: _dueDate!,
             notes: trimmedOrNull(_notesCtrl),

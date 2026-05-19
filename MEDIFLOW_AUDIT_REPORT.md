@@ -186,7 +186,7 @@ Preflight: this file compiles the exhaustive audit across Functional Bugs, Featu
 ---
 
 **[ISSUE-008]** AuditActorsProvider returns duplicates (no DISTINCT)
-- **Location:** `lib/features/audit/audit_provider.dart` → `auditActorsProvider` query
+- **Location:** audit provider → `auditActorsProvider` query
 - **Description:** Query lacks `distinct()` causing duplicate actor rows.
 - **Impact on user:** Confusing filter list and bad performance.
 - **Fix:** Use server-side DISTINCT or query unique actor IDs before mapping.
@@ -388,7 +388,7 @@ Preflight: this file compiles the exhaustive audit across Functional Bugs, Featu
 ---
 
 **[ISSUE-010]** AuditLogs empty-state icon semantically wrong
-- **Location:** `lib/features/audit/audit_logs_screen.dart` → empty state widget
+- **Location:** audit log screen → empty state widget
 - **Description:** Uses `history_toggle_off_rounded` (clock) not suited for "no logs".
 - **User impact:** Minor UX inconsistency.
 - **Fix:** Replace with a "document-empty" or "clipboard" icon and add helpful copy.
@@ -558,7 +558,7 @@ Preflight: this file compiles the exhaustive audit across Functional Bugs, Featu
 ---
 
 **[ISSUE-008]** Audit actors query duplicates could leak PII lists
-- **Location:** `lib/features/audit/audit_provider.dart` → `auditActorsProvider`
+- **Location:** audit provider → `auditActorsProvider`
 - **Vulnerability type:** Data exposure / noisy logs
 - **Risk level:** Medium / P2
 - **Mitigation:** Use DISTINCT and limit returned PII; paginate actor lists.

@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/audit_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
@@ -262,20 +262,16 @@ class StaffListNotifier extends AsyncNotifier<List<StaffMember>> {
     required String targetId,
     required String description,
   }) async {
-    try {
-      await _supabase.retry(() => _supabase.from('audit_logs').insert({
-            'actor_id': actorId,
-            'actor_name': actorName,
-            'actor_role': actorRole,
-            'action': action,
-            'target_table': 'doctors',
-            'target_id': targetId,
-            'description': description,
-          }));
-    } catch (e) {
-      // Don't fail the main operation if audit logging fails, but log it.
-      debugPrint('Failed to write audit log: $e');
-    }
+    await AuditService.instance.log(
+      supabase: _supabase,
+      actorId: actorId,
+      actorName: actorName,
+      actorRole: actorRole,
+      action: action,
+      targetTable: 'doctors',
+      targetId: targetId,
+      description: description,
+    );
   }
 }
 

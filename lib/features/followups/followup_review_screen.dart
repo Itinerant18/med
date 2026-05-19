@@ -3,14 +3,14 @@
 // Doctor-side review of a completed follow-up task.
 //
 // Shows:
-//   • Task summary (patient + assignee + dates)
+//   • Task summary (visit label or patient label + assignee + dates)
 //   • What the assistant actually did at the external doctor (joined from
 //     agent_outside_visits via followup_task_id)
 //   • A free-text "doctor review notes" field
 //   • [Acknowledge & Close] — stamps reviewed_by / reviewed_at on the task
-//   • [+ Create Follow-up from this] — opens AddFollowupSheet with the same
-//     patient pre-selected, so the doctor can chain a follow-up without
-//     leaving the screen.
+//   • [+ Create Follow-up from this] — opens AddFollowupSheet and pre-fills
+//     the current context when available, so the doctor can chain a follow-up
+//     without leaving the screen.
 import 'package:flutter/material.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +23,7 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart';
 import 'package:mediflow/features/followups/add_followup_sheet.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
+import 'package:mediflow/features/work_log/work_log_widget.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 
 class FollowupReviewScreen extends ConsumerStatefulWidget {
@@ -76,9 +77,10 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-    builder: (_) => AddFollowupSheet(
-        preselectedPatientId: task.patientId,
-        preselectedPatientName: task.patientName,
+      builder: (_) => AddFollowupSheet(
+        preselectedPatientId: task.hasPatient ? task.patientId : null,
+        preselectedPatientName:
+            task.hasPatient ? task.patientName : null,
         prefillExtDocName: task.targetExtDoctorName,
         prefillExtDocHospital: task.targetExtDoctorHospital,
         prefillExtDocSpec: task.targetExtDoctorSpecialization,
@@ -86,8 +88,10 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
       ),
     );
     if (created == true && mounted) {
-      AppSnackbar.showSuccess(context,
-          'New follow-up created for ${task.patientName ?? "patient"}');
+      AppSnackbar.showSuccess(
+        context,
+        'New follow-up created for ${task.displayLabel}',
+      );
     }
   }
 
@@ -139,7 +143,7 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              task.patientName ?? 'Unknown patient',
+                              task.displayLabel,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -155,7 +159,7 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
                           ),
                         ],
                       ),
-                      if ((task.title?.isNotEmpty ?? false)) ...[
+                      if (task.hasPatient && (task.title?.isNotEmpty ?? false)) ...[
                         const SizedBox(height: 4),
                         Text(
                           task.title!,
@@ -283,6 +287,12 @@ class _FollowupReviewScreenState extends ConsumerState<FollowupReviewScreen> {
                   hint:
                       'e.g. Patient needs OT evaluation. Schedule re-review in 2 weeks.',
                   maxLines: 4,
+                ),
+                const SizedBox(height: 20),
+                WorkLogWidget(
+                  entityType: 'followup_task',
+                  entityId: task.id,
+                  title: 'Activity Log',
                 ),
                 const SizedBox(height: 20),
 

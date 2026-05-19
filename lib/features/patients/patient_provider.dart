@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
-import 'package:mediflow/features/audit/audit_provider.dart';
+import 'package:mediflow/core/audit_service.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/patient_model.dart';
 
