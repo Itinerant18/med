@@ -27,17 +27,21 @@ class _AssistantProfileScreenState
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl = TextEditingController();
   late final TextEditingController _phoneCtrl = TextEditingController();
+  late final TextEditingController _followupReminderCtrl = TextEditingController(text: '7');
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
+    _followupReminderCtrl.dispose();
     super.dispose();
   }
 
   void _populate(Map<String, dynamic> d) {
     _nameCtrl.text = d['full_name'] ?? '';
     _phoneCtrl.text = d['phone'] ?? '';
+    _followupReminderCtrl.text =
+        (d['ext_doc_followup_reminder_days'] ?? 7).toString();
   }
 
   Future<void> _save() async {
@@ -45,6 +49,8 @@ class _AssistantProfileScreenState
     await ref.read(profileNotifierProvider.notifier).updateProfile({
       'full_name': _nameCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
+      'ext_doc_followup_reminder_days':
+          int.tryParse(_followupReminderCtrl.text.trim()) ?? 7,
     });
     if (mounted) {
       AppSnackbar.showSuccess(context, 'Profile updated');
@@ -266,6 +272,54 @@ class _AssistantProfileScreenState
                           _infoRow(AppIcons.email_outlined, 'Email',
                               data['email'] ?? '',
                               locked: true),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Follow-up Preferences
+                    NeuCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 14),
+                            child: Text('FOLLOW-UP PREFERENCES',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.sectionLabel,
+                                    letterSpacing: 1.2,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                          if (_isEditMode)
+                            NeuTextField(
+                              controller: _followupReminderCtrl,
+                              label: 'Follow-up Reminder (Days)',
+                              hint: 'e.g. 7',
+                              keyboardType: TextInputType.number,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Required';
+                                final n = int.tryParse(v);
+                                if (n == null || n < 1 || n > 90) {
+                                  return 'Enter a value between 1 and 90';
+                                }
+                                return null;
+                              },
+                            )
+                          else
+                            _infoRow(
+                              AppIcons.notifications_none_rounded,
+                              'Ext. Doctor Follow-up Reminder',
+                              '${_followupReminderCtrl.text} days',
+                            ),
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              'After recording an external doctor visit, you will be reminded to follow up after this many days.',
+                              style: TextStyle(
+                                  fontSize: 11, color: AppTheme.textMuted),
+                            ),
+                          ),
                         ],
                       ),
                     ),

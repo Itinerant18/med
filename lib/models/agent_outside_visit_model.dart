@@ -12,6 +12,7 @@ class AgentOutsideVisit {
     this.extDoctorSpecialization,
     this.extDoctorHospital,
     this.extDoctorPhone,
+    this.areaDistrict,
     required this.visitDate,
     this.chiefComplaint,
     this.diagnosis,
@@ -37,6 +38,7 @@ class AgentOutsideVisit {
   final String? extDoctorSpecialization;
   final String? extDoctorHospital;
   final String? extDoctorPhone;
+  final String? areaDistrict;
   final DateTime visitDate;
   final String? chiefComplaint;
   final String? diagnosis;
@@ -77,6 +79,7 @@ class AgentOutsideVisit {
       extDoctorSpecialization: json['ext_doctor_specialization']?.toString(),
       extDoctorHospital: json['ext_doctor_hospital']?.toString(),
       extDoctorPhone: json['ext_doctor_phone']?.toString(),
+      areaDistrict: json['area_district']?.toString(),
       visitDate: _parseDate(json['visit_date']),
       chiefComplaint: json['chief_complaint']?.toString(),
       diagnosis: json['diagnosis']?.toString(),

@@ -139,8 +139,11 @@ class NotificationPreferencesController
 
   @override
   Future<NotificationPreferencesState> build() async {
-    final authSub = _supabase.auth.onAuthStateChange.listen((_) {
-      ref.invalidateSelf();
+    final authSub = _supabase.auth.onAuthStateChange.listen((event) {
+      if (event.event == AuthChangeEvent.signedIn || 
+          event.event == AuthChangeEvent.signedOut) {
+        ref.invalidateSelf();
+      }
     });
     ref.onDispose(authSub.cancel);
 

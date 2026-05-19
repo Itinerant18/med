@@ -270,6 +270,24 @@ class _VisitCard extends ConsumerWidget {
                 ),
               ],
             ),
+            if (visit.areaDistrict != null && visit.areaDistrict!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(AppIcons.location_on_outlined,
+                      size: 14, color: AppTheme.textMuted),
+                  const SizedBox(width: 5),
+                  Text(
+                    visit.areaDistrict!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (visit.diagnosis != null && visit.diagnosis!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(

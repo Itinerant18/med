@@ -18,6 +18,33 @@ class AgentOutsideVisitsNotifier
   String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  static const _selectColumns = '''
+    id,
+    patient_id,
+    followup_task_id,
+    agent_id,
+    ext_doctor_name,
+    ext_doctor_specialization,
+    ext_doctor_hospital,
+    ext_doctor_phone,
+    area_district,
+    visit_date,
+    chief_complaint,
+    diagnosis,
+    prescriptions,
+    visit_notes,
+    next_followup_date,
+    meet_dr_name,
+    meet_place,
+    meet_dr_type,
+    meet_times_visited,
+    status,
+    reviewed_by,
+    reviewed_at,
+    created_at,
+    patients(full_name)
+  ''';
+
   @override
   Future<List<AgentOutsideVisit>> build() async {
     return _fetch();
@@ -30,31 +57,7 @@ class AgentOutsideVisitsNotifier
     try {
       final response = await _supabase.retry(() => _supabase
           .from('agent_outside_visits')
-          .select('''
-            id,
-            patient_id,
-            followup_task_id,
-            agent_id,
-            ext_doctor_name,
-            ext_doctor_specialization,
-            ext_doctor_hospital,
-            ext_doctor_phone,
-            visit_date,
-            chief_complaint,
-            diagnosis,
-            prescriptions,
-            visit_notes,
-            next_followup_date,
-            meet_dr_name,
-            meet_place,
-            meet_dr_type,
-            meet_times_visited,
-            status,
-            reviewed_by,
-            reviewed_at,
-            created_at,
-            patients(full_name)
-          ''')
+          .select(_selectColumns)
           .eq('agent_id', user.id)
           .order('visit_date', ascending: false)
           .order('created_at', ascending: false));
@@ -80,6 +83,7 @@ class AgentOutsideVisitsNotifier
     String? extDoctorSpecialization,
     String? extDoctorHospital,
     String? extDoctorPhone,
+    String? areaDistrict,
     required DateTime visitDate,
     String? chiefComplaint,
     String? diagnosis,
@@ -105,6 +109,8 @@ class AgentOutsideVisitsNotifier
         'ext_doctor_hospital': extDoctorHospital,
       if (extDoctorPhone != null && extDoctorPhone.isNotEmpty)
         'ext_doctor_phone': extDoctorPhone,
+      if (areaDistrict != null && areaDistrict.isNotEmpty)
+        'area_district': areaDistrict,
       'visit_date': _dateStr(visitDate),
       if (chiefComplaint != null && chiefComplaint.isNotEmpty)
         'chief_complaint': chiefComplaint,
@@ -143,6 +149,39 @@ class AgentOutsideVisitsNotifier
             );
       }
 
+      // Auto-create a self-assigned follow-up task so the agent is reminded
+      // to re-visit this external doctor on the chosen date.
+      if (nextFollowupDate != null) {
+        final hospLabel = (extDoctorHospital != null && extDoctorHospital.isNotEmpty)
+            ? ' at $extDoctorHospital'
+            : '';
+        await _supabase.retry(() => _supabase.from('followup_tasks').insert({
+              if (patientId != null && patientId.isNotEmpty)
+                'patient_id': patientId,
+              'assigned_to': user.id,
+              'created_by': user.id,
+              'due_date': _dateStr(nextFollowupDate),
+              'title': 'Re-visit Dr. $extDoctorName',
+              'notes':
+                  'Self-reminder: Follow up with Dr. $extDoctorName$hospLabel',
+              'priority': 'normal',
+              'status': 'pending',
+              'is_external_doctor': true,
+              if (extDoctorName.isNotEmpty)
+                'target_ext_doctor_name': extDoctorName,
+              if (extDoctorSpecialization != null &&
+                  extDoctorSpecialization.isNotEmpty)
+                'target_ext_doctor_specialization': extDoctorSpecialization,
+              if (extDoctorHospital != null && extDoctorHospital.isNotEmpty)
+                'target_ext_doctor_hospital': extDoctorHospital,
+              if (extDoctorPhone != null && extDoctorPhone.isNotEmpty)
+                'target_ext_doctor_phone': extDoctorPhone,
+              'scheduled_visit_date': _dateStr(nextFollowupDate),
+            }));
+        // Refresh the followup tasks list so the new reminder shows up.
+        ref.invalidate(followupTasksProvider);
+      }
+
       ref.invalidateSelf();
     } catch (e) {
       throw Exception(AppError.getMessage(e));
@@ -156,8 +195,12 @@ class AgentOutsideVisitsNotifier
     String? extDoctorSpecialization,
     String? extDoctorHospital,
     String? extDoctorPhone,
+    String? areaDistrict,
     String? meetDrType,
     int? meetTimesVisited,
+    DateTime? nextFollowupDate,
+    bool scheduleNewTask = false,
+    String? patientId,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
@@ -177,8 +220,13 @@ class AgentOutsideVisitsNotifier
           extDoctorPhone != null && extDoctorPhone.isNotEmpty
               ? extDoctorPhone
               : null,
+      'area_district':
+          areaDistrict != null && areaDistrict.isNotEmpty
+              ? areaDistrict
+              : null,
       'meet_dr_type': meetDrType,
       'meet_times_visited': meetTimesVisited,
+      'next_followup_date': nextFollowupDate != null ? _dateStr(nextFollowupDate) : null,
     };
 
     try {
@@ -187,6 +235,37 @@ class AgentOutsideVisitsNotifier
           .update(data)
           .eq('id', visitId)
           .eq('agent_id', user.id));
+
+      if (scheduleNewTask && nextFollowupDate != null) {
+        final hospLabel = (extDoctorHospital != null && extDoctorHospital.isNotEmpty)
+            ? ' at $extDoctorHospital'
+            : '';
+        await _supabase.retry(() => _supabase.from('followup_tasks').insert({
+              if (patientId != null && patientId.isNotEmpty)
+                'patient_id': patientId,
+              'assigned_to': user.id,
+              'created_by': user.id,
+              'due_date': _dateStr(nextFollowupDate),
+              'title': 'Re-visit Dr. $extDoctorName',
+              'notes':
+                  'Self-reminder: Follow up with Dr. $extDoctorName$hospLabel',
+              'priority': 'normal',
+              'status': 'pending',
+              'is_external_doctor': true,
+              if (extDoctorName.isNotEmpty)
+                'target_ext_doctor_name': extDoctorName,
+              if (extDoctorSpecialization != null &&
+                  extDoctorSpecialization.isNotEmpty)
+                'target_ext_doctor_specialization': extDoctorSpecialization,
+              if (extDoctorHospital != null && extDoctorHospital.isNotEmpty)
+                'target_ext_doctor_hospital': extDoctorHospital,
+              if (extDoctorPhone != null && extDoctorPhone.isNotEmpty)
+                'target_ext_doctor_phone': extDoctorPhone,
+              'scheduled_visit_date': _dateStr(nextFollowupDate),
+            }));
+        ref.invalidate(followupTasksProvider);
+      }
+
       ref.invalidateSelf();
     } catch (e) {
       throw Exception(AppError.getMessage(e));
@@ -219,31 +298,7 @@ final agentOutsideVisitForTaskProvider = FutureProvider.autoDispose
   try {
     final response = await supabase.retry(() => supabase
         .from('agent_outside_visits')
-        .select('''
-          id,
-          patient_id,
-          followup_task_id,
-          agent_id,
-          ext_doctor_name,
-          ext_doctor_specialization,
-          ext_doctor_hospital,
-          ext_doctor_phone,
-          visit_date,
-          chief_complaint,
-          diagnosis,
-          prescriptions,
-          visit_notes,
-          next_followup_date,
-          meet_dr_name,
-          meet_place,
-          meet_dr_type,
-          meet_times_visited,
-          status,
-          reviewed_by,
-          reviewed_at,
-          created_at,
-          patients(full_name)
-        ''')
+        .select(AgentOutsideVisitsNotifier._selectColumns)
         .eq('followup_task_id', taskId)
         .maybeSingle());
     if (response == null) return null;
@@ -260,31 +315,7 @@ final allAgentOutsideVisitsProvider =
     try {
       final response = await supabase.retry(() => supabase
           .from('agent_outside_visits')
-          .select('''
-            id,
-            patient_id,
-            followup_task_id,
-            agent_id,
-            ext_doctor_name,
-            ext_doctor_specialization,
-            ext_doctor_hospital,
-            ext_doctor_phone,
-            visit_date,
-            chief_complaint,
-            diagnosis,
-            prescriptions,
-            visit_notes,
-            next_followup_date,
-            meet_dr_name,
-            meet_place,
-            meet_dr_type,
-            meet_times_visited,
-            status,
-            reviewed_by,
-            reviewed_at,
-            created_at,
-            patients(full_name)
-          ''')
+          .select(AgentOutsideVisitsNotifier._selectColumns)
         .order('visit_date', ascending: false));
 
     return (response as List)
@@ -306,31 +337,7 @@ final agentOutsideVisitByIdProvider =
   try {
     final response = await supabase.retry(() => supabase
         .from('agent_outside_visits')
-        .select('''
-          id,
-          patient_id,
-          followup_task_id,
-          agent_id,
-          ext_doctor_name,
-          ext_doctor_specialization,
-          ext_doctor_hospital,
-          ext_doctor_phone,
-          visit_date,
-          chief_complaint,
-          diagnosis,
-          prescriptions,
-          visit_notes,
-          next_followup_date,
-          meet_dr_name,
-          meet_place,
-          meet_dr_type,
-          meet_times_visited,
-          status,
-          reviewed_by,
-          reviewed_at,
-          created_at,
-          patients(full_name)
-        ''')
+        .select(AgentOutsideVisitsNotifier._selectColumns)
         .eq('id', visitId)
         .maybeSingle());
     if (response == null) return null;

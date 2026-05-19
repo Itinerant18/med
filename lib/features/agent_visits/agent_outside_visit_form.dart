@@ -12,6 +12,34 @@ import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
+import 'package:mediflow/features/profile/profile_provider.dart';
+
+/// Predefined list of West Bengal districts for the area dropdown.
+const List<String> _westBengalDistricts = [
+  'Alipurduar',
+  'Bankura',
+  'Birbhum',
+  'Cooch Behar',
+  'Dakshin Dinajpur',
+  'Darjeeling',
+  'Hooghly',
+  'Howrah',
+  'Jalpaiguri',
+  'Jhargram',
+  'Kalimpong',
+  'Kolkata',
+  'Malda',
+  'Murshidabad',
+  'Nadia',
+  'North 24 Parganas',
+  'Paschim Bardhaman',
+  'Paschim Medinipur',
+  'Purba Bardhaman',
+  'Purba Medinipur',
+  'Purulia',
+  'South 24 Parganas',
+  'Uttar Dinajpur',
+];
 
 class AgentOutsideVisitForm extends ConsumerStatefulWidget {
   final String? visitId;
@@ -63,6 +91,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   final _meetPlaceCtrl = TextEditingController();
   String? _meetDrType;
   final _meetTimesVisitedCtrl = TextEditingController();
+  String? _areaDistrict;
 
   DateTime _visitDate = DateTime.now();
   final _chiefComplaintCtrl = TextEditingController();
@@ -70,6 +99,8 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   final _prescriptionsCtrl = TextEditingController();
   final _visitNotesCtrl = TextEditingController();
   DateTime? _nextFollowupDate;
+  DateTime? _originalFollowupDate;
+  bool _reminderPreferenceLoaded = false;
 
   // Resolved instructions to show on the info banner. Comes from one of:
   //   1. widget.prefillVisitInstructions (passed via router `extra`)
@@ -104,7 +135,31 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
       _hydrateFromTask(widget.followupTaskId!);
     }
 
-    if (_isEdit) _loadExistingVisit(widget.visitId!);
+    if (_isEdit) {
+      _loadExistingVisit(widget.visitId!);
+    } else {
+      // For new visits, auto-default the follow-up date from agent preference.
+      _loadReminderPreference();
+    }
+  }
+
+  /// Reads the agent's `ext_doc_followup_reminder_days` preference from their
+  /// profile and auto-defaults [_nextFollowupDate] so the agent gets a
+  /// pre-filled reminder date they can adjust or clear.
+  Future<void> _loadReminderPreference() async {
+    if (_reminderPreferenceLoaded) return;
+    try {
+      final profile = await ref.read(profileNotifierProvider.future);
+      if (!mounted) return;
+      final days = (profile['ext_doc_followup_reminder_days'] as int?) ?? 7;
+      setState(() {
+        _reminderPreferenceLoaded = true;
+        _nextFollowupDate = _visitDate.add(Duration(days: days));
+      });
+    } catch (_) {
+      // Best-effort — if profile fetch fails, leave it unset.
+      if (mounted) setState(() => _reminderPreferenceLoaded = true);
+    }
   }
 
   Future<void> _loadExistingVisit(String visitId) async {
@@ -120,6 +175,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
         _extSpecCtrl.text = visit.extDoctorSpecialization ?? '';
         _extHospCtrl.text = visit.extDoctorHospital ?? '';
         _extPhoneCtrl.text = visit.extDoctorPhone ?? '';
+        _areaDistrict = visit.areaDistrict;
         _meetDrNameCtrl.text = visit.meetDrName ?? '';
         _meetPlaceCtrl.text = visit.meetPlace ?? '';
         _meetDrType = visit.meetDrType;
@@ -129,6 +185,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
         _prescriptionsCtrl.text = visit.prescriptions ?? '';
         _visitNotesCtrl.text = visit.visitNotes ?? '';
         _nextFollowupDate = visit.nextFollowupDate;
+        _originalFollowupDate = visit.nextFollowupDate;
       });
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, AppError.getMessage(e));
@@ -223,8 +280,17 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               extDoctorSpecialization: _extSpecCtrl.text.trim(),
               extDoctorHospital: _extHospCtrl.text.trim(),
               extDoctorPhone: _extPhoneCtrl.text.trim(),
+              areaDistrict: _areaDistrict,
               meetDrType: _meetDrType,
               meetTimesVisited: int.tryParse(_meetTimesVisitedCtrl.text.trim()),
+              nextFollowupDate: _nextFollowupDate,
+              scheduleNewTask: _isEdit &&
+                  _nextFollowupDate != null &&
+                  (_originalFollowupDate == null ||
+                      _nextFollowupDate!.year != _originalFollowupDate!.year ||
+                      _nextFollowupDate!.month != _originalFollowupDate!.month ||
+                      _nextFollowupDate!.day != _originalFollowupDate!.day),
+              patientId: _selectedPatientId,
             );
       } else {
         await ref.read(agentOutsideVisitsProvider.notifier).createVisit(
@@ -234,6 +300,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
               extDoctorSpecialization: _extSpecCtrl.text.trim(),
               extDoctorHospital: _extHospCtrl.text.trim(),
               extDoctorPhone: _extPhoneCtrl.text.trim(),
+              areaDistrict: _areaDistrict,
               visitDate: _visitDate,
               chiefComplaint: _chiefComplaintCtrl.text.trim(),
               diagnosis: _diagnosisCtrl.text.trim(),
@@ -351,8 +418,23 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 12),
+
+                    // ── Area (District in West Bengal) ──
                     DropdownButtonFormField<String>(
-                      initialValue: _meetDrType,
+                      value: _areaDistrict,
+                      decoration: const InputDecoration(
+                        labelText: 'Area (District)',
+                        hintText: 'Select district',
+                      ),
+                      items: _westBengalDistricts
+                          .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _areaDistrict = v),
+                    ),
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      value: _meetDrType,
                       decoration:
                           const InputDecoration(labelText: 'Type of Doctor'),
                       hint: const Text('Select doctor type'),
@@ -379,6 +461,87 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                   ],
                 ),
               ),
+
+              // ── Follow-up Reminder Section ──
+              const SizedBox(height: 24),
+              const SectionTitle(
+                title: 'Follow-up Reminder',
+                icon: AppIcons.notifications_none_rounded,
+              ),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondary.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.secondary.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(AppIcons.info_outline_rounded,
+                          color: AppTheme.secondary, size: 16),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _isEdit 
+                            ? 'Change this date to schedule your next visit. Saving will auto-create a new task in "My Tasks".'
+                            : 'Set a date to remind yourself to re-visit this doctor. A task will be auto-created in "My Tasks".',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.secondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _pickDate(false),
+                  child: NeuCard(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(
+                          AppIcons.event_available_rounded,
+                          color: _nextFollowupDate != null
+                              ? AppTheme.primaryTeal
+                              : AppTheme.textMuted,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _nextFollowupDate == null
+                                ? 'No follow-up reminder'
+                                : 'Re-visit on ${DateFormat('MMM d, yyyy').format(_nextFollowupDate!)}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: _nextFollowupDate == null
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textColor,
+                              fontWeight: _nextFollowupDate == null
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (_nextFollowupDate != null)
+                          IconButton(
+                            icon: const Icon(AppIcons.clear_rounded,
+                                size: 18, color: AppTheme.textMuted),
+                            tooltip: 'Clear reminder',
+                            onPressed: () =>
+                                setState(() => _nextFollowupDate = null),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
