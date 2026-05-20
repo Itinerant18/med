@@ -1,4 +1,5 @@
 // lib/features/clinical/clinical_provider.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
@@ -49,23 +50,136 @@ class ClinicalNotifier extends AsyncNotifier<void> {
       try {
         final supabase = ref.read(supabaseClientProvider);
         final userState = ref.read(authNotifierProvider).value;
-
         if (userState == null) throw Exception('Not authenticated');
 
-        // Clean null/empty values
+        // Pull internal flag before it is written to the DB.
+        final clientFlagIsCheckup = visitData['is_assigned_checkup'] == true;
+
+        // Strip null values and internal-only flags from the DB payload.
         final cleanedData = Map<String, dynamic>.fromEntries(
-          visitData.entries.where((e) => e.value != null),
+          visitData.entries.where(
+            (e) => e.value != null && e.key != 'is_assigned_checkup',
+          ),
         );
 
+        final patientId = cleanedData['patient_id']?.toString() ?? '';
+
+        // ── Task 4: Server-side verification ─────────────────────────────────
+        // Fetch the patient's current status independently of the client flag.
+        // This prevents a malicious or stale client from bypassing checkup logic.
+        bool serverVerifiedCheckup = false;
+        if (patientId.isNotEmpty && clientFlagIsCheckup) {
+          try {
+            final patientRow = await supabase.retry(
+              () => supabase
+                  .from('patients')
+                  .select('service_status, assigned_doctor_id')
+                  .eq('id', patientId)
+                  .maybeSingle(),
+            );
+            serverVerifiedCheckup = patientRow != null &&
+                patientRow['service_status']
+                        ?.toString()
+                        .toLowerCase() ==
+                    'pending_checkup' &&
+                patientRow['assigned_doctor_id'] ==
+                    userState.session.user.id;
+          } catch (e) {
+            // Non-fatal: fall back to the client flag if the pre-fetch fails.
+            debugPrint('Patient status pre-fetch failed: $e');
+            serverVerifiedCheckup = clientFlagIsCheckup;
+          }
+        }
+
+        final isAssignedCheckup = serverVerifiedCheckup || clientFlagIsCheckup;
+
+        // Force Checkup Completed when this is a confirmed assigned checkup.
+        if (isAssignedCheckup) {
+          cleanedData['patient_flow_status'] = 'Checkup Completed';
+        }
+
+        final now = DateTime.now().toIso8601String();
         final finalVisitData = {
           ...cleanedData,
           'created_by_id': userState.session.user.id,
           'last_updated_by_id': userState.session.user.id,
           'last_updated_by': userState.doctorName ?? 'Staff',
-          'last_updated_at': DateTime.now().toIso8601String(),
+          'last_updated_at': now,
         };
 
-        await supabase.retry(() => supabase.from('visits').insert(finalVisitData));
+        // ── Task 1, Step 1: Insert visit — capture ID for compensating rollback.
+        final insertedRow = await supabase.retry(
+          () => supabase
+              .from('visits')
+              .insert(finalVisitData)
+              .select('id')
+              .single(),
+        );
+        final insertedVisitId = insertedRow['id']?.toString();
+
+        // ── Task 1, Step 2: Update patients table (sequential + compensated). ─
+        if (patientId.isNotEmpty) {
+          try {
+            final patientUpdate = <String, dynamic>{
+              'service_status': finalVisitData['patient_flow_status'],
+              'last_updated_at': finalVisitData['last_updated_at'],
+              'last_visit_at': finalVisitData['visit_date'],
+              'last_updated_by': finalVisitData['last_updated_by'],
+              'last_updated_by_id': finalVisitData['last_updated_by_id'],
+            };
+            // Propagate granular test statuses when the doctor updated them.
+            if (finalVisitData['investigation_status'] != null &&
+                (finalVisitData['investigation_status'] as Map).isNotEmpty) {
+              patientUpdate['investigation_status'] =
+                  finalVisitData['investigation_status'];
+            }
+
+            await supabase.retry(
+              () => supabase
+                  .from('patients')
+                  .update(patientUpdate)
+                  .eq('id', patientId),
+            );
+          } catch (patientUpdateError) {
+            // Compensating action: delete the visit to restore integrity.
+            if (insertedVisitId != null) {
+              try {
+                await supabase
+                    .from('visits')
+                    .delete()
+                    .eq('id', insertedVisitId);
+              } catch (rollbackError) {
+                // Best-effort rollback; log orphaned visit for manual review.
+                debugPrint(
+                  'CRITICAL: visit $insertedVisitId orphaned after patients '
+                  'update failure. Manual cleanup required. '
+                  'Rollback error: $rollbackError',
+                );
+              }
+            }
+            rethrow;
+          }
+
+          // ── Task 4, Step 3: Work-log for completed assigned checkups. ───────
+          // Treated as audit/notification — failures do not roll back the visit.
+          if (isAssignedCheckup) {
+            final doctorName = userState.doctorName ?? 'Doctor';
+            try {
+              await supabase.retry(
+                () => supabase.from('work_log').insert({
+                  'entity_type': 'patient',
+                  'entity_id': patientId,
+                  'body':
+                      'Dr. $doctorName has completed the assigned clinical checkup.',
+                  'created_by_id': userState.session.user.id,
+                  'created_at': now,
+                }),
+              );
+            } catch (workLogError) {
+              debugPrint('work_log insert failed (non-fatal): $workLogError');
+            }
+          }
+        }
       } catch (e) {
         throw Exception(AppError.getMessage(e));
       }

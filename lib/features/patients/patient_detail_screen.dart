@@ -16,6 +16,8 @@ import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 import 'package:mediflow/features/patients/document_upload_widget.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/followups/add_followup_sheet.dart';
+import 'package:mediflow/features/dr_visits/agents_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 
 import 'package:mediflow/core/app_snackbar.dart';
 
@@ -59,6 +61,14 @@ class PatientDetailScreen extends ConsumerWidget {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (authState?.role == UserRole.headDoctor)
+                    IconButton(
+                      icon: const Icon(AppIcons.person_search_rounded,
+                          color: AppTheme.doctorAccent),
+                      tooltip: 'Assign Doctor',
+                      onPressed: () =>
+                          _showAssignDoctorSheet(context, ref, patient),
+                    ),
                   if (canFollowup)
                     IconButton(
                       icon: const Icon(AppIcons.add_task_rounded,
@@ -506,6 +516,25 @@ class PatientDetailScreen extends ConsumerWidget {
     );
   }
 
+  void _showAssignDoctorSheet(
+    BuildContext context,
+    WidgetRef ref,
+    PatientModel? patient,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _AssignDoctorSheet(
+        patientId: patientId,
+        currentAssignedDoctorId: patient?.assignedDoctorId,
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await ConfirmDialog.show(
       context,
@@ -780,5 +809,175 @@ class _TimelineItem extends StatelessWidget {
     if (s == 'admitted' || s == 'under observation') return AppTheme.warningColor;
     if (visitType?.toLowerCase() == 'emergency') return AppTheme.errorColor;
     return AppTheme.textMuted;
+  }
+}
+
+// ── Assign Doctor Bottom Sheet ────────────────────────────────────────────────
+
+class _AssignDoctorSheet extends ConsumerStatefulWidget {
+  final String patientId;
+  final String? currentAssignedDoctorId;
+
+  const _AssignDoctorSheet({
+    required this.patientId,
+    required this.currentAssignedDoctorId,
+  });
+
+  @override
+  ConsumerState<_AssignDoctorSheet> createState() => _AssignDoctorSheetState();
+}
+
+class _AssignDoctorSheetState extends ConsumerState<_AssignDoctorSheet> {
+  String? _selectedDoctorId;
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final doctorsAsync = ref.watch(doctorsProvider);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(AppIcons.person_search_rounded,
+                    color: AppTheme.doctorAccent, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Assign Doctor for Checkup',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(AppIcons.close_rounded, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Select a doctor to assign this patient for an internal checkup. '
+              'Their status will change to Pending Checkup.',
+              style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 16),
+            doctorsAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(color: AppTheme.primaryTeal),
+                ),
+              ),
+              error: (e, _) => Text(
+                'Failed to load doctors: $e',
+                style: const TextStyle(color: AppTheme.errorColor),
+              ),
+              data: (doctors) {
+                final assignable = doctors
+                    .where((d) => d.id != widget.currentAssignedDoctorId)
+                    .toList();
+                if (assignable.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('No other doctors available.',
+                          style: TextStyle(color: AppTheme.textMuted)),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: assignable.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final doctor = assignable[i];
+                    final isSelected = _selectedDoctorId == doctor.id;
+                    return ListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 4),
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppTheme.doctorAccent
+                            .withValues(alpha: 0.1),
+                        child: const Icon(AppIcons.person_rounded,
+                            color: AppTheme.doctorAccent, size: 18),
+                      ),
+                      title: Text(
+                        'Dr. ${doctor.fullName}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      subtitle: doctor.specialization != null
+                          ? Text(doctor.specialization!,
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.textMuted))
+                          : null,
+                      trailing: isSelected
+                          ? const Icon(AppIcons.check_circle_rounded,
+                              color: AppTheme.doctorAccent)
+                          : null,
+                      onTap: () =>
+                          setState(() => _selectedDoctorId = doctor.id),
+                    );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            NeuButton(
+              onPressed: (_selectedDoctorId == null || _saving)
+                  ? null
+                  : () => _assignDoctor(context),
+              isLoading: _saving,
+              color: AppTheme.doctorAccent,
+              child: const Text(
+                'ASSIGN CHECKUP',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _assignDoctor(BuildContext context) async {
+    if (_selectedDoctorId == null) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(patientProvider.notifier).updatePatient(
+        widget.patientId,
+        {
+          'assigned_doctor_id': _selectedDoctorId,
+          'service_status': 'pending_checkup',
+        },
+      );
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, 'Doctor assigned successfully.');
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppSnackbar.showError(context, 'Failed to assign: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }

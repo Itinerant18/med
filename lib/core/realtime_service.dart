@@ -17,17 +17,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_service.dart';
-import 'package:mediflow/models/app_notification.dart';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
 enum SubscriptionStatus { disconnected, connecting, connected, error }
-
-/// Callback the auth gate (or any lifecycle owner) provides so the service
-/// can push in-app notifications without holding a ProviderContainer.
-typedef OnNotificationCallback = void Function(AppNotification notification);
 
 // ── Internal bookkeeping per table ──────────────────────────────────────────
 
@@ -67,7 +61,6 @@ class RealtimeService {
   String? _currentDoctorName;
   String? _currentUserId;
   bool _isAssistant = false;
-  OnNotificationCallback? _onNotification;
 
   // Status broadcasting.
   final _statusController =
@@ -85,14 +78,13 @@ class RealtimeService {
 
   // ── Public API ──────────────────────────────────────────────────────────
 
-  /// Start (or re-start) subscriptions for the authenticated user.
-  ///
-  /// [onNotification] replaces the old ProviderContainer — it's how in-app
-  /// notifications reach the UI layer without the service retaining a Ref.
+  /// Start (or re-start) table subscriptions for the authenticated user.
+  /// In-app notifications are now exclusively driven by [notificationProvider]
+  /// (which watches the `notifications` table). Raw-table subscriptions here
+  /// only fire OS-level foreground banners and data-refresh side-effects.
   void subscribeToPatientChanges(
     String currentDoctorName,
     bool isAssistant,
-    OnNotificationCallback onNotification,
   ) {
     final currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
 
@@ -101,7 +93,6 @@ class RealtimeService {
         _currentUserId == currentUserId &&
         _isAssistant == isAssistant &&
         _allConnected) {
-      _onNotification = onNotification;
       return;
     }
 
@@ -111,7 +102,6 @@ class RealtimeService {
     _currentDoctorName = currentDoctorName;
     _currentUserId = currentUserId;
     _isAssistant = isAssistant;
-    _onNotification = onNotification;
 
     for (final table in _tables) {
       _subscribeTable(table);
@@ -124,7 +114,6 @@ class RealtimeService {
     _currentDoctorName = null;
     _currentUserId = null;
     _isAssistant = false;
-    _onNotification = null;
   }
 
   // ── Per-table subscription ──────────────────────────────────────────────
@@ -308,36 +297,15 @@ class RealtimeService {
   // ── Event handlers ────────────────────────────────────────────────────────
 
   void _handleDrVisitInsert(PostgresChangePayload payload) {
+    // The subscription filter (assigned_agent_id = currentUserId) ensures this
+    // fires only for the current user. Show an OS-level banner immediately;
+    // the in-app notification arrives via notificationProvider once the backend
+    // inserts the corresponding row into the `notifications` table.
     try {
-      final row = payload.newRecord;
-      final assignedAgentId = row['assigned_agent_id']?.toString();
-      final client = Supabase.instance.client;
-      final currentUserId = client.auth.currentUser?.id;
-
-      if (assignedAgentId != null && assignedAgentId == currentUserId) {
-        _addNotification(
-          id: 'visit-${row['id']}',
-          title: 'New Visit Assigned',
-          body: 'You have been assigned a new patient visit.',
-          type: 'visit_assignment',
-          category: 'visit',
-          priority: 'high',
-        );
-        NotificationService.instance.showVisitAssignedNotification(
-          patientName: 'a patient',
-          doctorName: 'your lead',
-        );
-      } else if (assignedAgentId != null) {
-        FcmService.sendToDoctor(
-          doctorId: assignedAgentId,
-          title: 'New Visit Assigned',
-          body: 'A new patient visit has been assigned to you.',
-          data: {
-            'type': 'visit_assignment',
-            'visit_id': row['id']?.toString() ?? '',
-          },
-        );
-      }
+      NotificationService.instance.showVisitAssignedNotification(
+        patientName: 'a patient',
+        doctorName: 'your lead',
+      );
     } catch (e) {
       debugPrint('Realtime [dr_visits] handler error: $e');
     }
@@ -353,12 +321,14 @@ class RealtimeService {
 
   void _handlePatientUpdate(
       PostgresChangePayload payload, String doctorName) {
+    // Show an OS-level banner for foreground awareness. The in-app notification
+    // entry is owned by notificationProvider (notifications table) to avoid
+    // duplicates with the backend's own insert into that table.
     try {
       final row = payload.newRecord;
       final updatedBy = row['last_updated_by']?.toString() ?? '';
       final newStatus = row['service_status']?.toString() ?? '';
-      final oldStatus =
-          payload.oldRecord['service_status']?.toString();
+      final oldStatus = payload.oldRecord['service_status']?.toString();
 
       if (updatedBy == doctorName) return;
       if (newStatus.isEmpty || oldStatus == newStatus) return;
@@ -367,13 +337,6 @@ class RealtimeService {
         patientName: row['full_name']?.toString() ?? 'A patient',
         updatedBy: updatedBy,
         newStatus: newStatus,
-      );
-      _addNotification(
-        id: 'status-${row['id']}-${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Status Updated: ${row['full_name'] ?? 'Patient'}',
-        body: '$oldStatus → $newStatus (by $updatedBy)',
-        type: 'status_change',
-        category: 'patient',
       );
     } catch (e) {
       debugPrint('Realtime [patients/update] handler error: $e');
@@ -420,30 +383,4 @@ class RealtimeService {
     return;
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  void _addNotification({
-    required String id,
-    required String title,
-    required String body,
-    required String type,
-    String category = 'patient',
-    String priority = 'normal',
-  }) {
-    final cb = _onNotification;
-    if (cb == null) return;
-    try {
-      cb(AppNotification(
-        id: id,
-        title: title,
-        body: body,
-        timestamp: DateTime.now(),
-        type: type,
-        category: category,
-        priority: priority,
-      ));
-    } catch (e) {
-      debugPrint('RealtimeService: notification callback failed: $e');
-    }
-  }
 }

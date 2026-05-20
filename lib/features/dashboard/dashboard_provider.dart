@@ -29,6 +29,7 @@ class DashboardState {
   final List<Map<String, dynamic>> todayVisits;
   final List<Map<String, dynamic>> highPriorityPatients;
   final List<Map<String, dynamic>> assignedVisits;
+  final List<Map<String, dynamic>> assignedCheckups;
   final List<FollowupTask> followupTasks;
   final DashboardStats stats;
   final bool isLive;
@@ -38,6 +39,7 @@ class DashboardState {
     required this.todayVisits,
     required this.highPriorityPatients,
     this.assignedVisits = const [],
+    this.assignedCheckups = const [],
     this.followupTasks = const [],
     this.stats = const DashboardStats(),
     this.isLive = false,
@@ -48,6 +50,7 @@ class DashboardState {
     List<Map<String, dynamic>>? todayVisits,
     List<Map<String, dynamic>>? highPriorityPatients,
     List<Map<String, dynamic>>? assignedVisits,
+    List<Map<String, dynamic>>? assignedCheckups,
     List<FollowupTask>? followupTasks,
     DashboardStats? stats,
     bool? isLive,
@@ -57,6 +60,7 @@ class DashboardState {
       todayVisits: todayVisits ?? this.todayVisits,
       highPriorityPatients: highPriorityPatients ?? this.highPriorityPatients,
       assignedVisits: assignedVisits ?? this.assignedVisits,
+      assignedCheckups: assignedCheckups ?? this.assignedCheckups,
       followupTasks: followupTasks ?? this.followupTasks,
       stats: stats ?? this.stats,
       isLive: isLive ?? this.isLive,
@@ -249,6 +253,22 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
               .order('visit_date', ascending: false)
               .then((raw) => List<Map<String, dynamic>>.from(raw)));
 
+      // Patients assigned to this doctor for a pending checkup (doctor role only).
+      // Uses catchError so a missing column or RLS block does not crash the
+      // whole dashboard — the section simply stays hidden.
+      final isDoctor = userState?.role == UserRole.doctor;
+      final assignedCheckupsFuture = (isDoctor && userState != null)
+          ? supabase
+              .retry(() => supabase
+                  .from('patients')
+                  .select('id, full_name, service_status, last_updated_at')
+                  .eq('assigned_doctor_id', userState.session.user.id)
+                  .eq('service_status', 'pending_checkup')
+                  .order('last_updated_at', ascending: false)
+                  .then((raw) => List<Map<String, dynamic>>.from(raw)))
+              .catchError((Object _) => <Map<String, dynamic>>[])
+          : Future.value(<Map<String, dynamic>>[]);
+
       final followupTasksFuture = (!isAgent || userState == null)
           ? Future.value(<FollowupTask>[])
           : (() {
@@ -303,12 +323,14 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
         visitsFuture,
         priorityFuture,
         assignedVisitsFuture,
+        assignedCheckupsFuture,
         followupTasksFuture,
       ]);
       final visits = results[0] as List<Map<String, dynamic>>;
       final priority = results[1] as List<Map<String, dynamic>>;
       final assignedVisits = results[2] as List<Map<String, dynamic>>;
-      final followupTasks = results[3] as List<FollowupTask>;
+      final assignedCheckups = results[3] as List<Map<String, dynamic>>;
+      final followupTasks = results[4] as List<FollowupTask>;
 
       final pendingLabs =
           visits.where((v) => v['tests_performed'] == false).length;
@@ -318,6 +340,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
         todayVisits: visits,
         highPriorityPatients: priority,
         assignedVisits: assignedVisits,
+        assignedCheckups: assignedCheckups,
         followupTasks: followupTasks,
         stats: DashboardStats(
           todayVisitsCount: visits.length,

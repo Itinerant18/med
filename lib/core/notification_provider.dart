@@ -105,7 +105,7 @@ class NotificationPreferencesState {
 }
 
 final notificationProvider =
-    StateNotifierProvider.autoDispose<NotificationNotifier, List<AppNotification>>(
+    StateNotifierProvider<NotificationNotifier, List<AppNotification>>(
   (ref) {
     final supabase = ref.read(supabaseClientProvider);
     final notifier = NotificationNotifier();

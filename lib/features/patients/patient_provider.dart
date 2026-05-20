@@ -17,6 +17,20 @@ import 'package:mediflow/models/patient_model.dart';
 final patientProvider =
     AsyncNotifierProvider<PatientNotifier, void>(PatientNotifier.new);
 
+const _patientDetailSelectFull =
+    'id, full_name, phone, email, date_of_birth, gender, blood_group, symptoms, '
+    'area_affected, existing_conditions, current_medications, allergies, addictions, '
+    'health_scheme, address, referred_by, investigation_place, investigation_status, '
+    'staff_comments, created_at, last_updated_at, service_status, is_high_priority, '
+    'last_updated_by, created_by_id, emergency_contact_number, assigned_doctor_id';
+
+const _patientDetailSelectCompat =
+    'id, full_name, phone, email, date_of_birth, gender, blood_group, symptoms, '
+    'area_affected, existing_conditions, current_medications, allergies, addictions, '
+    'health_scheme, address, referred_by, investigation_place, investigation_status, '
+    'staff_comments, created_at, last_updated_at, service_status, is_high_priority, '
+    'last_updated_by, created_by_id, emergency_contact_number';
+
 /// Provider to fetch a single patient by ID.
 final patientDetailProvider =
     FutureProvider.family<PatientModel?, String>((ref, id) async {
@@ -26,13 +40,30 @@ final patientDetailProvider =
     final response = await supabase.retry(() =>
         supabase
             .from('patients')
-            .select(
-              'id, full_name, phone, email, date_of_birth, gender, blood_group, symptoms, area_affected, existing_conditions, current_medications, allergies, addictions, health_scheme, address, referred_by, investigation_place, investigation_status, staff_comments, created_at, last_updated_at, service_status, is_high_priority, last_updated_by, created_by_id, emergency_contact_number',
-            )
+            .select(_patientDetailSelectFull)
             .eq('id', id)
             .maybeSingle());
     if (response == null) return null;
     return PatientModel.fromJson(Map<String, dynamic>.from(response));
+  } on PostgrestException catch (e) {
+    // assigned_doctor_id column may not exist yet if the migration hasn't run.
+    // Fall back to the compat select so the rest of the screen still loads.
+    if (e.code == '42703' ||
+        (e.message.toLowerCase().contains('assigned_doctor_id'))) {
+      try {
+        final fallback = await supabase.retry(() =>
+            supabase
+                .from('patients')
+                .select(_patientDetailSelectCompat)
+                .eq('id', id)
+                .maybeSingle());
+        if (fallback == null) return null;
+        return PatientModel.fromJson(Map<String, dynamic>.from(fallback));
+      } catch (fallbackError) {
+        throw Exception(AppError.getMessage(fallbackError));
+      }
+    }
+    throw Exception(AppError.getMessage(e));
   } catch (e) {
     throw Exception(AppError.getMessage(e));
   }

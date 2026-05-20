@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:mediflow/core/app_config.dart';
 import 'package:mediflow/core/navigation_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Background message handler — must be a top-level function.
@@ -29,7 +30,16 @@ class FcmService {
 
   static const _edgeFnPath = '/functions/v1/send-fcm-notification';
 
-  // Tracked subscriptions so we can cancel and re-subscribe across logouts.
+  // Role → Supabase table mapping.
+  // All current roles live in the `doctors` table (auth_provider inserts
+  // all users there). Update this map if assistants ever move to a separate
+  // table (e.g., 'assistant': 'staff').
+  static const Map<String, String> _roleToTable = {
+    'head_doctor': 'doctors',
+    'doctor': 'doctors',
+    'assistant': 'doctors',
+  };
+
   StreamSubscription<RemoteMessage>? _foregroundSub;
   StreamSubscription<RemoteMessage>? _openedAppSub;
   StreamSubscription<String>? _tokenRefreshSub;
@@ -38,6 +48,7 @@ class FcmService {
   int _quietStartHour = 22;
   int _quietEndHour = 7;
   DateTime? _lastTokenSync;
+  UserRole? _userRole;
 
   // ── Initialization ────────────────────────────────────────────────────────
 
@@ -83,8 +94,6 @@ class FcmService {
 
     FirebaseMessaging.onBackgroundMessage(firebaseBackgroundMessageHandler);
 
-    // Track these subscriptions so we can cancel them if the app shuts the
-    // FCM session down (logout, reinstall) and resume them on next sign-in.
     _foregroundSub?.cancel();
     _foregroundSub = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
@@ -95,9 +104,20 @@ class FcmService {
     _initialized = true;
   }
 
+  // ── Role context ──────────────────────────────────────────────────────────
+
+  /// Called by [AuthNotifier] immediately after sign-in so token storage
+  /// targets the correct table for this user's role.
+  void setUserRole(UserRole role) {
+    _userRole = role;
+  }
+
+  String get _tokenTable =>
+      _roleToTable[_userRole?.databaseValue] ?? 'doctors';
+
   // ── Token management ──────────────────────────────────────────────────────
 
-  /// Gets the current FCM token and stores it in the doctors table.
+  /// Fetches the current FCM token and stores it in the role-appropriate table.
   Future<void> syncToken() async {
     try {
       if (_lastTokenSync != null &&
@@ -113,8 +133,6 @@ class FcmService {
       await _saveTokenToSupabase(token);
       _lastTokenSync = DateTime.now();
 
-      // Replace any stale refresh subscription with a fresh one bound to the
-      // current user, so token rotations always update the right doctor row.
       _tokenRefreshSub?.cancel();
       _tokenRefreshSub = _fcm.onTokenRefresh.listen(_saveTokenToSupabase);
     } catch (e) {
@@ -128,12 +146,13 @@ class FcmService {
       final userId = client.auth.currentUser?.id;
       if (userId == null) return;
 
-      await client.retry(() => client.from('doctors').update({
+      final table = _tokenTable;
+      await client.retry(() => client.from(table).update({
         'fcm_token': token,
         'fcm_updated_at': DateTime.now().toIso8601String(),
       }).eq('id', userId));
 
-      debugPrint('[FCM] Token saved to Supabase');
+      debugPrint('[FCM] Token saved to `$table`');
     } catch (e) {
       debugPrint('[FCM] _saveTokenToSupabase error: $e');
     }
@@ -142,21 +161,21 @@ class FcmService {
   /// Clears the FCM token on logout so stale tokens don't receive notifications.
   Future<void> clearToken() async {
     try {
-      // Stop watching for token rotations on the now-departing user. We'll
-      // re-subscribe on the next syncToken() after they sign in again.
       await _tokenRefreshSub?.cancel();
       _tokenRefreshSub = null;
 
       final client = Supabase.instance.client;
       final userId = client.auth.currentUser?.id;
       if (userId != null) {
-        await client.retry(() => client.from('doctors').update({
+        final table = _tokenTable;
+        await client.retry(() => client.from(table).update({
           'fcm_token': null,
         }).eq('id', userId));
       }
 
       await _fcm.deleteToken();
       _lastTokenSync = null;
+      _userRole = null;
     } catch (e) {
       debugPrint('[FCM] clearToken error: $e');
     }
@@ -185,10 +204,12 @@ class FcmService {
 
   // ── Send notifications (app-side) ─────────────────────────────────────────
 
-  /// Sends a push notification to a specific doctor via the Supabase Edge Function.
-  /// Requires the target doctor's FCM token from the doctors table.
-  static Future<bool> sendToDoctor({
-    required String doctorId,
+  /// Sends a push notification to a recipient by looking up their FCM token.
+  /// Queries the `doctors` table (which holds all current roles).
+  /// Update the query to a unified view or `user_fcm_tokens` table if the
+  /// schema is ever split by role.
+  static Future<bool> sendToUser({
+    required String userId,
     required String title,
     required String body,
     Map<String, String>? data,
@@ -198,12 +219,12 @@ class FcmService {
       final result = await client.retry(() => client
           .from('doctors')
           .select('fcm_token')
-          .eq('id', doctorId)
+          .eq('id', userId)
           .maybeSingle());
 
       final token = result?['fcm_token'] as String?;
       if (token == null || token.isEmpty) {
-        debugPrint('[FCM] Doctor $doctorId has no FCM token, skipping push');
+        debugPrint('[FCM] User $userId has no FCM token, skipping push');
         return false;
       }
 
@@ -214,10 +235,19 @@ class FcmService {
         data: data,
       );
     } catch (e) {
-      debugPrint('[FCM] sendToDoctor error: $e');
+      debugPrint('[FCM] sendToUser error: $e');
       return false;
     }
   }
+
+  /// Legacy alias — prefer [sendToUser].
+  static Future<bool> sendToDoctor({
+    required String doctorId,
+    required String title,
+    required String body,
+    Map<String, String>? data,
+  }) =>
+      sendToUser(userId: doctorId, title: title, body: body, data: data);
 
   /// Sends a push notification directly to a known FCM token.
   static Future<bool> sendToToken({
@@ -296,11 +326,10 @@ class FcmService {
       session = refreshed.session ?? auth.currentSession;
       return session?.accessToken;
     } catch (e) {
+      // Network hiccup or stale token — return null so the push is skipped.
+      // Do NOT sign the user out here; this is a background notification task
+      // and forcing a sign-out would disrupt the user's active session.
       debugPrint('[FCM] Session refresh failed before edge call: $e');
-      // Graceful fallback: sign out stale session so UI can drive re-auth.
-      try {
-        await auth.signOut();
-      } catch (_) {}
       return null;
     }
   }

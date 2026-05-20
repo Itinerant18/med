@@ -41,9 +41,31 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
   final _customComplaintController = TextEditingController();
 
   // Operational tracking
-  bool _testsPerformed = false;
   bool _otRequired = false;
   String _flowStatus = 'Admitted';
+
+  // Canonical test list — kept in sync with patient_form_screen.dart.
+  static const List<String> _canonicalTests = [
+    'Blood Test',
+    'CT Scan',
+    'MRI',
+    'HRCT Thorax',
+    'Biopsy Report',
+    'Other',
+  ];
+
+  // Granular investigation status (populated from patient record).
+  // Always contains every canonical test once a patient is loaded.
+  Map<String, dynamic> _investigationStatus = {};
+
+  // OT details revealed when _otRequired is true
+  final _otTypeController = TextEditingController();
+  final _otScheduledDateController = TextEditingController();
+  DateTime? _scheduledOtDate;
+
+  // Assigned-checkup context (Task 4)
+  String? _patientServiceStatus;
+  String? _patientAssignedDoctorId;
 
   // Clinical notes
   final _diagnosisController = TextEditingController();
@@ -61,20 +83,20 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.patientId != null) {
-      _selectedPatientId = widget.patientId;
-      _selectedPatientName = widget.patientName;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _loadPatientInfo();
-      });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.read(patientSearchQueryProvider.notifier).state = '';
-          _searchController.clear();
-        }
-      });
-    }
+    // Pre-populate the investigation map with all canonical tests so the
+    // checklist is always visible, even before a patient is selected.
+    _investigationStatus = _mergeWithCanonical({});
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(patientSearchQueryProvider.notifier).state = '';
+      _searchController.clear();
+      if (widget.patientId != null) {
+        _selectedPatientId = widget.patientId;
+        _selectedPatientName = widget.patientName;
+        _loadPatientInfo();
+      }
+    });
   }
 
   @override
@@ -95,6 +117,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     _tempController.dispose();
     _spo2Controller.dispose();
     _rrController.dispose();
+    _otTypeController.dispose();
+    _otScheduledDateController.dispose();
     super.dispose();
   }
 
@@ -109,10 +133,28 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         final dob = patient.dateOfBirth;
         _selectedPatientAge =
             dob != null ? (DateTime.now().year - dob.year).toString() : 'N/A';
+        _investigationStatus =
+            _mergeWithCanonical(patient.investigationStatus);
+        _patientServiceStatus = patient.serviceStatus;
+        _patientAssignedDoctorId = patient.assignedDoctorId;
       });
     } catch (e) {
       debugPrint('Failed to load patient info: $e');
     }
+  }
+
+  /// Builds an investigation map that contains every canonical test.
+  /// Existing patient values are preserved as-is when they are 'done';
+  /// 'na' and any missing entries are normalized to 'pending' so the
+  /// clinical entry is strictly binary (done / not done).
+  static Map<String, dynamic> _mergeWithCanonical(
+      Map<String, dynamic> existing) {
+    return {
+      for (final test in _canonicalTests)
+        test: existing[test]?.toString().toLowerCase() == 'done'
+            ? 'done'
+            : 'pending',
+    };
   }
 
   Future<void> _onCompleteVisit() async {
@@ -132,15 +174,36 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       return;
     }
 
+    // ── OT / flow-status conflict guard ──────────────────────────────────────
+    // A patient cannot be both Discharged/Referred AND scheduled for surgery.
+    if (_otRequired &&
+        (_flowStatus == 'Discharged' || _flowStatus == 'Referred')) {
+      AppSnackbar.showError(
+        context,
+        'Cannot schedule OT for a ${_flowStatus.toLowerCase()} patient. '
+        'Disable "OT Required" or change the Patient Flow Status.',
+      );
+      return;
+    }
+
     final doctorName = user.userMetadata?['full_name'] ?? 'Unknown';
     final now = DateTime.now().toIso8601String();
+
+    // Derive tests_performed: true only when every canonical test is 'done'.
+    final allTestsDone = _investigationStatus.values
+        .every((v) => v?.toString().toLowerCase() == 'done');
+
+    // Checkup flag: only set when pre-loaded patient is an assigned checkup.
+    final isAssignedCheckup = widget.patientId != null &&
+        _patientServiceStatus?.toLowerCase() == 'pending_checkup' &&
+        _patientAssignedDoctorId == user.id;
 
     final visitData = <String, dynamic>{
       'patient_id': _selectedPatientId,
       'doctor_id': user.id,
       'visit_type': _visitType,
       'chief_complaint': _chiefComplaint,
-      'tests_performed': _testsPerformed,
+      'tests_performed': allTestsDone,
       'ot_required': _otRequired,
       'patient_flow_status': _flowStatus,
       'final_diagnosis': _diagnosisController.text.trim(),
@@ -149,7 +212,20 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       'last_updated_by': doctorName,
       'last_updated_at': now,
       'visit_date': now,
+      'is_assigned_checkup': isAssignedCheckup,
     };
+
+    // Always send the full investigation_status map so the visits row is the
+    // authoritative record of which tests were performed (or that none were
+    // defined). An empty map is a valid and meaningful value here.
+    visitData['investigation_status'] = _investigationStatus;
+
+    if (_otRequired && _otTypeController.text.trim().isNotEmpty) {
+      visitData['ot_type'] = _otTypeController.text.trim();
+    }
+    if (_otRequired && _scheduledOtDate != null) {
+      visitData['ot_scheduled_date'] = _scheduledOtDate!.toIso8601String();
+    }
 
     if (_isOtherComplaint && _customComplaintController.text.isNotEmpty) {
       visitData['chief_complaint_custom'] =
@@ -198,13 +274,16 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         _selectedPatientId = null;
         _selectedPatientName = null;
         _selectedPatientAge = null;
+        _investigationStatus = _mergeWithCanonical({});
+        _patientServiceStatus = null;
+        _patientAssignedDoctorId = null;
       }
       _chiefComplaint = null;
       _isOtherComplaint = false;
-      _testsPerformed = false;
       _otRequired = false;
       _flowStatus = 'Admitted';
       _visitType = 'OPD';
+      _scheduledOtDate = null;
     });
     _customComplaintController.clear();
     _diagnosisController.clear();
@@ -216,6 +295,8 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     _tempController.clear();
     _spo2Controller.clear();
     _rrController.clear();
+    _otTypeController.clear();
+    _otScheduledDateController.clear();
     _searchController.clear();
     ref.read(patientSearchQueryProvider.notifier).state = '';
   }
@@ -239,6 +320,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
               key: _formKey,
               child: Column(
                 children: [
+                  _buildAssignedCheckupBanner(),
                   _buildPatientSelector(),
                   const SizedBox(height: 16),
                   _buildVisitDetailsSection(),
@@ -324,6 +406,9 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                   _selectedPatientId = null;
                   _selectedPatientName = null;
                   _selectedPatientAge = null;
+                  _patientServiceStatus = null;
+                  _patientAssignedDoctorId = null;
+                  _investigationStatus = _mergeWithCanonical({});
                 }),
               ),
           ],
@@ -394,8 +479,12 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                           _selectedPatientAge = age;
                         });
                         _searchController.clear();
-                        ref.read(patientSearchQueryProvider.notifier).state =
-                            '';
+                        ref.read(patientSearchQueryProvider.notifier).state = '';
+                        // Load full patient data so investigation statuses,
+                        // service status, and assigned-doctor context are
+                        // populated from the DB — this was the missing call
+                        // that made the search feel "broken" after selection.
+                        _loadPatientInfo();
                       },
                     );
                   }).toList(),
@@ -558,20 +647,119 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           const SectionTitle(
               title: 'Operational Tracking',
               icon: AppIcons.track_changes_rounded),
+          // ── Tests: master "All Tests Done" toggle + per-test checklist ──────
+          // _investigationStatus is always pre-populated with the canonical
+          // test list (done / pending). Master switch marks all at once;
+          // individual switches override specific tests.
           _buildSwitchRow(
-            label: 'Tests Performed',
-            value: _testsPerformed,
+            label: 'All Tests Done',
+            value: _investigationStatus.values
+                .every((v) => v?.toString().toLowerCase() == 'done'),
             activeColor: const Color(0xFF38A169),
-            statusText: _testsPerformed ? 'Done' : 'Not performed',
-            onChanged: (val) => setState(() => _testsPerformed = val),
+            statusText: _investigationStatus.values
+                    .every((v) => v?.toString().toLowerCase() == 'done')
+                ? 'All complete'
+                : 'In progress',
+            onChanged: (val) => setState(() {
+              for (final key in _investigationStatus.keys) {
+                _investigationStatus[key] = val ? 'done' : 'pending';
+              }
+            }),
           ),
+          const Divider(height: 20),
+          const Text(
+            'Investigations',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          ..._investigationStatus.entries.map((entry) {
+            final isDone = entry.value?.toString().toLowerCase() == 'done';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.key,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      Text(
+                        isDone ? 'Done' : 'Pending',
+                        style: TextStyle(
+                          color: isDone
+                              ? const Color(0xFF38A169)
+                              : AppTheme.textMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Switch(
+                    value: isDone,
+                    activeTrackColor:
+                        const Color(0xFF38A169).withValues(alpha: 0.3),
+                    activeThumbColor: const Color(0xFF38A169),
+                    onChanged: (val) => setState(() {
+                      _investigationStatus[entry.key] =
+                          val ? 'done' : 'pending';
+                    }),
+                  ),
+                ],
+              ),
+            );
+          }),
           const Divider(height: 24),
+          // ── OT Required with animated reveal ──────────────────────────────
           _buildSwitchRow(
             label: 'OT Required',
             value: _otRequired,
             activeColor: const Color(0xFFE53E3E),
             statusText: _otRequired ? 'Scheduled' : 'Not required',
-            onChanged: (val) => setState(() => _otRequired = val),
+            onChanged: (val) {
+              setState(() {
+                _otRequired = val;
+                // Clear OT detail fields when the switch is toggled off so
+                // stale data is never accidentally included in the payload.
+                if (!val) {
+                  _otTypeController.clear();
+                  _otScheduledDateController.clear();
+                  _scheduledOtDate = null;
+                }
+              });
+            },
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _otRequired
+                ? Column(
+                    children: [
+                      const SizedBox(height: 14),
+                      NeuTextField(
+                        controller: _otTypeController,
+                        label: 'OT Type',
+                        hint: 'e.g. General, Laparoscopic, Ortho...',
+                      ),
+                      const SizedBox(height: 12),
+                      NeuTextField(
+                        controller: _otScheduledDateController,
+                        label: 'Scheduled Date',
+                        hint: 'Tap to select a date',
+                        readOnly: true,
+                        onTap: () => _pickOtDate(context),
+                        suffixIcon: const Icon(
+                            AppIcons.calendar_today_rounded,
+                            size: 16,
+                            color: AppTheme.primaryTeal),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
@@ -581,6 +769,64 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                 .toList(),
             onChanged: (val) => setState(() => _flowStatus = val!),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickOtDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _scheduledOtDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: AppTheme.primaryTeal),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _scheduledOtDate = picked;
+        _otScheduledDateController.text =
+            '${picked.day}/${picked.month}/${picked.year}';
+      });
+    }
+  }
+
+  Widget _buildAssignedCheckupBanner() {
+    final user = Supabase.instance.client.auth.currentUser;
+    final show = widget.patientId != null &&
+        _patientServiceStatus?.toLowerCase() == 'pending_checkup' &&
+        _patientAssignedDoctorId != null &&
+        _patientAssignedDoctorId == user?.id;
+    if (!show) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(AppIcons.warning_amber_rounded,
+              color: AppTheme.warningColor, size: 16),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Assigned Checkup — Complete this visit to notify the Head Doctor.',
+              style: TextStyle(
+                color: AppTheme.warningColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
       ),

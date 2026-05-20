@@ -49,8 +49,8 @@ class PushNotificationService {
       // still reach devices while preserving the in-app notification insert.
       for (final recipientId in recipientIds) {
         try {
-          await FcmService.sendToDoctor(
-            doctorId: recipientId,
+          await FcmService.sendToUser(
+            userId: recipientId,
             title: title,
             body: body,
             data: pushData,

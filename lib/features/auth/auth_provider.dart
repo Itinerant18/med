@@ -104,8 +104,8 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
       if (!_disposed) state = nextState;
 
       // Sync FCM token whenever the user signs in
-      if (event.event == AuthChangeEvent.signedIn) {
-        _syncFcmToken();
+      if (event.event == AuthChangeEvent.signedIn && nextState.value != null) {
+        _syncFcmToken(nextState.value!.role);
       }
     });
 
@@ -117,15 +117,18 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     final result = await _resolveAuthUserState(_supabase.auth.currentSession);
 
     // Sync FCM token on initial load if already signed in
-    if (_supabase.auth.currentSession != null) {
-      _syncFcmToken();
+    if (result != null) {
+      _syncFcmToken(result.role);
     }
 
     return result;
   }
 
-  void _syncFcmToken() {
-    Future.microtask(() => FcmService.instance.syncToken());
+  void _syncFcmToken(UserRole role) {
+    Future.microtask(() {
+      FcmService.instance.setUserRole(role);
+      FcmService.instance.syncToken();
+    });
   }
 
   Future<Map<String, dynamic>?> _lookupAccountByPhone(String phone) async {
@@ -153,9 +156,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         if (session == null) {
           throw Exception('Sign-in succeeded but no session was created.');
         }
-        // Sync FCM token after sign in
-        _syncFcmToken();
-        return _resolveAuthUserState(session);
+        final resolved = await _resolveAuthUserState(session);
+        if (resolved != null) _syncFcmToken(resolved.role);
+        return resolved;
       } catch (e) {
         throw Exception(AppError.getMessage(e));
       }
@@ -321,8 +324,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
               );
             }
 
-            _syncFcmToken();
-            return _resolveAuthUserState(session);
+            final resolved = await _resolveAuthUserState(session);
+            if (resolved != null) _syncFcmToken(resolved.role);
+            return resolved;
           }
 
           await _supabase.retry(() => _supabase.from('doctors').upsert({
@@ -339,8 +343,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
             'created_at': DateTime.now().toIso8601String(),
           }, onConflict: 'id'));
 
-          _syncFcmToken();
-          return _resolveAuthUserState(session);
+          final resolved = await _resolveAuthUserState(session);
+          if (resolved != null) _syncFcmToken(resolved.role);
+          return resolved;
         } catch (e) {
           throw Exception(AppError.getMessage(e));
         }

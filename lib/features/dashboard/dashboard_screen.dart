@@ -61,6 +61,10 @@ class DashboardScreen extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     _buildHeroPanel(context, name, role, isAdmin, ref, authState),
                     _buildStatCards(data, isAdmin),
+                    if (role == UserRole.doctor && data.assignedCheckups.isNotEmpty) ...[
+                      _buildSectionHeader('My Assigned Checkups'),
+                      _buildAssignedCheckupsList(data.assignedCheckups, context),
+                    ],
                     if (!isAdmin && data.assignedVisits.isNotEmpty) ...[
                       _buildSectionHeader('Assigned to me today'),
                       _buildAssignedVisitsList(data.assignedVisits, context),
@@ -677,6 +681,97 @@ class DashboardScreen extends ConsumerWidget {
             }).toList(),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAssignedCheckupsList(
+    List<Map<String, dynamic>> patients,
+    BuildContext context,
+  ) {
+    return SizedBox(
+      height: 110,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: patients.length,
+        itemBuilder: (_, i) {
+          final patient = patients[i];
+          final name = patient['full_name'] as String? ?? 'Unknown';
+          return GestureDetector(
+            onTap: () => context.push('/clinical/new', extra: {
+              'patientId': patient['id'] as String,
+              'patientName': name,
+            }),
+            child: Container(
+              width: 170,
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.bgColor,
+                borderRadius: BorderRadius.circular(14),
+                border: const Border(
+                  left: BorderSide(color: AppTheme.doctorAccent, width: 4),
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                      color: AppTheme.neuShadowDark,
+                      offset: Offset(3, 3),
+                      blurRadius: 6),
+                  BoxShadow(
+                      color: AppTheme.surfaceWhite,
+                      offset: Offset(-3, -3),
+                      blurRadius: 6),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(AppIcons.person_search_rounded,
+                          size: 13, color: AppTheme.doctorAccent),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: AppTheme.textColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Pending Checkup',
+                    style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.doctorAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Tap to log visit',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.doctorAccent),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

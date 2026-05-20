@@ -67,6 +67,10 @@ class MediFlowApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(notificationPreferencesControllerProvider);
+    // Keep the Realtime WebSocket channel alive for the entire app session.
+    // Without this, the autoDispose-free provider would still not be created
+    // until first accessed, so we eagerly initialize it here.
+    ref.watch(notificationProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
