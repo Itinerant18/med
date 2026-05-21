@@ -813,12 +813,12 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.35)),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const Icon(AppIcons.warning_amber_rounded,
+          Icon(AppIcons.warning_amber_rounded,
               color: AppTheme.warningColor, size: 16),
-          const SizedBox(width: 10),
-          const Expanded(
+          SizedBox(width: 10),
+          Expanded(
             child: Text(
               'Assigned Checkup — Complete this visit to notify the Head Doctor.',
               style: TextStyle(

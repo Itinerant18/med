@@ -1,6 +1,9 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/work_log_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -41,6 +44,8 @@ class WorkLogNotifier extends FamilyAsyncNotifier<List<WorkLogEntry>, WorkLogKey
     _validateEntityType(entityType);
     _validateEntityId(entityId);
 
+    final cacheKey = 'work_log_${entityType}_$entityId';
+
     try {
       final response = await _supabase.retry(() => _supabase
           .from('work_log')
@@ -49,11 +54,22 @@ class WorkLogNotifier extends FamilyAsyncNotifier<List<WorkLogEntry>, WorkLogKey
           .eq('entity_id', entityId)
           .order('created_at', ascending: false));
 
+      CacheService.instance
+          .putRaw(cacheKey, response, ttl: const Duration(hours: 1))
+          .ignore();
+
       return (response as List<dynamic>)
           .map((row) =>
               WorkLogEntry.fromJson(Map<String, dynamic>.from(row as Map)))
           .toList(growable: false);
     } catch (e) {
+      final cached = CacheService.instance.getRaw(cacheKey);
+      if (cached != null) {
+        return (cached as List)
+            .map((row) =>
+                WorkLogEntry.fromJson(Map<String, dynamic>.from(row as Map)))
+            .toList(growable: false);
+      }
       throw Exception(AppError.getMessage(e));
     }
   }
@@ -79,15 +95,43 @@ class WorkLogNotifier extends FamilyAsyncNotifier<List<WorkLogEntry>, WorkLogKey
       throw Exception('Not authenticated.');
     }
 
+    final payload = {
+      'entity_type': entityType,
+      'entity_id': entityId,
+      'author_id': auth.session.user.id,
+      'author_name': auth.displayName,
+      'author_role': auth.role.databaseValue,
+      'body': trimmed,
+    };
+
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      final tempId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: tempId,
+        table: 'work_log',
+        operation: SyncOperation.insert,
+        data: payload,
+        timestamp: DateTime.now(),
+        retryCount: 0,
+      ));
+
+      final optimistic = WorkLogEntry(
+        id: tempId,
+        entityType: entityType,
+        entityId: entityId,
+        authorId: auth.session.user.id,
+        authorName: auth.displayName,
+        authorRole: auth.role.databaseValue,
+        body: trimmed,
+        createdAt: DateTime.now(),
+      );
+      state = AsyncData([optimistic, ...?state.valueOrNull]);
+      return;
+    }
+
     try {
-      await _supabase.retry(() => _supabase.from('work_log').insert({
-            'entity_type': entityType,
-            'entity_id': entityId,
-            'author_id': auth.session.user.id,
-            'author_name': auth.displayName,
-            'author_role': auth.role.databaseValue,
-            'body': trimmed,
-          }));
+      await _supabase.retry(() => _supabase.from('work_log').insert(payload));
     } catch (e) {
       throw Exception(AppError.getMessage(e));
     }

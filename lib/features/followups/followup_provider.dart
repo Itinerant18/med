@@ -1,9 +1,12 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/parse_utils.dart';
 import 'package:mediflow/core/push_notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -187,6 +190,8 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
 
+    final cacheKey = 'followup_tasks_${user.id}';
+
     if (markOverdue) {
       await _markOverdue(user.id);
     }
@@ -228,11 +233,22 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
           .order('due_date', ascending: true)
           .order('created_at', ascending: false));
 
+      CacheService.instance
+          .putRaw(cacheKey, response, ttl: const Duration(minutes: 30))
+          .ignore();
+
       return (response as List)
           .map((json) =>
               FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
     } catch (e) {
+      final cached = CacheService.instance.getRaw(cacheKey);
+      if (cached != null) {
+        return (cached as List)
+            .map((json) =>
+                FollowupTask.fromJson(Map<String, dynamic>.from(json as Map)))
+            .toList();
+      }
       throw Exception(AppError.getMessage(e));
     }
   }
@@ -281,18 +297,80 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
     String? extDoctorPhone,
     String? completionNotes,
   }) async {
+    final updatePayload = {
+      'status': 'completed',
+      'completed_at': DateTime.now().toIso8601String(),
+      'is_external_doctor': isExternalDoctor,
+      'ext_doctor_name': isExternalDoctor ? extDoctorName : null,
+      'ext_doctor_specialization':
+          isExternalDoctor ? extDoctorSpecialization : null,
+      'ext_doctor_hospital': isExternalDoctor ? extDoctorHospital : null,
+      'ext_doctor_phone': isExternalDoctor ? extDoctorPhone : null,
+      'completion_notes': completionNotes,
+    };
+
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: 'offline_${DateTime.now().millisecondsSinceEpoch}',
+        table: 'followup_tasks',
+        operation: SyncOperation.update,
+        data: updatePayload,
+        matchColumn: 'id',
+        matchValue: taskId,
+        timestamp: DateTime.now(),
+        retryCount: 0,
+      ));
+
+      // Optimistic: mark the task as completed in current state.
+      final current = state.valueOrNull;
+      if (current != null) {
+        state = AsyncData(current.map((t) {
+          if (t.id != taskId) return t;
+          return FollowupTask(
+            id: t.id,
+            patientId: t.patientId,
+            drVisitId: t.drVisitId,
+            assignedTo: t.assignedTo,
+            createdBy: t.createdBy,
+            dueDate: t.dueDate,
+            title: t.title,
+            notes: t.notes,
+            priority: t.priority,
+            targetExtDoctorName: t.targetExtDoctorName,
+            targetExtDoctorHospital: t.targetExtDoctorHospital,
+            targetExtDoctorSpecialization: t.targetExtDoctorSpecialization,
+            targetExtDoctorPhone: t.targetExtDoctorPhone,
+            visitInstructions: t.visitInstructions,
+            scheduledVisitDate: t.scheduledVisitDate,
+            isExternalDoctor: isExternalDoctor,
+            extDoctorName: isExternalDoctor ? extDoctorName : t.extDoctorName,
+            extDoctorSpecialization: isExternalDoctor
+                ? extDoctorSpecialization
+                : t.extDoctorSpecialization,
+            extDoctorHospital:
+                isExternalDoctor ? extDoctorHospital : t.extDoctorHospital,
+            extDoctorPhone:
+                isExternalDoctor ? extDoctorPhone : t.extDoctorPhone,
+            completionNotes: completionNotes,
+            reviewedBy: t.reviewedBy,
+            reviewedAt: t.reviewedAt,
+            doctorReviewNotes: t.doctorReviewNotes,
+            status: 'completed',
+            completedAt: DateTime.now(),
+            createdAt: t.createdAt,
+            patientName: t.patientName,
+          );
+        }).toList());
+      }
+      return;
+    }
+
     try {
-      await _supabase.retry(() => _supabase.from('followup_tasks').update({
-            'status': 'completed',
-            'completed_at': DateTime.now().toIso8601String(),
-            'is_external_doctor': isExternalDoctor,
-            'ext_doctor_name': isExternalDoctor ? extDoctorName : null,
-            'ext_doctor_specialization':
-                isExternalDoctor ? extDoctorSpecialization : null,
-            'ext_doctor_hospital': isExternalDoctor ? extDoctorHospital : null,
-            'ext_doctor_phone': isExternalDoctor ? extDoctorPhone : null,
-            'completion_notes': completionNotes,
-          }).eq('id', taskId));
+      await _supabase.retry(() => _supabase
+          .from('followup_tasks')
+          .update(updatePayload)
+          .eq('id', taskId));
 
       ref.invalidateSelf();
 

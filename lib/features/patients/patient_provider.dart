@@ -5,9 +5,12 @@
 // state without manual try/catch + setState boilerplate.
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/audit_service.dart';
@@ -36,14 +39,25 @@ final patientDetailProvider =
     FutureProvider.family<PatientModel?, String>((ref, id) async {
   if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
   final supabase = ref.read(supabaseClientProvider);
+  final cacheKey = 'patient_detail_$id';
+
+  PatientModel? fromCache() {
+    final cached =
+        CacheService.instance.getRaw(cacheKey) as Map<String, dynamic>?;
+    return cached != null ? PatientModel.fromJson(cached) : null;
+  }
+
   try {
-    final response = await supabase.retry(() =>
-        supabase
-            .from('patients')
-            .select(_patientDetailSelectFull)
-            .eq('id', id)
-            .maybeSingle());
+    final response = await supabase.retry(() => supabase
+        .from('patients')
+        .select(_patientDetailSelectFull)
+        .eq('id', id)
+        .maybeSingle());
     if (response == null) return null;
+    CacheService.instance
+        .putRaw(cacheKey, Map<String, dynamic>.from(response),
+            ttl: const Duration(minutes: 30))
+        .ignore();
     return PatientModel.fromJson(Map<String, dynamic>.from(response));
   } on PostgrestException catch (e) {
     // assigned_doctor_id column may not exist yet if the migration hasn't run.
@@ -51,21 +65,25 @@ final patientDetailProvider =
     if (e.code == '42703' ||
         (e.message.toLowerCase().contains('assigned_doctor_id'))) {
       try {
-        final fallback = await supabase.retry(() =>
-            supabase
-                .from('patients')
-                .select(_patientDetailSelectCompat)
-                .eq('id', id)
-                .maybeSingle());
+        final fallback = await supabase.retry(() => supabase
+            .from('patients')
+            .select(_patientDetailSelectCompat)
+            .eq('id', id)
+            .maybeSingle());
         if (fallback == null) return null;
+        CacheService.instance
+            .putRaw(cacheKey, Map<String, dynamic>.from(fallback),
+                ttl: const Duration(minutes: 30))
+            .ignore();
         return PatientModel.fromJson(Map<String, dynamic>.from(fallback));
       } catch (fallbackError) {
-        throw Exception(AppError.getMessage(fallbackError));
+        return fromCache() ??
+            (throw Exception(AppError.getMessage(fallbackError)));
       }
     }
-    throw Exception(AppError.getMessage(e));
+    return fromCache() ?? (throw Exception(AppError.getMessage(e)));
   } catch (e) {
-    throw Exception(AppError.getMessage(e));
+    return fromCache() ?? (throw Exception(AppError.getMessage(e)));
   }
 });
 
@@ -89,27 +107,37 @@ class PatientNotifier extends AsyncNotifier<void> {
   /// Sets [state] to [AsyncLoading] then [AsyncData]/[AsyncError] so
   /// watchers get automatic loading/error feedback.
   Future<String> registerPatient(Map<String, dynamic> patientData) async {
+    final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated. Please sign in again.');
+
+    final finalData = {...patientData};
+    finalData.removeWhere((key, value) => value == null || value == '');
+    finalData['created_by_id'] = userId;
+    finalData['last_updated_by'] = _doctorName;
+    finalData['last_updated_by_id'] = userId;
+    finalData['last_updated_at'] = DateTime.now().toIso8601String();
+    finalData['service_status'] ??= 'pending';
+    finalData['created_at'] = DateTime.now().toIso8601String();
+
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      final tempId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
+      finalData['id'] = tempId;
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: tempId,
+        table: 'patients',
+        operation: SyncOperation.insert,
+        data: finalData,
+        timestamp: DateTime.now(),
+        retryCount: 0,
+      ));
+      return tempId;
+    }
+
     state = const AsyncLoading();
     String newId = '';
     state = await AsyncValue.guard(() async {
       try {
-        final userId = _userId ?? Supabase.instance.client.auth.currentUser?.id;
-        if (userId == null) {
-          throw Exception('Not authenticated. Please sign in again.');
-        }
-
-        final finalData = {...patientData};
-        finalData.removeWhere((key, value) => value == null || value == '');
-
-        finalData['created_by_id'] = userId;
-        finalData['last_updated_by'] = _doctorName;
-        finalData['last_updated_by_id'] = userId;
-        finalData['last_updated_at'] = DateTime.now().toIso8601String();
-        // service_status is computed by the form based on investigation statuses;
-        // only fall back to 'pending' if the form did not supply one.
-        finalData['service_status'] ??= 'pending';
-        finalData['created_at'] = DateTime.now().toIso8601String();
-
         final response = await _supabase.retry(() => _supabase
             .from('patients')
             .insert(finalData)
@@ -147,6 +175,29 @@ class PatientNotifier extends AsyncNotifier<void> {
     Map<String, dynamic> patientData,
   ) async {
     if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
+
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      final finalData = {
+        ...patientData,
+        'last_updated_by': _doctorName,
+        'last_updated_by_id': _userId,
+        'last_updated_at': DateTime.now().toIso8601String(),
+      };
+      finalData.removeWhere((key, value) => value == null);
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: 'offline_${DateTime.now().millisecondsSinceEpoch}',
+        table: 'patients',
+        operation: SyncOperation.update,
+        data: finalData,
+        matchColumn: 'id',
+        matchValue: id,
+        timestamp: DateTime.now(),
+        retryCount: 0,
+      ));
+      CacheService.instance.invalidate('patient_detail_$id').ignore();
+      return;
+    }
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -227,6 +278,12 @@ class PatientNotifier extends AsyncNotifier<void> {
 
   Future<void> deletePatient(String id) async {
     if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
+
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      throw Exception(
+          'Cannot delete patient while offline. Please try again when connected.');
+    }
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {

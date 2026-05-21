@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
 
 class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
@@ -70,9 +71,8 @@ final profileStatsProvider =
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return empty;
 
-  // Wait for the profile load to complete so we never run the patient count
-  // query with an empty name string (which would match zero rows but costs
-  // a round trip). If the profile query failed, propagate zeros.
+  final cacheKey = 'profile_stats_${user.id}';
+
   final profileAsync = ref.watch(profileNotifierProvider);
   final profileData = profileAsync.valueOrNull;
   if (profileAsync.isLoading || profileData == null) return empty;
@@ -82,32 +82,50 @@ final profileStatsProvider =
 
   final supabase = ref.watch(supabaseClientProvider);
 
-  final results = await Future.wait<List<dynamic>>([
-    supabase
-        .from('visits')
-        .select('id')
-        .eq('doctor_id', user.id)
-        .then((value) => value as List<dynamic>)
-        .catchError((_) => <dynamic>[]),
-    supabase
-        .from('patients')
-        .select('id')
-        .eq('last_updated_by', doctorName)
-        .then((value) => value as List<dynamic>)
-        .catchError((_) => <dynamic>[]),
-  ]);
-  final visitsRes = results[0];
-  final patientsRes = results[1];
+  try {
+    final results = await Future.wait<List<dynamic>>([
+      supabase
+          .from('visits')
+          .select('id')
+          .eq('doctor_id', user.id)
+          .then((value) => value as List<dynamic>)
+          .catchError((_) => <dynamic>[]),
+      supabase
+          .from('patients')
+          .select('id')
+          .eq('last_updated_by', doctorName)
+          .then((value) => value as List<dynamic>)
+          .catchError((_) => <dynamic>[]),
+    ]);
+    final visitsRes = results[0];
+    final patientsRes = results[1];
 
-  final createdAtRaw = profileData['created_at'];
-  final createdAt = createdAtRaw != null
-      ? DateTime.tryParse(createdAtRaw.toString()) ?? DateTime.now()
-      : DateTime.now();
-  final daysActive = DateTime.now().difference(createdAt).inDays + 1;
+    final createdAtRaw = profileData['created_at'];
+    final createdAt = createdAtRaw != null
+        ? DateTime.tryParse(createdAtRaw.toString()) ?? DateTime.now()
+        : DateTime.now();
+    final daysActive = DateTime.now().difference(createdAt).inDays + 1;
 
-  return {
-    'patients': patientsRes.length,
-    'visits': visitsRes.length,
-    'days': daysActive,
-  };
+    final freshStats = {
+      'patients': patientsRes.length,
+      'visits': visitsRes.length,
+      'days': daysActive,
+    };
+
+    CacheService.instance
+        .putRaw(cacheKey, freshStats, ttl: const Duration(minutes: 30))
+        .ignore();
+    return freshStats;
+  } catch (_) {
+    final cached =
+        CacheService.instance.getRaw(cacheKey) as Map<String, dynamic>?;
+    if (cached != null) {
+      return {
+        'patients': (cached['patients'] as num?)?.toInt() ?? 0,
+        'visits': (cached['visits'] as num?)?.toInt() ?? 0,
+        'days': (cached['days'] as num?)?.toInt() ?? 0,
+      };
+    }
+    return empty;
+  }
 });

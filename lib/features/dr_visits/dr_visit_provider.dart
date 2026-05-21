@@ -12,9 +12,12 @@
 // -- contact_attempts element shape:
 // -- { "date": "ISO string", "method": "call|visit|whatsapp|other", "notes": "free text", "agent_id": "uuid" }
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
 import 'package:mediflow/models/user_role.dart';
@@ -50,6 +53,8 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     final supabase = ref.read(supabaseClientProvider);
     final userState = ref.watch(authNotifierProvider).value;
     final role = ref.watch(currentRoleProvider);
+    final userId = userState?.session.user.id ?? '';
+    final cacheKey = 'dr_visits_${role.name}_$userId';
 
     try {
       var query = supabase.from('dr_visits').select('''
@@ -116,14 +121,26 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
         }
       }
 
-      return rows.map((row) {
+      final enriched = rows.map((row) {
         final assignedAgentId = row['assigned_agent_id']?.toString();
         if (assignedAgentId != null && agentNames.containsKey(assignedAgentId)) {
           row['agent'] = {'full_name': agentNames[assignedAgentId]};
         }
-        return DrVisit.fromJson(row);
+        return row;
       }).toList();
+
+      CacheService.instance
+          .putRaw(cacheKey, enriched, ttl: const Duration(minutes: 30))
+          .ignore();
+
+      return enriched.map(DrVisit.fromJson).toList();
     } catch (e) {
+      final cached = CacheService.instance.getRaw(cacheKey);
+      if (cached != null) {
+        return (cached as List)
+            .map((row) => DrVisit.fromJson(Map<String, dynamic>.from(row as Map)))
+            .toList();
+      }
       throw Exception(AppError.getMessage(e));
     }
   }
@@ -145,6 +162,67 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     required DateTime? followupDate,
     required String followupNotes,
   }) async {
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      final supabase = ref.read(supabaseClientProvider);
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final payload = <String, dynamic>{
+        if (patientId != null) 'patient_id': patientId,
+        'doctor_id': user.id,
+        'assigned_agent_id': assignedAgentId,
+        'visit_notes': visitNotes,
+        'diagnosis': diagnosis,
+        'followup_date': followupDate?.toIso8601String().split('T')[0],
+        'followup_notes': followupNotes,
+        'created_by_id': user.id,
+        'is_external_doctor': isExternal,
+        if (isExternal) 'ext_doctor_name': extDoctorName,
+        if (isExternal) 'ext_doctor_specialization': extDoctorSpecialization,
+        if (isExternal) 'ext_doctor_hospital': extDoctorHospital,
+        if (isExternal) 'ext_doctor_phone': extDoctorPhone,
+        if (isExternal) 'lead_patient_name': leadPatientName,
+        if (isExternal) 'lead_patient_phone': leadPatientPhone,
+        if (isExternal) 'lead_patient_address': leadPatientAddress,
+        if (isExternal) 'lead_notes': leadNotes,
+      };
+      final tempId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: tempId,
+        table: 'dr_visits',
+        operation: SyncOperation.insert,
+        data: payload,
+        timestamp: DateTime.now(),
+        retryCount: 0,
+      ));
+
+      final now = DateTime.now();
+      final optimistic = DrVisit(
+        id: tempId,
+        doctorId: user.id,
+        assignedAgentId: assignedAgentId,
+        visitNotes: visitNotes,
+        diagnosis: diagnosis,
+        visitDate: now,
+        followupDate: followupDate,
+        followupNotes: followupNotes,
+        createdAt: now,
+        isExternalDoctor: isExternal,
+        extDoctorName: extDoctorName,
+        extDoctorSpecialization: extDoctorSpecialization,
+        extDoctorHospital: extDoctorHospital,
+        extDoctorPhone: extDoctorPhone,
+        leadPatientName: leadPatientName,
+        leadPatientPhone: leadPatientPhone,
+        leadPatientAddress: leadPatientAddress,
+        leadNotes: leadNotes,
+        patientId: patientId,
+      );
+      state = AsyncData([optimistic, ...?state.valueOrNull]);
+      return;
+    }
+
     await _runAndReload(() async {
       try {
         final supabase = ref.read(supabaseClientProvider);
