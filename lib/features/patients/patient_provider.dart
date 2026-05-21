@@ -349,6 +349,30 @@ class PatientNotifier extends AsyncNotifier<void> {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint('Patient search failed: $e');
+      
+      final userState = ref.read(authNotifierProvider).value;
+      if (userState != null) {
+        final cacheKey = 'patients_${userState.role.name}_${userState.session.user.id}';
+        final cached = CacheService.instance.getRaw(cacheKey);
+        if (cached != null) {
+          final queryLower = query.trim().toLowerCase();
+          final List<Map<String, dynamic>> results = [];
+          for (final row in cached as List) {
+            final fullName = row['full_name']?.toString() ?? '';
+            if (fullName.toLowerCase().contains(queryLower)) {
+              results.add({
+                'id': row['id'],
+                'full_name': row['full_name'],
+                'date_of_birth': row['date_of_birth'],
+                'phone': row['phone'],
+              });
+              if (results.length >= limit) break;
+            }
+          }
+          return results;
+        }
+      }
+      
       // Return empty list on error for better UX in search fields.
       return [];
     }

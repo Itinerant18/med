@@ -12,8 +12,8 @@ import 'package:mediflow/core/string_utils.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/shared/widgets/confirm_dialog.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
-import 'package:mediflow/features/clinical/clinical_entry_screen.dart';
 import 'package:mediflow/features/dashboard/dashboard_screen.dart';
+import 'package:mediflow/features/staff/network_directory_screen.dart';
 import 'package:mediflow/features/dashboard/notification_sheet.dart';
 import 'package:mediflow/features/dr_visits/dr_visit_screen.dart';
 import 'package:mediflow/features/followups/my_followups_screen.dart';
@@ -102,7 +102,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final screens = <Widget>[
       const DashboardScreen(),
       const PatientListScreen(),
-      const ClinicalEntryScreen(),
+      const NetworkDirectoryScreen(),
       role == UserRole.assistant
           ? const MyFollowupsScreen()
           : const DrVisitScreen(),
@@ -119,9 +119,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         label: 'Patients',
       ),
       const NavigationDestination(
-        icon: Icon(AppIcons.medical_services_outlined),
-        selectedIcon: Icon(AppIcons.medical_services_rounded),
-        label: 'Clinical',
+        icon: Icon(AppIcons.people_alt_outlined),
+        selectedIcon: Icon(AppIcons.groups_rounded),
+        label: 'Directory',
       ),
       NavigationDestination(
         icon: Icon(

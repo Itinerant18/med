@@ -547,80 +547,38 @@ class DashboardScreen extends ConsumerWidget {
     bool isAdmin,
     BuildContext context,
   ) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.bgColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: AppTheme.surfaceWhite,
-              offset: Offset(-2, -2),
-              blurRadius: 6,
-            ),
-            BoxShadow(
-              color: AppTheme.neuShadowDark,
-              offset: Offset(2, 2),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: DataTable(
-            showCheckboxColumn: false,
-            headingRowColor: WidgetStateProperty.all(AppTheme.primaryTeal.withValues(alpha: 0.1)),
-            dataRowMinHeight: 60,
-            dataRowMaxHeight: 60,
-            columnSpacing: 24,
-            columns: [
-              const DataColumn(label: Text('Patient', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-              const DataColumn(label: Text('Time', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-              const DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-              const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-              if (isAdmin)
-                const DataColumn(label: Text('Added By', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-            ],
-            rows: visits.map((visit) {
-              final patientInfo = visit['patients'] as Map<String, dynamic>?;
-              final patientName = patientInfo?['full_name'] ?? visit['patient_name'] ?? 'Unknown';
-              final patientId = visit['patient_id'] as String?;
-              final visitTime = visit['visit_date'] != null
-                  ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
-                  : '--:--';
-              final status = (visit['patient_flow_status'] ?? 'admitted').toString().toLowerCase();
-              final addedBy = visit['last_updated_by'] as String?;
-              final isHighPriority = patientInfo?['is_high_priority'] ?? false;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Column(
+        children: visits.map((visit) {
+          final patientInfo = visit['patients'] as Map<String, dynamic>?;
+          final patientName = patientInfo?['full_name'] ??
+              visit['patient_name'] ??
+              'Unknown';
+          final patientId = visit['patient_id'] as String?;
+          final visitTime = visit['visit_date'] != null
+              ? DateFormat.jm()
+                  .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+              : '--:--';
+          final status = (visit['patient_flow_status'] ?? 'admitted')
+              .toString()
+              .toLowerCase();
+          final addedBy = visit['last_updated_by'] as String?;
+          final isHighPriority = patientInfo?['is_high_priority'] == true;
+          final visitType = (visit['visit_type'] as String?) ?? 'OPD';
 
-              return DataRow(
-                onSelectChanged: patientId != null
-                    ? (_) => context.push('/patients/$patientId/detail')
-                    : null,
-                cells: [
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isHighPriority) ...[
-                          const Icon(AppIcons.warning_amber_rounded, size: 14, color: AppTheme.errorColor),
-                          const SizedBox(width: 4),
-                        ],
-                        Text(patientName, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textColor)),
-                      ],
-                    ),
-                  ),
-                  DataCell(Text(visitTime, style: const TextStyle(color: AppTheme.textMuted))),
-                  DataCell(Text(visit['visit_type'] ?? 'OPD', style: const TextStyle(color: AppTheme.primaryTeal, fontWeight: FontWeight.w500))),
-                  DataCell(ServiceStatusBadge(status: status, size: 9)),
-                  if (isAdmin)
-                    DataCell(Text(addedBy != null ? 'Dr. $addedBy' : '--', style: const TextStyle(color: AppTheme.textMuted, fontStyle: FontStyle.italic))),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+          return _VisitListCard(
+            patientName: patientName,
+            time: visitTime,
+            type: visitType,
+            status: status,
+            isHighPriority: isHighPriority,
+            addedBy: isAdmin ? addedBy : null,
+            onTap: patientId != null
+                ? () => context.push('/patients/$patientId/detail')
+                : null,
+          );
+        }).toList(),
       ),
     );
   }
@@ -629,58 +587,26 @@ class DashboardScreen extends ConsumerWidget {
     List<Map<String, dynamic>> visits,
     BuildContext context,
   ) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.bgColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: AppTheme.surfaceWhite,
-              offset: Offset(-2, -2),
-              blurRadius: 6,
-            ),
-            BoxShadow(
-              color: AppTheme.neuShadowDark,
-              offset: Offset(2, 2),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: DataTable(
-            showCheckboxColumn: false,
-            headingRowColor: WidgetStateProperty.all(AppTheme.primaryTeal.withValues(alpha: 0.1)),
-            dataRowMinHeight: 60,
-            dataRowMaxHeight: 60,
-            columnSpacing: 24,
-            columns: const [
-              DataColumn(label: Text('Patient', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-              DataColumn(label: Text('Time', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textColor))),
-            ],
-            rows: visits.map((visit) {
-              final patientInfo = visit['patients'] as Map<String, dynamic>?;
-              final patientName = patientInfo?['full_name'] ?? 'Unknown';
-              final visitTime = visit['visit_date'] != null
-                  ? DateFormat.jm().format(parseDbDateOr(visit['visit_date'], DateTime.now()))
-                  : '--:--';
-              final followupStatus = visit['followup_status'] ?? 'pending';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Column(
+        children: visits.map((visit) {
+          final patientInfo = visit['patients'] as Map<String, dynamic>?;
+          final patientName = patientInfo?['full_name'] ?? 'Unknown';
+          final visitTime = visit['visit_date'] != null
+              ? DateFormat.jm()
+                  .format(parseDbDateOr(visit['visit_date'], DateTime.now()))
+              : '--:--';
+          final followupStatus =
+              (visit['followup_status'] as String?) ?? 'pending';
 
-              return DataRow(
-                onSelectChanged: (_) => context.push('/dr-visits/${visit['id']}'),
-                cells: [
-                  DataCell(Text(patientName, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textColor))),
-                  DataCell(Text(visitTime, style: const TextStyle(color: AppTheme.textMuted))),
-                  DataCell(ServiceStatusBadge(status: followupStatus, size: 9)),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+          return _VisitListCard(
+            patientName: patientName,
+            time: visitTime,
+            status: followupStatus,
+            onTap: () => context.push('/dr-visits/${visit['id']}'),
+          );
+        }).toList(),
       ),
     );
   }
@@ -1089,6 +1015,173 @@ class _PulseDotState extends State<_PulseDot>
         decoration: const BoxDecoration(
           color: AppTheme.successColor,
           shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Visit List Card ─────────────────────────────────
+
+class _VisitListCard extends StatelessWidget {
+  const _VisitListCard({
+    required this.patientName,
+    required this.time,
+    required this.status,
+    this.type,
+    this.isHighPriority = false,
+    this.addedBy,
+    this.onTap,
+  });
+
+  final String patientName;
+  final String time;
+  final String status;
+  final String? type;
+  final bool isHighPriority;
+  final String? addedBy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.bgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: isHighPriority
+                  ? const Border(
+                      left: BorderSide(
+                          color: AppTheme.errorColor, width: 4))
+                  : null,
+              boxShadow: const [
+                BoxShadow(
+                  color: AppTheme.surfaceWhite,
+                  offset: Offset(-2, -2),
+                  blurRadius: 6,
+                ),
+                BoxShadow(
+                  color: AppTheme.neuShadowDark,
+                  offset: Offset(2, 2),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color:
+                        AppTheme.primaryTeal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Icon(AppIcons.person_rounded,
+                        color: AppTheme.primaryTeal, size: 18),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          if (isHighPriority) ...[
+                            const Icon(AppIcons.warning_amber_rounded,
+                                size: 13, color: AppTheme.errorColor),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              patientName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: AppTheme.textColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(AppIcons.access_time_rounded,
+                              size: 11, color: AppTheme.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            time,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (type != null) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 3,
+                              height: 3,
+                              decoration: const BoxDecoration(
+                                color: AppTheme.textMuted,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              type!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.primaryTeal,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (addedBy != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(AppIcons.person_outline_rounded,
+                                size: 10, color: AppTheme.textMuted),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                'by Dr. $addedBy',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppTheme.textMuted,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ServiceStatusBadge(status: status, size: 9),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 // lib/features/profile/profile_provider.dart
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/cache_service.dart';
@@ -11,28 +12,43 @@ class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception('Not authenticated');
 
-    final supabase = ref.watch(supabaseClientProvider);
+    final supabase = ref.read(supabaseClientProvider);
 
-    // Use maybeSingle() instead of single() to avoid throwing
-    // when no doctor row exists yet
-    final existing =
-        await supabase.from('doctors').select().eq('id', user.id).maybeSingle();
+    try {
+      // Use maybeSingle() instead of single() to avoid throwing
+      // when no doctor row exists yet.
+      final existing = await supabase
+          .from('doctors')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
 
-    if (existing != null) {
-      return Map<String, dynamic>.from(existing);
+      if (existing != null) {
+        return Map<String, dynamic>.from(existing);
+      }
+    } catch (e, st) {
+      // Log so we can see the real cause instead of the generic fallback.
+      debugPrint('[profile] SELECT failed: $e\n$st');
+      rethrow;
     }
 
-    // Doctor row missing — create it from auth metadata
-    final metadata = user.userMetadata ?? {};
-    final fallback = {
+    // Profile row missing — synthesize one from auth metadata so the UI still
+    // renders. Attempt to persist it best-effort; never fail the screen just
+    // because the INSERT raced or RLS pushed back.
+    final metadata = user.userMetadata ?? const {};
+    final fallback = <String, dynamic>{
       'id': user.id,
-      'full_name': metadata['full_name'] ?? user.email ?? 'Doctor',
+      'full_name': metadata['full_name'] ?? user.email ?? 'User',
       'specialization': metadata['specialization'] ?? '',
       'email': user.email ?? '',
       'created_at': DateTime.now().toIso8601String(),
     };
 
-    await supabase.from('doctors').upsert(fallback, onConflict: 'id');
+    try {
+      await supabase.from('doctors').upsert(fallback, onConflict: 'id');
+    } catch (e, st) {
+      debugPrint('[profile] fallback upsert failed (non-fatal): $e\n$st');
+    }
     return fallback;
   }
 

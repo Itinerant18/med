@@ -118,6 +118,44 @@ class ErrorBoundary extends StatelessWidget {
               ),
             ),
           ],
+          if (error.toString().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+              ),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(top: 8),
+                title: Text(
+                  'Show details',
+                  style: AppTheme.bodyFont(
+                    size: 12,
+                    weight: FontWeight.w600,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SelectableText(
+                      error.toString(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

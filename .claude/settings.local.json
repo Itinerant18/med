@@ -1,11 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "PowerShell($env:PYTHONIOENCODING = 'utf-8'; python \"C:\\\\Users\\\\itine\\\\.claude\\\\skills\\\\senior-architect\\\\scripts\\\\project_architect.py\" \"C:\\\\workspace\\\\profile\\\\med\" 2>&1)",
+      "PowerShell($env:PYTHONIOENCODING = 'utf-8'; python \"C:\\\\Users\\\\itine\\\\.claude\\\\skills\\\\senior-architect\\\\scripts\\\\dependency_analyzer.py\" \"C:\\\\workspace\\\\profile\\\\med\" 2>&1; python \"C:\\\\Users\\\\itine\\\\.claude\\\\skills\\\\senior-architect\\\\scripts\\\\architecture_diagram_generator.py\" \"C:\\\\workspace\\\\profile\\\\med\" 2>&1)",
+      "Bash(awk END{print NR} *)"
+    ]
+  },
   "disabledMcpjsonServers": [
     "supabase",
     "code-review-graph"
-  ],
-  "permissions": {
-    "allow": [
-      "Bash(flutter analyze *)"
-    ]
-  }
+  ]
 }

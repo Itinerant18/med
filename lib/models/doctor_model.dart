@@ -7,6 +7,7 @@ class DoctorModel {
   final String fullName;
   final String? specialization;
   final String? email;
+  final String? phone;
   final String role;
   final String? approvalStatus;
   final DateTime? createdAt;
@@ -16,6 +17,7 @@ class DoctorModel {
     required this.fullName,
     this.specialization,
     this.email,
+    this.phone,
     required this.role,
     this.approvalStatus,
     this.createdAt,
@@ -27,6 +29,7 @@ class DoctorModel {
       fullName: parseDbString(json['full_name'], 'Unknown'),
       specialization: json['specialization']?.toString(),
       email: json['email']?.toString(),
+      phone: json['phone']?.toString(),
       role: parseDbString(json['role'], 'assistant'),
       approvalStatus: json['approval_status']?.toString(),
       createdAt: parseDbDate(json['created_at']),

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/app_notification.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -190,13 +191,12 @@ class NotificationPreferencesController
 
   @override
   Future<NotificationPreferencesState> build() async {
-    final authSub = _supabase.auth.onAuthStateChange.listen((event) {
-      if (event.event == AuthChangeEvent.signedIn || 
-          event.event == AuthChangeEvent.signedOut) {
-        ref.invalidateSelf();
-      }
-    });
-    ref.onDispose(authSub.cancel);
+    // Rebuild only when the authenticated user actually changes (login/logout).
+    // Watching the raw auth stream would fire on every token refresh and cause
+    // a new network round-trip on each event, spamming the log with failures.
+    ref.watch(authNotifierProvider.select(
+      (v) => v.valueOrNull?.session.user.id,
+    ));
 
     final preferences = await _loadPreferences();
     _applyPreferences(preferences);

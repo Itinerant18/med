@@ -9,6 +9,7 @@ import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:mediflow/shared/widgets/confirm_dialog.dart';
+import 'package:mediflow/shared/widgets/error_boundary.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/profile/change_password_dialog.dart';
 
@@ -116,7 +117,12 @@ class _AssistantProfileScreenState
       ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(AppError.getMessage(e))),
+        error: (e, st) => ErrorBoundary(
+          error: e,
+          stackTrace: st,
+          contextLabel: 'assistant_profile',
+          onRetry: () => ref.invalidate(profileNotifierProvider),
+        ),
         data: (data) {
           if (!_hasPopulated) {
             WidgetsBinding.instance.addPostFrameCallback((_) {

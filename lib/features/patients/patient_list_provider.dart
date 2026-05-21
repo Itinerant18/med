@@ -89,7 +89,7 @@ class SearchFilter {
 }
 
 const _patientListSelect =
-    'id, full_name, phone, email, symptoms, health_scheme, service_status, '
+    'id, full_name, date_of_birth, phone, email, symptoms, health_scheme, service_status, '
     'is_high_priority, last_updated_by, last_updated_at, created_by_id, '
     'created_at';
 

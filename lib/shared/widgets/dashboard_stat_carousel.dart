@@ -76,6 +76,7 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Container(
           width: 34,
@@ -86,26 +87,31 @@ class _StatCard extends StatelessWidget {
           ),
           child: Icon(item.icon, color: item.color, size: 19),
         ),
-        const Spacer(),
-        Text(
-          item.value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.textColor,
-            letterSpacing: -0.4,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          item.label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppTheme.textMuted,
-            fontWeight: FontWeight.w600,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              item.value,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textColor,
+                letterSpacing: -0.4,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ],
     );

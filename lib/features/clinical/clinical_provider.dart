@@ -1,8 +1,10 @@
 // lib/features/clinical/clinical_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/user_role.dart';
 
@@ -11,11 +13,6 @@ final patientSearchQueryProvider = StateProvider<String>((ref) => '');
 final clinicalPatientSearchProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final query = ref.watch(patientSearchQueryProvider);
-
-  final searchQueryNotifier = ref.read(patientSearchQueryProvider.notifier);
-  ref.onDispose(() {
-    searchQueryNotifier.state = '';
-  });
 
   if (query.trim().length < 2) return [];
 
@@ -36,6 +33,26 @@ final clinicalPatientSearchProvider =
     final response = await supabase.retry(() => dbQuery.limit(8));
     return List<Map<String, dynamic>>.from(response);
   } catch (e) {
+    if (userState != null) {
+      final cacheKey = 'patients_${userState.role.name}_${userState.session.user.id}';
+      final cached = CacheService.instance.getRaw(cacheKey);
+      if (cached != null) {
+        final queryLower = query.trim().toLowerCase();
+        final List<Map<String, dynamic>> results = [];
+        for (final row in cached as List) {
+          final fullName = row['full_name']?.toString() ?? '';
+          if (fullName.toLowerCase().contains(queryLower)) {
+            results.add({
+              'id': row['id'],
+              'full_name': row['full_name'],
+              'date_of_birth': row['date_of_birth'],
+            });
+            if (results.length >= 8) break;
+          }
+        }
+        return results;
+      }
+    }
     throw Exception(AppError.getMessage(e));
   }
 });
@@ -119,27 +136,56 @@ class ClinicalNotifier extends AsyncNotifier<void> {
 
         // ── Task 1, Step 2: Update patients table (sequential + compensated). ─
         if (patientId.isNotEmpty) {
-          try {
-            final patientUpdate = <String, dynamic>{
-              'service_status': finalVisitData['patient_flow_status'],
-              'last_updated_at': finalVisitData['last_updated_at'],
-              'last_visit_at': finalVisitData['visit_date'],
-              'last_updated_by': finalVisitData['last_updated_by'],
-              'last_updated_by_id': finalVisitData['last_updated_by_id'],
-            };
-            // Propagate granular test statuses when the doctor updated them.
-            if (finalVisitData['investigation_status'] != null &&
-                (finalVisitData['investigation_status'] as Map).isNotEmpty) {
-              patientUpdate['investigation_status'] =
-                  finalVisitData['investigation_status'];
-            }
+          final patientUpdate = <String, dynamic>{
+            'service_status': finalVisitData['patient_flow_status'],
+            'last_updated_at': finalVisitData['last_updated_at'],
+            'last_visit_at': finalVisitData['visit_date'],
+            'last_updated_by': finalVisitData['last_updated_by'],
+            'last_updated_by_id': finalVisitData['last_updated_by_id'],
+          };
+          // Propagate granular test statuses when the doctor updated them.
+          if (finalVisitData['investigation_status'] != null &&
+              (finalVisitData['investigation_status'] as Map).isNotEmpty) {
+            patientUpdate['investigation_status'] =
+                finalVisitData['investigation_status'];
+          }
 
+          try {
             await supabase.retry(
               () => supabase
                   .from('patients')
                   .update(patientUpdate)
                   .eq('id', patientId),
             );
+          } on PostgrestException catch (pge) {
+            // last_visit_at may not exist in all deployments (pending migration).
+            // Retry without it rather than rolling back a successful visit insert.
+            if (pge.code == '42703' &&
+                pge.message.toLowerCase().contains('last_visit_at')) {
+              await supabase.retry(
+                () => supabase
+                    .from('patients')
+                    .update(Map.from(patientUpdate)..remove('last_visit_at'))
+                    .eq('id', patientId),
+              );
+            } else {
+              // Different column/schema error — compensate and surface it.
+              if (insertedVisitId != null) {
+                try {
+                  await supabase
+                      .from('visits')
+                      .delete()
+                      .eq('id', insertedVisitId);
+                } catch (rollbackError) {
+                  debugPrint(
+                    'CRITICAL: visit $insertedVisitId orphaned after patients '
+                    'update failure. Manual cleanup required. '
+                    'Rollback error: $rollbackError',
+                  );
+                }
+              }
+              rethrow;
+            }
           } catch (patientUpdateError) {
             // Compensating action: delete the visit to restore integrity.
             if (insertedVisitId != null) {
@@ -149,7 +195,6 @@ class ClinicalNotifier extends AsyncNotifier<void> {
                     .delete()
                     .eq('id', insertedVisitId);
               } catch (rollbackError) {
-                // Best-effort rollback; log orphaned visit for manual review.
                 debugPrint(
                   'CRITICAL: visit $insertedVisitId orphaned after patients '
                   'update failure. Manual cleanup required. '

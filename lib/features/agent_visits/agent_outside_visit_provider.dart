@@ -7,6 +7,7 @@ import 'package:mediflow/core/push_notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
+import 'package:mediflow/features/staff/external_doctors_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -244,6 +245,9 @@ class AgentOutsideVisitsNotifier
       }
 
       ref.invalidateSelf();
+      // Invalidate the directory so the new doctor appears immediately
+      // without waiting for the Realtime round-trip.
+      ref.invalidate(externalDoctorsProvider);
 
       // ── Push notification to task creator ──
       if (taskCreatedBy != null) {
@@ -364,6 +368,7 @@ class AgentOutsideVisitsNotifier
       }
 
       ref.invalidateSelf();
+      ref.invalidate(externalDoctorsProvider);
     } catch (e) {
       throw Exception(AppError.getMessage(e));
     }
