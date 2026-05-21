@@ -122,7 +122,7 @@ class FcmService {
     try {
       if (_lastTokenSync != null &&
           DateTime.now().difference(_lastTokenSync!) <
-              const Duration(hours: 12)) {
+              const Duration(minutes: 30)) {
         return;
       }
 
