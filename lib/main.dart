@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mediflow/core/app_config.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/connectivity_wrapper.dart';
 import 'package:mediflow/core/fcm_service.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/notification_service.dart';
 import 'package:mediflow/core/router.dart';
@@ -31,6 +33,9 @@ Future<void> main() async {
 
   await dotenv.load(fileName: '.env.local');
   AppConfig.validate();
+
+  await CacheService.instance.init();
+  await SyncQueue.instance.init();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

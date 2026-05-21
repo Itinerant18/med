@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/realtime_service.dart';
@@ -199,10 +200,33 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
     }
   }
 
+  DashboardState? _loadFromCache(String cacheKey) {
+    final data = CacheService.instance.getRaw(cacheKey) as Map<String, dynamic>?;
+    if (data == null) return null;
+    List<Map<String, dynamic>> toMapList(dynamic v) =>
+        (v as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+    return DashboardState(
+      todayVisits: toMapList(data['visits']),
+      highPriorityPatients: toMapList(data['priority']),
+      assignedVisits: toMapList(data['assignedVisits']),
+      assignedCheckups: toMapList(data['assignedCheckups']),
+      followupTasks: const [],
+      isLive: false,
+      lastRefreshed: data['cachedAt'] != null
+          ? DateTime.tryParse(data['cachedAt'] as String)
+          : null,
+    );
+  }
+
   Future<DashboardState> _fetch() async {
     final supabase = ref.read(supabaseClientProvider);
     final userState = ref.read(authNotifierProvider).valueOrNull;
     final isAgent = userState?.role == UserRole.assistant;
+    final userId = Supabase.instance.client.auth.currentUser?.id ?? '';
+    final cacheKey = 'dashboard_$userId';
 
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
@@ -336,7 +360,7 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
           visits.where((v) => v['tests_performed'] == false).length;
       final upcomingOT = visits.where((v) => v['ot_required'] == true).length;
 
-      return DashboardState(
+      final freshState = DashboardState(
         todayVisits: visits,
         highPriorityPatients: priority,
         assignedVisits: assignedVisits,
@@ -351,7 +375,21 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
         isLive: true,
         lastRefreshed: DateTime.now(),
       );
+
+      // Persist for offline use (15-min TTL).
+      CacheService.instance.putRaw(cacheKey, {
+        'visits': visits,
+        'priority': priority,
+        'assignedVisits': assignedVisits,
+        'assignedCheckups': assignedCheckups,
+        'cachedAt': DateTime.now().toIso8601String(),
+      }, ttl: const Duration(minutes: 15)).ignore();
+
+      return freshState;
     } catch (e) {
+      // Return cached dashboard when the network is unavailable.
+      final cached = _loadFromCache(cacheKey);
+      if (cached != null) return cached;
       throw Exception(AppError.getMessage(e));
     }
   }

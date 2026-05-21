@@ -22,11 +22,11 @@ extension SupabaseRetry on SupabaseClient {
     while (true) {
       attempts++;
       try {
-        return await operation();
+        return await operation().timeout(const Duration(seconds: 10));
       } catch (e) {
-        if (attempts >= maxAttempts || !_isTransientError(e)) {
-          rethrow;
-        }
+        // SocketException = device is offline; retrying immediately won't help.
+        if (e is SocketException) rethrow;
+        if (attempts >= maxAttempts || !_isTransientError(e)) rethrow;
         await Future.delayed(delay * attempts);
       }
     }

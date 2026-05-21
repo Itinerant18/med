@@ -1,8 +1,11 @@
 // lib/features/agent_visits/agent_outside_visit_provider.dart
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/push_notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -51,23 +54,41 @@ class AgentOutsideVisitsNotifier
     return _fetch();
   }
 
+  Future<bool> _isOffline() async {
+    final result = await Connectivity().checkConnectivity();
+    return result.contains(ConnectivityResult.none);
+  }
+
   Future<List<AgentOutsideVisit>> _fetch() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
+    final cacheKey = 'agent_visits_${user.id}';
 
     try {
-      final response = await _supabase.retry(() => _supabase
+      final rawResponse = await _supabase.retry(() => _supabase
           .from('agent_outside_visits')
           .select(_selectColumns)
           .eq('agent_id', user.id)
           .order('visit_date', ascending: false)
           .order('created_at', ascending: false));
 
-      return (response as List)
+      // Persist for offline use.
+      CacheService.instance
+          .putRaw(cacheKey, rawResponse, ttl: const Duration(hours: 1))
+          .ignore();
+
+      return (rawResponse as List)
           .map((j) =>
               AgentOutsideVisit.fromJson(Map<String, dynamic>.from(j as Map)))
           .toList();
     } catch (e) {
+      final cached = CacheService.instance.getRaw(cacheKey);
+      if (cached != null) {
+        return (cached as List)
+            .map((j) =>
+                AgentOutsideVisit.fromJson(Map<String, dynamic>.from(j as Map)))
+            .toList();
+      }
       throw Exception(AppError.getMessage(e));
     }
   }
@@ -128,6 +149,25 @@ class AgentOutsideVisitsNotifier
       if (meetDrType != null) 'meet_dr_type': meetDrType,
       if (meetTimesVisited != null) 'meet_times_visited': meetTimesVisited,
     };
+
+    // Offline path — queue the insert and show an optimistic item in the list.
+    if (await _isOffline()) {
+      final tempId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: tempId,
+        table: 'agent_outside_visits',
+        operation: SyncOperation.insert,
+        data: data,
+        timestamp: DateTime.now(),
+      ));
+      final optimistic = AgentOutsideVisit.fromJson({
+        ...data,
+        'id': tempId,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      state = AsyncData([optimistic, ...?state.value]);
+      return;
+    }
 
     // Query the task creator before insert (best-effort) for push notification.
     String? taskCreatedBy;
@@ -332,6 +372,22 @@ class AgentOutsideVisitsNotifier
   Future<void> deleteVisit(String visitId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
+
+    // Offline — remove optimistically and queue the deletion.
+    if (await _isOffline()) {
+      state = AsyncData(
+          (state.value ?? []).where((v) => v.id != visitId).toList());
+      await SyncQueue.instance.enqueue(SyncAction(
+        id: 'del_$visitId',
+        table: 'agent_outside_visits',
+        operation: SyncOperation.delete,
+        data: const {},
+        matchColumn: 'id',
+        matchValue: visitId,
+        timestamp: DateTime.now(),
+      ));
+      return;
+    }
 
     try {
       await _supabase.retry(() => _supabase

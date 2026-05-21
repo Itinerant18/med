@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_provider.dart';
@@ -409,6 +410,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
       ref.read(notificationProvider.notifier).clearAll();
       ref.read(notificationPreferencesControllerProvider.notifier).resetToDefaults();
     } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
+    await CacheService.instance.clearAll();
     await FcmService.instance.clearToken();
     await _googleSignIn.signOut();
 
@@ -429,6 +431,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     final user = session.user;
     final metadata = user.userMetadata ?? const {};
     final linkedProviders = await _getLinkedProviders(user);
+    final cacheKey = 'auth_profile_${user.id}';
 
     try {
       final profile = await _supabase.retry(() => _supabase
@@ -439,6 +442,17 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
           .maybeSingle());
 
       if (profile != null) {
+        // Persist for offline resilience — no TTL (profile rarely changes).
+        CacheService.instance.putRaw(cacheKey, {
+          'full_name': profile['full_name'],
+          'specialization': profile['specialization'],
+          'role': profile['role'],
+          'approval_status': profile['approval_status'],
+          'rejection_reason': profile['rejection_reason'],
+          'phone': profile['phone'],
+          'phone_verified': profile['phone_verified'],
+        }).ignore();
+
         return AuthUserState(
           session: session,
           doctorName: profile['full_name'] as String?,
@@ -452,10 +466,25 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         );
       }
     } catch (_) {
-      // Fall back to metadata if DB query fails
+      // Try cached profile before falling back to minimal auth metadata.
+      final cached =
+          CacheService.instance.getRaw(cacheKey) as Map<String, dynamic>?;
+      if (cached != null) {
+        return AuthUserState(
+          session: session,
+          doctorName: cached['full_name'] as String?,
+          specialization: cached['specialization'] as String?,
+          approvalStatus: cached['approval_status'] as String? ?? 'pending',
+          rejectionReason: cached['rejection_reason'] as String?,
+          role: UserRole.fromString(cached['role'] as String?),
+          linkedProviders: linkedProviders,
+          phone: cached['phone'] as String?,
+          phoneVerified: cached['phone_verified'] as bool? ?? false,
+        );
+      }
     }
 
-    // Fallback to auth metadata
+    // Final fallback to auth metadata (minimal info, no approval_status).
     return AuthUserState(
       session: session,
       doctorName: metadata['full_name'] as String?,

@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
@@ -116,6 +117,17 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
   final userState = ref.watch(authNotifierProvider).value;
   final role = ref.watch(currentRoleProvider);
 
+  // Only cache the unfiltered first-page view to keep things simple.
+  final isDefaultFilter = filter.query.isEmpty &&
+      filter.offset == 0 &&
+      filter.healthScheme == HealthSchemeFilter.all &&
+      filter.priority == PriorityFilter.all &&
+      filter.dateRange == DateRangeFilter.allTime &&
+      filter.visitType == VisitTypeFilter.all;
+  final cacheKey = isDefaultFilter
+      ? 'patients_${role.name}_${userState?.session.user.id ?? ""}'
+      : null;
+
   try {
     var query = supabase.from('patients').select(_patientListSelect);
 
@@ -169,12 +181,32 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
         query.order('created_at', ascending: false),
     }.range(filter.offset, filter.offset + filter.limit - 1);
 
-    final response = await supabase.retry(() => transformQuery);
-    return (response as List)
-        .map((row) => PatientModel.fromJson(Map<String, dynamic>.from(row as Map)))
+    final rawResponse = await supabase.retry(() => transformQuery);
+
+    if (cacheKey != null) {
+      CacheService.instance
+          .putRaw(cacheKey, rawResponse, ttl: const Duration(hours: 1))
+          .ignore();
+    }
+
+    return (rawResponse as List)
+        .map((row) =>
+            PatientModel.fromJson(Map<String, dynamic>.from(row as Map)))
         .toList(growable: false);
   } catch (e) {
     if (isDisposed) return [];
+
+    // Fall back to cached patient list when offline.
+    if (cacheKey != null) {
+      final cached = CacheService.instance.getRaw(cacheKey);
+      if (cached != null) {
+        return (cached as List)
+            .map((row) =>
+                PatientModel.fromJson(Map<String, dynamic>.from(row as Map)))
+            .toList(growable: false);
+      }
+    }
+
     throw Exception(AppError.getMessage(e));
   }
 });

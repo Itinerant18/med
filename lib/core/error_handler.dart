@@ -120,6 +120,18 @@ class AppError {
     return 'Something went wrong. Please try again or contact support.';
   }
 
+  /// Returns true if the error indicates a missing or broken network connection.
+  static bool isOfflineError(dynamic error) {
+    if (error == null) return false;
+    final msg = error.toString().toLowerCase();
+    return msg.contains('socketexception') ||
+        msg.contains('failed host lookup') ||
+        msg.contains('network is unreachable') ||
+        msg.contains('no route to host') ||
+        msg.contains('connection refused') ||
+        msg.contains('no internet');
+  }
+
   /// Returns true if the error is an auth/session error requiring re-login.
   static bool requiresReLogin(dynamic error) {
     if (error == null) return false;
