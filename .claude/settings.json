@@ -3,25 +3,20 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "code-review-graph update --skip-flows",
-            "timeout": 5000
-          }
-        ]
+        "command": "code-review-graph update --skip-flows",
+        "timeout": 5000
       }
     ],
     "SessionStart": [
       {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "code-review-graph status",
-            "timeout": 3000
-          }
-        ]
+        "command": "code-review-graph status",
+        "timeout": 3000
+      }
+    ],
+    "PreCommit": [
+      {
+        "command": "code-review-graph detect-changes --brief",
+        "timeout": 10000
       }
     ]
   }
