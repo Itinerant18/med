@@ -230,8 +230,8 @@ class FollowupTasksNotifier extends AutoDisposeAsyncNotifier<List<FollowupTask>>
             patients(full_name)
           ''')
           .eq('assigned_to', user.id)
-          .order('due_date', ascending: true)
-          .order('created_at', ascending: false));
+          .order('created_at', ascending: false)
+          .order('due_date', ascending: true));
 
       CacheService.instance
           .putRaw(cacheKey, response, ttl: const Duration(minutes: 30))
@@ -599,8 +599,8 @@ final doctorAssignedFollowupsProvider =
           patients(full_name)
         ''')
         .eq('created_by', user.id)
-        .order('due_date', ascending: true)
-        .order('created_at', ascending: false));
+        .order('created_at', ascending: false)
+        .order('due_date', ascending: true));
 
     return (response as List)
         .map((json) =>

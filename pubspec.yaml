@@ -28,10 +28,11 @@ dependencies:
   http: ^1.2.0 # for Edge Function calls
   fl_chart: ^0.69.0
   google_fonts: ^6.2.1
-  font_awesome_flutter: ^10.7.0
+  font_awesome_flutter: ^11.0.0
   flutter_dotenv: ^6.0.1
   shared_preferences: ^2.5.5
   line_awesome_flutter: ^3.0.1
+  material_symbols_icons: ^4.2783.0
 
 dev_dependencies:
   flutter_test:
@@ -40,5 +41,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
   assets:
     - .env.local

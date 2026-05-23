@@ -15,6 +15,8 @@ import 'package:mediflow/shared/widgets/error_boundary.dart';
 import 'package:mediflow/features/patients/patient_permissions.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/patient_model.dart';
+import 'package:mediflow/features/dr_visits/agents_provider.dart';
+import 'package:mediflow/models/user_role.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediflow/shared/widgets/service_status_badge.dart';
 
@@ -122,6 +124,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final staffMap = ref.watch(staffMapProvider).valueOrNull ?? {};
     final filter = _buildFilter();
     final patientsAsync = ref.watch(roleAwarePatientsProvider(filter));
     final totalAsync = ref.watch(patientTotalCountProvider);
@@ -337,6 +340,8 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                         columns: [
                           const DataColumn(label: Text('Patient')),
                           const DataColumn(label: Text('Contact')),
+                          const DataColumn(label: Text('Referred By')),
+                          const DataColumn(label: Text('Added By')),
                           const DataColumn(label: Text('Scheme')),
                           const DataColumn(label: Text('Status')),
                           const DataColumn(label: Text('Priority')),
@@ -345,6 +350,12 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                         ],
                         rows: List<DataRow>.generate(patients.length, (index) {
                           final patient = patients[index];
+                          final creator = staffMap[patient.createdById];
+                          final creatorName = creator?.fullName ?? 'Unknown';
+                          final creatorRole = creator != null
+                              ? UserRole.fromString(creator.role).label
+                              : 'System';
+                          final creatorNameWithRole = '$creatorName ($creatorRole)';
                           final canEdit =
                               isAdmin &&
                               PatientPermissions.canEditPatient(
@@ -376,6 +387,18 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
                                   patient.phone ?? '—',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  patient.referredBy == null || patient.referredBy!.trim().isEmpty
+                                      ? 'None'
+                                      : patient.referredBy!,
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  creatorNameWithRole,
                                 ),
                               ),
                               DataCell(

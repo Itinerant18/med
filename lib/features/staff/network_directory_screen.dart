@@ -140,25 +140,249 @@ class _InternalStaffTab extends ConsumerWidget {
                       : 'No agents found.',
                 );
               }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                itemCount: members.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) {
-                  final member = members[i];
-                  return _InternalDoctorCard(
-                    member: member,
-                    showActivity: canSeeActivity,
-                    activity: activityMap[member.id],
-                    activityLoading: activityAsync?.isLoading ?? false,
-                    selectedDate: selectedDate,
-                  );
-                },
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                child: NeuCard(
+                  borderRadius: 20,
+                  padding: const EdgeInsets.all(8),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      horizontalMargin: 12,
+                      columnSpacing: 20,
+                      headingRowColor: WidgetStateProperty.all(
+                        AppTheme.primaryTeal.withValues(alpha: 0.05),
+                      ),
+                      columns: [
+                        DataColumn(
+                          label: Text(
+                            'Name',
+                            style: AppTheme.bodyFont(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: AppTheme.primaryTeal),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Role',
+                            style: AppTheme.bodyFont(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: AppTheme.primaryTeal),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Specialization',
+                            style: AppTheme.bodyFont(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: AppTheme.primaryTeal),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Phone',
+                            style: AppTheme.bodyFont(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: AppTheme.primaryTeal),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Email',
+                            style: AppTheme.bodyFont(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: AppTheme.primaryTeal),
+                          ),
+                        ),
+                        if (canSeeActivity)
+                          DataColumn(
+                            label: Text(
+                              'Activity',
+                              style: AppTheme.bodyFont(
+                                  size: 13,
+                                  weight: FontWeight.w700,
+                                  color: AppTheme.primaryTeal),
+                            ),
+                          ),
+                        if (canSeeActivity)
+                          DataColumn(
+                            label: Text(
+                              'Actions',
+                              style: AppTheme.bodyFont(
+                                  size: 13,
+                                  weight: FontWeight.w700,
+                                  color: AppTheme.primaryTeal),
+                            ),
+                          ),
+                      ],
+                      rows: members.map((member) {
+                        final isDoctor = member.role == UserRole.doctor.databaseValue;
+                        final badgeColor =
+                            isDoctor ? AppTheme.doctorAccent : AppTheme.assistantAccent;
+                        final badgeLabel = isDoctor ? 'Doctor' : 'Agent';
+                        final activity = activityMap[member.id];
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Text(
+                                member.fullName,
+                                style: AppTheme.bodyFont(
+                                    size: 13, weight: FontWeight.w700),
+                              ),
+                            ),
+                            DataCell(
+                              _RoleBadge(label: badgeLabel, color: badgeColor),
+                            ),
+                            DataCell(
+                              Text(
+                                member.specialization?.isNotEmpty == true
+                                    ? member.specialization!
+                                    : '-',
+                                style: AppTheme.bodyFont(size: 13),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                member.phone?.isNotEmpty == true
+                                    ? member.phone!
+                                    : '-',
+                                style: AppTheme.bodyFont(size: 13),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                member.email?.isNotEmpty == true
+                                    ? member.email!
+                                    : '-',
+                                style: AppTheme.bodyFont(size: 13),
+                              ),
+                            ),
+                            if (canSeeActivity)
+                              DataCell(
+                                _buildActivitySummary(
+                                  isDoctor,
+                                  activity,
+                                  activityAsync?.isLoading ?? false,
+                                ),
+                              ),
+                            if (canSeeActivity)
+                              DataCell(
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(AppIcons.history_rounded,
+                                      color: AppTheme.primaryTeal, size: 18),
+                                  onPressed: () => _showActivitySheet(
+                                      context, member, selectedDate),
+                                ),
+                              ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActivitySummary(
+      bool isDoctor, StaffActivity? activity, bool loading) {
+    if (loading && activity == null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 10,
+            height: 10,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.2,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Loading…',
+            style: AppTheme.bodyFont(size: 11, color: AppTheme.textMuted),
+          ),
+        ],
+      );
+    }
+
+    final a = activity;
+    if (a == null || a.isEmpty) {
+      return Text(
+        '-',
+        style: AppTheme.bodyFont(size: 11, color: AppTheme.textMuted),
+      );
+    }
+
+    final chips = <Widget>[];
+    if (isDoctor) {
+      if (a.drVisits.isNotEmpty) {
+        chips.add(_ActivityChip(
+          icon: AppIcons.medical_services_rounded,
+          color: AppTheme.doctorAccent,
+          label:
+              '${a.drVisits.length} ${a.drVisits.length == 1 ? "visit" : "visits"}',
+        ));
+      }
+      if (a.followupsAssigned.isNotEmpty) {
+        chips.add(_ActivityChip(
+          icon: AppIcons.add_task_rounded,
+          color: AppTheme.primaryTeal,
+          label:
+              '${a.followupsAssigned.length} ${a.followupsAssigned.length == 1 ? "follow-up" : "follow-ups"}',
+        ));
+      }
+    } else {
+      if (a.outsideVisits.isNotEmpty) {
+        chips.add(_ActivityChip(
+          icon: AppIcons.local_hospital_rounded,
+          color: AppTheme.assistantAccent,
+          label:
+              '${a.outsideVisits.length} ${a.outsideVisits.length == 1 ? "visit" : "visits"}',
+        ));
+      }
+      if (a.followupsCompleted.isNotEmpty) {
+        chips.add(_ActivityChip(
+          icon: AppIcons.check_circle_rounded,
+          color: AppTheme.successColor,
+          label: '${a.followupsCompleted.length} comp.',
+        ));
+      }
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: chips,
+    );
+  }
+
+  void _showActivitySheet(
+      BuildContext context, DoctorModel member, DateTime selectedDate) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _StaffActivitySheet(
+        member: member,
+        selectedDate: selectedDate,
+      ),
     );
   }
 }
@@ -265,232 +489,6 @@ class _ActivityDatePill extends ConsumerWidget {
   }
 }
 
-class _InternalDoctorCard extends StatelessWidget {
-  const _InternalDoctorCard({
-    required this.member,
-    this.showActivity = false,
-    this.activity,
-    this.activityLoading = false,
-    required this.selectedDate,
-  });
-
-  final DoctorModel member;
-  final bool showActivity;
-  final StaffActivity? activity;
-  final bool activityLoading;
-  final DateTime selectedDate;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDoctor = member.role == UserRole.doctor.databaseValue;
-    final badgeColor =
-        isDoctor ? AppTheme.doctorAccent : AppTheme.assistantAccent;
-    final badgeLabel = isDoctor ? 'Doctor' : 'Agent';
-
-    final card = NeuCard(
-      padding: const EdgeInsets.all(14),
-      borderRadius: 20,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Icon(AppIcons.person_rounded,
-                      color: badgeColor, size: 20),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            member.fullName,
-                            style: AppTheme.bodyFont(
-                                size: 14, weight: FontWeight.w700),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _RoleBadge(label: badgeLabel, color: badgeColor),
-                      ],
-                    ),
-                    if (member.specialization?.isNotEmpty == true) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        member.specialization!,
-                        style: AppTheme.bodyFont(
-                            size: 12, color: AppTheme.textMuted),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (member.phone?.isNotEmpty == true ||
-                        member.email?.isNotEmpty == true)
-                      const SizedBox(height: 4),
-                    if (member.phone?.isNotEmpty == true)
-                      _ContactRow(
-                          icon: AppIcons.phone_rounded, text: member.phone!),
-                    if (member.email?.isNotEmpty == true)
-                      _ContactRow(
-                          icon: AppIcons.email_outlined, text: member.email!),
-                  ],
-                ),
-              ),
-              if (showActivity)
-                const Icon(AppIcons.arrow_forward_ios_rounded,
-                    size: 12, color: AppTheme.textMuted),
-            ],
-          ),
-          if (showActivity) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1, color: AppTheme.neutralDivider),
-            const SizedBox(height: 10),
-            _ActivityFooter(
-              isDoctor: isDoctor,
-              activity: activity,
-              loading: activityLoading,
-            ),
-          ],
-        ],
-      ),
-    );
-
-    if (!showActivity) return card;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => _showActivitySheet(context),
-        child: card,
-      ),
-    );
-  }
-
-  void _showActivitySheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.bgColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _StaffActivitySheet(
-        member: member,
-        selectedDate: selectedDate,
-      ),
-    );
-  }
-}
-
-// ── Activity counts row on the card ──────────────────────────────────────────
-
-class _ActivityFooter extends StatelessWidget {
-  const _ActivityFooter({
-    required this.isDoctor,
-    required this.activity,
-    required this.loading,
-  });
-
-  final bool isDoctor;
-  final StaffActivity? activity;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading && activity == null) {
-      return Row(
-        children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: AppTheme.textMuted.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Loading activity…',
-            style: AppTheme.bodyFont(size: 11, color: AppTheme.textMuted),
-          ),
-        ],
-      );
-    }
-
-    final a = activity;
-    if (a == null || a.isEmpty) {
-      return Row(
-        children: [
-          Icon(AppIcons.history_toggle_off_rounded,
-              size: 12, color: AppTheme.textMuted.withValues(alpha: 0.7)),
-          const SizedBox(width: 6),
-          Text(
-            'No activity on this date',
-            style: AppTheme.bodyFont(
-                size: 11,
-                color: AppTheme.textMuted,
-                weight: FontWeight.w500),
-          ),
-        ],
-      );
-    }
-
-    final chips = <Widget>[];
-    if (isDoctor) {
-      if (a.drVisits.isNotEmpty) {
-        chips.add(_ActivityChip(
-          icon: AppIcons.medical_services_rounded,
-          color: AppTheme.doctorAccent,
-          label: '${a.drVisits.length} '
-              '${a.drVisits.length == 1 ? "visit" : "visits"}',
-        ));
-      }
-      if (a.followupsAssigned.isNotEmpty) {
-        chips.add(_ActivityChip(
-          icon: AppIcons.add_task_rounded,
-          color: AppTheme.primaryTeal,
-          label: '${a.followupsAssigned.length} '
-              '${a.followupsAssigned.length == 1 ? "follow-up" : "follow-ups"}',
-        ));
-      }
-    } else {
-      if (a.outsideVisits.isNotEmpty) {
-        chips.add(_ActivityChip(
-          icon: AppIcons.local_hospital_rounded,
-          color: AppTheme.assistantAccent,
-          label: '${a.outsideVisits.length} outside '
-              '${a.outsideVisits.length == 1 ? "visit" : "visits"}',
-        ));
-      }
-      if (a.followupsCompleted.isNotEmpty) {
-        chips.add(_ActivityChip(
-          icon: AppIcons.check_circle_rounded,
-          color: AppTheme.successColor,
-          label: '${a.followupsCompleted.length} completed',
-        ));
-      }
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 6,
-      children: chips,
-    );
-  }
-}
-
 class _ActivityChip extends StatelessWidget {
   const _ActivityChip({
     required this.icon,
@@ -553,12 +551,157 @@ class _ExternalDoctorsTab extends ConsumerWidget {
                 message: 'No external doctors yet.\nTap + to add one.',
               );
             }
-            return ListView.separated(
+            return SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              itemCount: doctors.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) =>
-                  _ExternalDoctorCard(doctor: doctors[i]),
+              child: NeuCard(
+                borderRadius: 20,
+                padding: const EdgeInsets.all(8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    horizontalMargin: 12,
+                    columnSpacing: 20,
+                    headingRowColor: WidgetStateProperty.all(
+                      AppTheme.primaryTeal.withValues(alpha: 0.05),
+                    ),
+                    columns: [
+                      DataColumn(
+                        label: Text(
+                          'Name',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Type',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Specialization',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Hospital / Clinic',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Area (District)',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Phone',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Email',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Status',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Actions',
+                          style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700, color: AppTheme.primaryTeal),
+                        ),
+                      ),
+                    ],
+                    rows: doctors.map((doctor) {
+                      final isOffline = doctor.id.startsWith('offline_');
+                      final canManage = !isOffline && !doctor.fromHistory;
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Text(
+                              doctor.name,
+                              style: AppTheme.bodyFont(size: 13, weight: FontWeight.w700),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              doctor.meetDrType ?? '-',
+                              style: AppTheme.bodyFont(size: 13),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              doctor.specialization ?? '-',
+                              style: AppTheme.bodyFont(size: 13),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              doctor.hospital ?? '-',
+                              style: AppTheme.bodyFont(size: 13),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              doctor.areaDistrict ?? '-',
+                              style: AppTheme.bodyFont(size: 13),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              doctor.phone ?? '-',
+                              style: AppTheme.bodyFont(size: 13),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              doctor.email ?? '-',
+                              style: AppTheme.bodyFont(size: 13),
+                            ),
+                          ),
+                          DataCell(
+                            isOffline
+                                ? const _RoleBadge(label: 'Pending sync', color: AppTheme.warningColor)
+                                : doctor.fromHistory
+                                    ? const _RoleBadge(label: 'From visits', color: AppTheme.infoColor)
+                                    : const _RoleBadge(label: 'Synced', color: AppTheme.primaryTeal),
+                          ),
+                          DataCell(
+                            canManage
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(AppIcons.edit_rounded, color: AppTheme.primaryTeal, size: 18),
+                                        onPressed: () => _showEditSheet(context, doctor),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(AppIcons.delete_rounded, color: AppTheme.errorColor, size: 18),
+                                        onPressed: () => _confirmDelete(context, ref, doctor),
+                                      ),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
             );
           },
         ),
@@ -588,132 +731,8 @@ class _ExternalDoctorsTab extends ConsumerWidget {
       builder: (_) => const _AddExternalDoctorSheet(),
     );
   }
-}
 
-class _ExternalDoctorCard extends ConsumerWidget {
-  const _ExternalDoctorCard({required this.doctor});
-
-  final ExternalDoctor doctor;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isOffline = doctor.id.startsWith('offline_');
-    // History entries and pending-sync entries cannot be edited/deleted here.
-    final canManage = !isOffline && !doctor.fromHistory;
-
-    return NeuCard(
-      padding: const EdgeInsets.all(14),
-      borderRadius: 20,
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryTeal.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Icon(AppIcons.person_search_rounded,
-                  color: AppTheme.primaryTeal, size: 20),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        doctor.name,
-                        style: AppTheme.bodyFont(
-                            size: 14, weight: FontWeight.w700),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isOffline)
-                      const _RoleBadge(
-                          label: 'Pending sync',
-                          color: AppTheme.warningColor)
-                    else if (doctor.fromHistory)
-                      const _RoleBadge(
-                          label: 'From visits',
-                          color: AppTheme.infoColor),
-                  ],
-                ),
-                if (doctor.specialization?.isNotEmpty == true) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    doctor.specialization!,
-                    style: AppTheme.bodyFont(
-                        size: 12, color: AppTheme.textMuted),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                if (doctor.hospital?.isNotEmpty == true) ...[
-                  const SizedBox(height: 2),
-                  _ContactRow(
-                      icon: AppIcons.local_hospital_rounded,
-                      text: doctor.hospital!),
-                ],
-                if (doctor.phone?.isNotEmpty == true ||
-                    doctor.email?.isNotEmpty == true)
-                  const SizedBox(height: 2),
-                if (doctor.phone?.isNotEmpty == true)
-                  _ContactRow(
-                      icon: AppIcons.phone_rounded, text: doctor.phone!),
-                if (doctor.email?.isNotEmpty == true)
-                  _ContactRow(
-                      icon: AppIcons.email_outlined, text: doctor.email!),
-              ],
-            ),
-          ),
-          if (canManage)
-            PopupMenuButton<_CardAction>(
-              icon: const Icon(AppIcons.tune_rounded,
-                  size: 18, color: AppTheme.textMuted),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              onSelected: (action) {
-                if (action == _CardAction.edit) {
-                  _showEditSheet(context);
-                } else {
-                  _confirmDelete(context, ref);
-                }
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: _CardAction.edit,
-                  child: Row(children: [
-                    const Icon(AppIcons.edit_rounded,
-                        size: 16, color: AppTheme.primaryTeal),
-                    const SizedBox(width: 10),
-                    Text('Edit',
-                        style: AppTheme.bodyFont(
-                            size: 13, color: AppTheme.primaryTeal)),
-                  ]),
-                ),
-                PopupMenuItem(
-                  value: _CardAction.delete,
-                  child: Row(children: [
-                    const Icon(AppIcons.delete_rounded,
-                        size: 16, color: AppTheme.errorColor),
-                    const SizedBox(width: 10),
-                    Text('Delete',
-                        style: AppTheme.bodyFont(
-                            size: 13, color: AppTheme.errorColor)),
-                  ]),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditSheet(BuildContext context) {
+  void _showEditSheet(BuildContext context, ExternalDoctor doctor) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -725,13 +744,12 @@ class _ExternalDoctorCard extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, ExternalDoctor doctor) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.cardBg,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete Doctor',
             style: AppTheme.bodyFont(size: 16, weight: FontWeight.w700)),
         content: Text(
@@ -742,16 +760,13 @@ class _ExternalDoctorCard extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text('Cancel',
-                style: AppTheme.bodyFont(
-                    size: 13, color: AppTheme.textMuted)),
+                style: AppTheme.bodyFont(size: 13, color: AppTheme.textMuted)),
           ),
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
               try {
-                await ref
-                    .read(externalDoctorsProvider.notifier)
-                    .delete(doctor.id);
+                await ref.read(externalDoctorsProvider.notifier).delete(doctor.id);
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -773,7 +788,33 @@ class _ExternalDoctorCard extends ConsumerWidget {
   }
 }
 
-enum _CardAction { edit, delete }
+
+
+const List<String> _westBengalDistricts = [
+  'Alipurduar',
+  'Bankura',
+  'Birbhum',
+  'Cooch Behar',
+  'Dakshin Dinajpur',
+  'Darjeeling',
+  'Hooghly',
+  'Howrah',
+  'Jalpaiguri',
+  'Jhargram',
+  'Kalimpong',
+  'Kolkata',
+  'Malda',
+  'Murshidabad',
+  'Nadia',
+  'North 24 Parganas',
+  'Paschim Bardhaman',
+  'Paschim Medinipur',
+  'Purba Bardhaman',
+  'Purba Medinipur',
+  'Purulia',
+  'South 24 Parganas',
+  'Uttar Dinajpur',
+];
 
 // ── Add external doctor bottom sheet ─────────────────────────────────────────
 
@@ -795,6 +836,8 @@ class _AddExternalDoctorSheetState
   final _emailController = TextEditingController();
   bool _saving = false;
   String? _errorMessage;
+  String? _areaDistrict;
+  String? _meetDrType;
 
   @override
   void dispose() {
@@ -819,6 +862,8 @@ class _AddExternalDoctorSheetState
             hospital: _hospitalController.text,
             phone: _phoneController.text,
             email: _emailController.text,
+            areaDistrict: _areaDistrict,
+            meetDrType: _meetDrType,
           );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -892,6 +937,30 @@ class _AddExternalDoctorSheetState
               hint: 'Email address',
               keyboardType: TextInputType.emailAddress,
             ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _areaDistrict,
+              decoration: const InputDecoration(
+                labelText: 'Area (District)',
+                hintText: 'Select district',
+              ),
+              items: _westBengalDistricts
+                  .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                  .toList(),
+              onChanged: (v) => setState(() => _areaDistrict = v),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _meetDrType,
+              decoration: const InputDecoration(
+                labelText: 'Type of Doctor',
+                hintText: 'Select doctor type',
+              ),
+              items: ['Dental', 'ENT', 'General Surgeon', 'GP', 'RMP', 'MDS']
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) => setState(() => _meetDrType = v),
+            ),
             const SizedBox(height: 20),
             if (_errorMessage != null)
               Padding(
@@ -957,6 +1026,8 @@ class _EditExternalDoctorSheetState
   late final TextEditingController _emailController;
   bool _saving = false;
   String? _errorMessage;
+  String? _areaDistrict;
+  String? _meetDrType;
 
   @override
   void initState() {
@@ -971,6 +1042,8 @@ class _EditExternalDoctorSheetState
         TextEditingController(text: widget.doctor.phone ?? '');
     _emailController =
         TextEditingController(text: widget.doctor.email ?? '');
+    _areaDistrict = widget.doctor.areaDistrict;
+    _meetDrType = widget.doctor.meetDrType;
   }
 
   @override
@@ -997,6 +1070,8 @@ class _EditExternalDoctorSheetState
             hospital: _hospitalController.text,
             phone: _phoneController.text,
             email: _emailController.text,
+            areaDistrict: _areaDistrict,
+            meetDrType: _meetDrType,
           );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -1069,6 +1144,30 @@ class _EditExternalDoctorSheetState
               label: 'Email',
               hint: 'Email address',
               keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _areaDistrict,
+              decoration: const InputDecoration(
+                labelText: 'Area (District)',
+                hintText: 'Select district',
+              ),
+              items: _westBengalDistricts
+                  .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                  .toList(),
+              onChanged: (v) => setState(() => _areaDistrict = v),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _meetDrType,
+              decoration: const InputDecoration(
+                labelText: 'Type of Doctor',
+                hintText: 'Select doctor type',
+              ),
+              items: ['Dental', 'ENT', 'General Surgeon', 'GP', 'RMP', 'MDS']
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) => setState(() => _meetDrType = v),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 12),
@@ -1649,34 +1748,6 @@ class _RoleBadge extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: color,
         ),
-      ),
-    );
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  const _ContactRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Row(
-        children: [
-          Icon(icon, size: 11, color: AppTheme.textMuted),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              text,
-              style:
-                  AppTheme.bodyFont(size: 12, color: AppTheme.textMuted),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -45,3 +45,18 @@ final doctorsProvider = FutureProvider<List<DoctorModel>>((ref) async {
     throw Exception(AppError.getMessage(e));
   }
 });
+
+// A unified provider that maps user ID to DoctorModel for rapid UI lookup.
+final staffMapProvider = FutureProvider<Map<String, DoctorModel>>((ref) async {
+  final agents = await ref.watch(agentsProvider.future);
+  final doctors = await ref.watch(doctorsProvider.future);
+  final map = <String, DoctorModel>{};
+  for (final a in agents) {
+    map[a.id] = a;
+  }
+  for (final d in doctors) {
+    map[d.id] = d;
+  }
+  return map;
+});
+

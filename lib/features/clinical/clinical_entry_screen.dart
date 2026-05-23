@@ -71,6 +71,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
   final _diagnosisController = TextEditingController();
   final _prescriptionsController = TextEditingController();
   final _handoffController = TextEditingController();
+  final _postOpReferredToController = TextEditingController();
 
   // Vitals
   final _bpSystolicController = TextEditingController();
@@ -111,6 +112,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     _diagnosisController.dispose();
     _prescriptionsController.dispose();
     _handoffController.dispose();
+    _postOpReferredToController.dispose();
     _bpSystolicController.dispose();
     _bpDiastolicController.dispose();
     _pulseController.dispose();
@@ -207,7 +209,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
       'ot_required': _otRequired,
       'patient_flow_status': _flowStatus,
       'final_diagnosis': _diagnosisController.text.trim(),
-      'prescriptions': _prescriptionsController.text.trim(),
+      'post_op_referred_to': _postOpReferredToController.text.trim(),
       'staff_comments': _handoffController.text.trim(),
       'last_updated_by': doctorName,
       'last_updated_at': now,
@@ -289,6 +291,7 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     _diagnosisController.clear();
     _prescriptionsController.clear();
     _handoffController.clear();
+    _postOpReferredToController.clear();
     _bpSystolicController.clear();
     _bpDiastolicController.clear();
     _pulseController.clear();
@@ -324,8 +327,6 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
                   _buildPatientSelector(),
                   const SizedBox(height: 16),
                   _buildVisitDetailsSection(),
-                  const SizedBox(height: 16),
-                  _buildVitalsSection(),
                   const SizedBox(height: 16),
                   _buildOperationalTrackingSection(),
                   const SizedBox(height: 16),
@@ -561,84 +562,6 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
     );
   }
 
-  Widget _buildVitalsSection() {
-    return NeuCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SectionTitle(
-              title: 'Vitals', icon: AppIcons.monitor_heart_rounded),
-          Row(
-            children: [
-              Expanded(
-                child: NeuTextField(
-                  controller: _bpSystolicController,
-                  label: 'BP Systolic',
-                  hint: '120',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: NeuTextField(
-                  controller: _bpDiastolicController,
-                  label: 'BP Diastolic',
-                  hint: '80',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: NeuTextField(
-                  controller: _pulseController,
-                  label: 'Pulse (bpm)',
-                  hint: '72',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: NeuTextField(
-                  controller: _tempController,
-                  label: 'Temp (°C)',
-                  hint: '37.0',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: NeuTextField(
-                  controller: _spo2Controller,
-                  label: 'SpO2 (%)',
-                  hint: '98',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: NeuTextField(
-                  controller: _rrController,
-                  label: 'Resp. Rate',
-                  hint: '16',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildOperationalTrackingSection() {
     return NeuCard(
       child: Column(
@@ -848,10 +771,10 @@ class _ClinicalEntryScreenState extends ConsumerState<ClinicalEntryScreen> {
           ),
           const SizedBox(height: 14),
           NeuTextField(
-            controller: _prescriptionsController,
-            label: 'Prescriptions',
-            hint: 'Medication, dosage, duration...',
-            maxLines: 4,
+            controller: _postOpReferredToController,
+            label: 'Post Op Refered To (Radiation Oncology) :',
+            hint: 'Enter details...',
+            maxLines: 2,
           ),
           const SizedBox(height: 14),
           NeuTextField(

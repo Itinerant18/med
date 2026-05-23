@@ -19,6 +19,8 @@ class ExternalDoctor {
     this.addedBy,
     this.createdAt,
     this.fromHistory = false,
+    this.areaDistrict,
+    this.meetDrType,
   });
 
   final String id;
@@ -32,6 +34,8 @@ class ExternalDoctor {
   // True when sourced from known_external_doctors view (agent visit history)
   // rather than an explicit entry in the external_doctors table.
   final bool fromHistory;
+  final String? areaDistrict;
+  final String? meetDrType;
 
   factory ExternalDoctor.fromJson(Map<String, dynamic> json) {
     return ExternalDoctor(
@@ -45,6 +49,8 @@ class ExternalDoctor {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
+      areaDistrict: json['area_district']?.toString(),
+      meetDrType: json['meet_dr_type']?.toString(),
     );
   }
 
@@ -56,6 +62,8 @@ class ExternalDoctor {
       hospital: json['ext_doctor_hospital']?.toString(),
       phone: json['ext_doctor_phone']?.toString(),
       fromHistory: true,
+      areaDistrict: json['area_district']?.toString(),
+      meetDrType: json['meet_dr_type']?.toString(),
     );
   }
 }
@@ -159,6 +167,8 @@ class ExternalDoctorsNotifier extends AsyncNotifier<List<ExternalDoctor>> {
     String? hospital,
     String? phone,
     String? email,
+    String? areaDistrict,
+    String? meetDrType,
   }) async {
     String? trim(String? v) => v?.trim().isEmpty == true ? null : v?.trim();
     final payload = <String, dynamic>{
@@ -167,6 +177,8 @@ class ExternalDoctorsNotifier extends AsyncNotifier<List<ExternalDoctor>> {
       'hospital': trim(hospital),
       'phone': trim(phone),
       'email': trim(email),
+      'area_district': trim(areaDistrict),
+      'meet_dr_type': trim(meetDrType),
     };
     try {
       await _supabase.retry(
@@ -203,6 +215,8 @@ class ExternalDoctorsNotifier extends AsyncNotifier<List<ExternalDoctor>> {
     String? hospital,
     String? phone,
     String? email,
+    String? areaDistrict,
+    String? meetDrType,
   }) async {
     final userState = ref.read(authNotifierProvider).valueOrNull;
     if (userState == null) throw Exception('Not authenticated');
@@ -216,6 +230,8 @@ class ExternalDoctorsNotifier extends AsyncNotifier<List<ExternalDoctor>> {
       if (hospital?.trim().isNotEmpty == true) 'hospital': hospital!.trim(),
       if (phone?.trim().isNotEmpty == true) 'phone': phone!.trim(),
       if (email?.trim().isNotEmpty == true) 'email': email!.trim(),
+      if (areaDistrict?.trim().isNotEmpty == true) 'area_district': areaDistrict!.trim(),
+      if (meetDrType?.trim().isNotEmpty == true) 'meet_dr_type': meetDrType!.trim(),
     };
 
     final connectivity = await Connectivity().checkConnectivity();
@@ -238,6 +254,8 @@ class ExternalDoctorsNotifier extends AsyncNotifier<List<ExternalDoctor>> {
         email: email?.trim(),
         addedBy: userState.session.user.id,
         createdAt: DateTime.now(),
+        areaDistrict: areaDistrict?.trim(),
+        meetDrType: meetDrType?.trim(),
       );
       final updated = List<ExternalDoctor>.from(state.valueOrNull ?? [])
         ..add(optimistic)

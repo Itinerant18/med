@@ -43,6 +43,8 @@ class AgentOutsideVisitsNotifier
     meet_place,
     meet_dr_type,
     meet_times_visited,
+    no_of_patients_received,
+    work_pending,
     status,
     reviewed_by,
     reviewed_at,
@@ -117,6 +119,8 @@ class AgentOutsideVisitsNotifier
     String? meetPlace,
     String? meetDrType,
     int? meetTimesVisited,
+    int? noOfPatientsReceived,
+    String? workPending,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
@@ -149,6 +153,8 @@ class AgentOutsideVisitsNotifier
       if (meetPlace != null && meetPlace.isNotEmpty) 'meet_place': meetPlace,
       if (meetDrType != null) 'meet_dr_type': meetDrType,
       if (meetTimesVisited != null) 'meet_times_visited': meetTimesVisited,
+      if (noOfPatientsReceived != null) 'no_of_patients_received': noOfPatientsReceived,
+      if (workPending != null && workPending.isNotEmpty) 'work_pending': workPending,
     };
 
     // Offline path — queue the insert and show an optimistic item in the list.
@@ -290,6 +296,8 @@ class AgentOutsideVisitsNotifier
     DateTime? nextFollowupDate,
     bool scheduleNewTask = false,
     String? patientId,
+    int? noOfPatientsReceived,
+    String? workPending,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated.');
@@ -328,6 +336,8 @@ class AgentOutsideVisitsNotifier
       'visit_notes':
           visitNotes != null && visitNotes.isNotEmpty ? visitNotes : null,
       'next_followup_date': nextFollowupDate != null ? _dateStr(nextFollowupDate) : null,
+      'no_of_patients_received': noOfPatientsReceived,
+      'work_pending': workPending != null && workPending.isNotEmpty ? workPending : null,
     };
 
     try {

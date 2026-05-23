@@ -9,6 +9,7 @@ import 'package:mediflow/core/neu_widgets.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
+import 'package:mediflow/features/staff/external_doctors_provider.dart';
 import 'package:mediflow/models/patient_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -337,6 +338,12 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final externalDoctorsAsync = ref.watch(externalDoctorsProvider);
+    final externalDoctors = externalDoctorsAsync.valueOrNull ?? [];
+    final currentReferralText = _referredByController.text.trim();
+    final hasCustomReferral = currentReferralText.isNotEmpty &&
+        !externalDoctors.any((d) => d.name == currentReferralText);
+
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
@@ -501,10 +508,37 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                                 textCapitalization: TextCapitalization.words,
                               ),
                               const SizedBox(height: 12),
-                              NeuTextField(
-                                controller: _referredByController,
-                                label: 'Referred By',
-                                textCapitalization: TextCapitalization.words,
+                              DropdownButtonFormField<String>(
+                                initialValue: currentReferralText.isEmpty ? null : currentReferralText,
+                                decoration: const InputDecoration(
+                                  labelText: 'Referred By',
+                                  hintText: 'Select referring doctor (optional)',
+                                ),
+                                items: [
+                                  const DropdownMenuItem<String>(
+                                    value: null,
+                                    child: Text('None (No Referral)'),
+                                  ),
+                                  if (hasCustomReferral)
+                                    DropdownMenuItem<String>(
+                                      value: currentReferralText,
+                                      child: Text('$currentReferralText (Legacy Reference)'),
+                                    ),
+                                  ...externalDoctors.map((doc) {
+                                    final displayName = doc.hospital != null && doc.hospital!.isNotEmpty
+                                        ? '${doc.name} (${doc.hospital})'
+                                        : doc.name;
+                                    return DropdownMenuItem<String>(
+                                      value: doc.name,
+                                      child: Text(displayName),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (v) {
+                                  setState(() {
+                                    _referredByController.text = v ?? '';
+                                  });
+                                },
                               ),
                               const SizedBox(height: 12),
                               NeuTextField(

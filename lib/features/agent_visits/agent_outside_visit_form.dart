@@ -100,6 +100,8 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
   final _diagnosisCtrl = TextEditingController();
   final _prescriptionsCtrl = TextEditingController();
   final _visitNotesCtrl = TextEditingController();
+  final _noOfPatientsCtrl = TextEditingController();
+  final _workPendingCtrl = TextEditingController();
   DateTime? _nextFollowupDate;
   DateTime? _originalFollowupDate;
   bool _reminderPreferenceLoaded = false;
@@ -187,6 +189,8 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
         _diagnosisCtrl.text = visit.diagnosis ?? '';
         _prescriptionsCtrl.text = visit.prescriptions ?? '';
         _visitNotesCtrl.text = visit.visitNotes ?? '';
+        _noOfPatientsCtrl.text = visit.noOfPatientsReceived?.toString() ?? '';
+        _workPendingCtrl.text = visit.workPending ?? '';
         _nextFollowupDate = visit.nextFollowupDate;
         _originalFollowupDate = visit.nextFollowupDate;
       });
@@ -294,6 +298,8 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
     _diagnosisCtrl.dispose();
     _prescriptionsCtrl.dispose();
     _visitNotesCtrl.dispose();
+    _noOfPatientsCtrl.dispose();
+    _workPendingCtrl.dispose();
     super.dispose();
   }
 
@@ -326,20 +332,26 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
 
     setState(() => _isLoading = true);
     try {
+      if (_extNameCtrl.text.trim().isEmpty) {
+        _extNameCtrl.text = _extHospCtrl.text.trim().isNotEmpty
+            ? _extHospCtrl.text.trim()
+            : 'External Doctor';
+      }
+
       if (_isEdit) {
         await ref.read(agentOutsideVisitsProvider.notifier).updateVisit(
               visitId: widget.visitId!,
               visitDate: _visitDate,
               extDoctorName: _extNameCtrl.text.trim(),
-              extDoctorSpecialization: _extSpecCtrl.text.trim(),
+              extDoctorSpecialization: null,
               extDoctorHospital: _extHospCtrl.text.trim(),
-              extDoctorPhone: _extPhoneCtrl.text.trim(),
+              extDoctorPhone: null,
               areaDistrict: _areaDistrict,
               meetDrType: _meetDrType,
               meetTimesVisited: int.tryParse(_meetTimesVisitedCtrl.text.trim()),
-              chiefComplaint: _chiefComplaintCtrl.text.trim(),
-              diagnosis: _diagnosisCtrl.text.trim(),
-              prescriptions: _prescriptionsCtrl.text.trim(),
+              chiefComplaint: null,
+              diagnosis: null,
+              prescriptions: null,
               visitNotes: _visitNotesCtrl.text.trim(),
               nextFollowupDate: _nextFollowupDate,
               scheduleNewTask: _isEdit &&
@@ -349,30 +361,30 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                       _nextFollowupDate!.month != _originalFollowupDate!.month ||
                       _nextFollowupDate!.day != _originalFollowupDate!.day),
               patientId: _selectedPatientId,
+              noOfPatientsReceived: int.tryParse(_noOfPatientsCtrl.text.trim()),
+              workPending: _workPendingCtrl.text.trim(),
             );
       } else {
         await ref.read(agentOutsideVisitsProvider.notifier).createVisit(
               patientId: _selectedPatientId,
               followupTaskId: widget.followupTaskId,
               extDoctorName: _extNameCtrl.text.trim(),
-              extDoctorSpecialization: _extSpecCtrl.text.trim(),
+              extDoctorSpecialization: null,
               extDoctorHospital: _extHospCtrl.text.trim(),
-              extDoctorPhone: _extPhoneCtrl.text.trim(),
+              extDoctorPhone: null,
               areaDistrict: _areaDistrict,
               visitDate: _visitDate,
-              chiefComplaint: _chiefComplaintCtrl.text.trim(),
-              diagnosis: _diagnosisCtrl.text.trim(),
-              prescriptions: _prescriptionsCtrl.text.trim(),
+              chiefComplaint: null,
+              diagnosis: null,
+              prescriptions: null,
               visitNotes: _visitNotesCtrl.text.trim(),
               nextFollowupDate: _nextFollowupDate,
-              meetDrName: _meetDrNameCtrl.text.trim().isEmpty
-                  ? null
-                  : _meetDrNameCtrl.text.trim(),
-              meetPlace: _meetPlaceCtrl.text.trim().isEmpty
-                  ? null
-                  : _meetPlaceCtrl.text.trim(),
+              meetDrName: null,
+              meetPlace: null,
               meetDrType: _meetDrType,
               meetTimesVisited: int.tryParse(_meetTimesVisitedCtrl.text.trim()),
+              noOfPatientsReceived: int.tryParse(_noOfPatientsCtrl.text.trim()),
+              workPending: _workPendingCtrl.text.trim(),
             );
       }
 
@@ -512,67 +524,10 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                 child: Column(
                   children: [
                     NeuTextField(
-                      controller: _extNameCtrl,
-                      label: 'Doctor Name *',
-                      hint: 'Dr. Full Name',
-                      textCapitalization: TextCapitalization.words,
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: _extSpecCtrl,
-                      label: 'Specialization',
-                      hint: 'Cardiology, Orthopedics...',
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
                       controller: _extHospCtrl,
                       label: 'Hospital / Clinic',
                       hint: 'Name of the hospital or clinic',
                       textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: _extPhoneCtrl,
-                      label: 'Doctor Phone',
-                      hint: 'Contact number',
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // ── Area (District in West Bengal) ──
-                    DropdownButtonFormField<String>(
-                      initialValue: _areaDistrict,
-                      decoration: const InputDecoration(
-                        labelText: 'Area (District)',
-                        hintText: 'Select district',
-                      ),
-                      items: _westBengalDistricts
-                          .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _areaDistrict = v),
-                    ),
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: _meetDrType,
-                      decoration:
-                          const InputDecoration(labelText: 'Type of Doctor'),
-                      hint: const Text('Select doctor type'),
-                      items: [
-                        'Dental',
-                        'ENT',
-                        'General Surgeon',
-                        'GP',
-                        'RMP',
-                        'MDS'
-                      ]
-                          .map(
-                              (t) => DropdownMenuItem(value: t, child: Text(t)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _meetDrType = v),
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
@@ -595,24 +550,17 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
                 child: Column(
                   children: [
                     NeuTextField(
-                      controller: _chiefComplaintCtrl,
-                      label: 'Chief Complaint',
-                      hint: "Patient's main complaint during visit",
-                      maxLines: 2,
+                      controller: _noOfPatientsCtrl,
+                      label: 'No of Patient Recived',
+                      hint: 'e.g. 5',
+                      keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
-                      controller: _diagnosisCtrl,
-                      label: 'Diagnosis',
-                      hint: 'What the doctor diagnosed',
+                      controller: _workPendingCtrl,
+                      label: 'Work Pending',
+                      hint: 'Describe pending tasks...',
                       maxLines: 2,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: _prescriptionsCtrl,
-                      label: 'Prescriptions',
-                      hint: 'Medications / treatments prescribed',
-                      maxLines: 3,
                     ),
                     const SizedBox(height: 12),
                     NeuTextField(
@@ -771,6 +719,8 @@ class _ExternalDoctorPickerSheetState
   final _addHospCtrl = TextEditingController();
   final _addPhoneCtrl = TextEditingController();
   final _addEmailCtrl = TextEditingController();
+  String? _addAreaDistrict;
+  String? _addMeetDrType;
   bool _saving = false;
   String? _saveError;
 
@@ -798,6 +748,8 @@ class _ExternalDoctorPickerSheetState
             hospital: _addHospCtrl.text.trim(),
             phone: _addPhoneCtrl.text.trim(),
             email: _addEmailCtrl.text.trim(),
+            areaDistrict: _addAreaDistrict,
+            meetDrType: _addMeetDrType,
           );
       // Find the newly added doctor in the refreshed list and pass it back.
       final doctors = ref.read(externalDoctorsProvider).valueOrNull ?? [];
@@ -817,6 +769,8 @@ class _ExternalDoctorPickerSheetState
               _addHospCtrl.text.trim().isEmpty ? null : _addHospCtrl.text.trim(),
           phone:
               _addPhoneCtrl.text.trim().isEmpty ? null : _addPhoneCtrl.text.trim(),
+          areaDistrict: _addAreaDistrict,
+          meetDrType: _addMeetDrType,
         );
       }
       if (mounted) widget.onSelected(added);
@@ -1046,6 +1000,30 @@ class _ExternalDoctorPickerSheetState
               label: 'Email',
               hint: 'Email address',
               keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+             DropdownButtonFormField<String>(
+              initialValue: _addAreaDistrict,
+              decoration: const InputDecoration(
+                labelText: 'Area (District)',
+                hintText: 'Select district',
+              ),
+              items: _westBengalDistricts
+                  .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                  .toList(),
+              onChanged: (v) => setState(() => _addAreaDistrict = v),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _addMeetDrType,
+              decoration: const InputDecoration(
+                labelText: 'Type of Doctor',
+                hintText: 'Select doctor type',
+              ),
+              items: ['Dental', 'ENT', 'General Surgeon', 'GP', 'RMP', 'MDS']
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) => setState(() => _addMeetDrType = v),
             ),
             if (_saveError != null) ...[
               const SizedBox(height: 12),

@@ -28,6 +28,8 @@ class AgentOutsideVisit {
     this.reviewedAt,
     required this.createdAt,
     this.patientName,
+    this.noOfPatientsReceived,
+    this.workPending,
   });
 
   final String id;
@@ -56,6 +58,8 @@ class AgentOutsideVisit {
 
   // Joined
   final String? patientName;
+  final int? noOfPatientsReceived;
+  final String? workPending;
 
   static DateTime _parseDate(dynamic v) {
     if (v == null) return DateTime.now();
@@ -101,6 +105,8 @@ class AgentOutsideVisit {
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       patientName: json['patients']?['full_name']?.toString(),
+      noOfPatientsReceived: (json['no_of_patients_received'] as num?)?.toInt(),
+      workPending: json['work_pending']?.toString(),
     );
   }
 }
