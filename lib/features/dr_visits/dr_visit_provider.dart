@@ -22,6 +22,7 @@ import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/patients/patient_provider.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:mediflow/models/visit_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final drVisitsProvider = AsyncNotifierProvider<DrVisitsNotifier, List<DrVisit>>(
     DrVisitsNotifier.new);
@@ -38,6 +39,29 @@ final drVisitByIdProvider = Provider.family<DrVisit?, String>((ref, id) {
 class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
   @override
   Future<List<DrVisit>> build() async {
+    final supabase = ref.read(supabaseClientProvider);
+    final userState = ref.watch(authNotifierProvider).value;
+    final role = ref.watch(currentRoleProvider);
+    final userId = userState?.session.user.id ?? '';
+
+    if (userId.isNotEmpty) {
+      final channel = supabase
+          .channel('dr_visits_live_${role.name}_$userId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'dr_visits',
+            callback: (payload) async {
+              state = await AsyncValue.guard(() => _fetchVisits());
+            },
+          )
+          .subscribe();
+
+      ref.onDispose(() {
+        channel.unsubscribe();
+      });
+    }
+
     return _fetchVisits();
   }
 

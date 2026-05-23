@@ -55,6 +55,8 @@ class AppTheme {
   // ── Section header label ───────────────────────────────────────────────────
   static const Color sectionLabel = textMuted;
 
+  static String? get fontFamily => GoogleFonts.manrope().fontFamily;
+
   // ── Typography helpers ─────────────────────────────────────────────────────
   static TextStyle headingFont({
     double size = 24,

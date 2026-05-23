@@ -12,6 +12,7 @@ import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/staff/external_doctors_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
+import 'package:mediflow/features/followups/external_doctor_picker_sheet.dart';
 import 'package:mediflow/features/patients/patient_list_provider.dart';
 import 'package:mediflow/features/profile/profile_provider.dart';
 import 'package:mediflow/features/work_log/work_log_widget.dart';
@@ -276,7 +277,7 @@ class _AgentOutsideVisitFormState extends ConsumerState<AgentOutsideVisitForm> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => _ExternalDoctorPickerSheet(
+      builder: (_) => ExternalDoctorPickerSheet(
         onSelected: (doctor) {
           Navigator.of(context).pop();
           _applyDoctorSelection(doctor);

@@ -11,22 +11,29 @@ import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/models/app_notification.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class NotificationSheet extends ConsumerWidget {
+class NotificationSheet extends ConsumerStatefulWidget {
   const NotificationSheet({super.key});
 
+  @override
+  ConsumerState<NotificationSheet> createState() => _NotificationSheetState();
+}
+
+class _NotificationSheetState extends ConsumerState<NotificationSheet> {
+  String _selectedTab = 'All'; // 'All' | 'Unread' | 'Urgent'
+
   Future<void> _handleTap(
-    BuildContext context,
-    WidgetRef ref,
     AppNotification notif,
     NotificationNotifier notifier,
+    SupabaseClient supabase,
   ) async {
-    // Mark as read in local state.
+    // Mark as read in local state and database.
     if (!notif.isRead) {
-      notifier.markOneRead(notif.id);
+      await notifier.markOneRead(supabase, notif.id);
     }
 
-    // Navigate if entity info is present (synchronous, before DB write).
+    // Navigate if entity info is present.
     if (notif.entityType != null && notif.entityId != null) {
       final route = switch (notif.entityType) {
         'followup_task' => '/followups/review/${notif.entityId}',
@@ -34,19 +41,43 @@ class NotificationSheet extends ConsumerWidget {
         'dr_visit' => '/dr-visits/${notif.entityId}',
         _ => null,
       };
-      if (route != null) {
+      if (route != null && mounted) {
         Navigator.pop(context);
         context.push(route);
       }
     }
+  }
 
-    // Mark as read in the database (best-effort).
-    try {
-      await ref.read(supabaseClientProvider).from('notifications').update({
-        'is_read': true,
-      }).eq('id', notif.id);
-    } catch (e) {
-      debugPrint('Failed to mark notification read: $e');
+  Future<void> _confirmClearAll(
+    BuildContext context,
+    NotificationNotifier notifier,
+    SupabaseClient supabase,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.bgColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Clear All Notifications', style: AppTheme.headingFont(size: 18)),
+        content: Text(
+          'Are you sure you want to delete all notifications? This action cannot be undone.',
+          style: AppTheme.bodyFont(size: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: AppTheme.textMuted, fontFamily: AppTheme.fontFamily)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear All', style: TextStyle(color: AppTheme.errorColor, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await notifier.clearAll(supabase);
     }
   }
 
@@ -71,9 +102,21 @@ class NotificationSheet extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final notifications = ref.watch(notificationProvider);
     final notifier = ref.read(notificationProvider.notifier);
+    final supabase = ref.read(supabaseClientProvider);
+
+    // Apply filtering based on selected tab
+    final filteredNotifications = notifications.where((n) {
+      if (_selectedTab == 'Unread') {
+        return !n.isRead;
+      }
+      if (_selectedTab == 'Urgent') {
+        return n.priority == 'high' || n.priority == 'urgent';
+      }
+      return true; // 'All'
+    }).toList();
 
     return DraggableScrollableSheet(
       minChildSize: 0.4,
@@ -82,7 +125,7 @@ class NotificationSheet extends ConsumerWidget {
       builder: (context, scrollController) {
         final entries = <Object>[];
         String? lastLabel;
-        for (final notification in notifications) {
+        for (final notification in filteredNotifications) {
           final label = _dateLabel(notification.timestamp);
           if (label != lastLabel) {
             entries.add(label);
@@ -103,40 +146,143 @@ class NotificationSheet extends ConsumerWidget {
             ),
             child: Column(
               children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.textMuted.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                  padding: const EdgeInsets.fromLTRB(24, 12, 20, 8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Notifications',
                           style: AppTheme.headingFont(size: 22)),
-                      if (notifications.any((n) => !n.isRead))
-                        NeuButton(
-                          onPressed: () => notifier.markAllRead(),
-                          variant: NeuButtonVariant.ghost,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: const Text('Mark all read'),
-                        ),
+                      Row(
+                        children: [
+                          if (notifications.any((n) => !n.isRead)) ...[
+                            NeuButton(
+                              onPressed: () => notifier.markAllRead(supabase),
+                              variant: NeuButtonVariant.ghost,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: const Text(
+                                'Mark all read',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          if (notifications.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(AppIcons.delete_outline_rounded,
+                                  color: AppTheme.errorColor, size: 20),
+                              tooltip: 'Clear all',
+                              onPressed: () => _confirmClearAll(context, notifier, supabase),
+                            ),
+                        ],
+                      ),
                     ],
+                  ),
+                ),
+
+                // Filter Tabs Bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['All', 'Unread', 'Urgent'].map((tab) {
+                        final isSelected = _selectedTab == tab;
+                        int? count;
+                        if (tab == 'Unread') {
+                          count = notifications.where((n) => !n.isRead).length;
+                        } else if (tab == 'Urgent') {
+                          count = notifications
+                              .where((n) => n.priority == 'high' || n.priority == 'urgent')
+                              .length;
+                        }
+
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedTab = tab),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.primaryTeal.withValues(alpha: 0.1)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primaryTeal
+                                    : AppTheme.border.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  tab,
+                                  style: AppTheme.bodyFont(
+                                    size: 13,
+                                    weight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected ? AppTheme.primaryTeal : AppTheme.textMuted,
+                                  ),
+                                ),
+                                if (count != null && count > 0) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppTheme.primaryTeal
+                                          : AppTheme.textMuted.withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      count.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
                 const OrganicDivider(),
                 Expanded(
-                  child: notifications.isEmpty
-                      ? const EmptyState(
+                  child: filteredNotifications.isEmpty
+                      ? EmptyState(
                           icon: AppIcons.notifications_none_rounded,
-                          title: 'No notifications yet',
+                          title: switch (_selectedTab) {
+                            'Unread' => 'No unread notifications',
+                            'Urgent' => 'No urgent alerts',
+                            _ => 'No notifications yet',
+                          },
                         )
                       : ListView.builder(
                           controller: scrollController,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                           itemCount: entries.length,
                           itemBuilder: (context, index) {
                             final entry = entries[index];
                             if (entry is String) {
                               return Padding(
-                                padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                                padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
                                 child: Text(
                                   entry,
                                   style: AppTheme.bodyFont(
@@ -152,9 +298,9 @@ class NotificationSheet extends ConsumerWidget {
                               index: index,
                               notification: notif,
                               timeAgo: _timeAgo(notif.timestamp),
-                              onDismiss: () => notifier.dismiss(notif.id),
+                              onDismiss: () => notifier.dismiss(supabase, notif.id),
                               onTap: () {
-                                unawaited(_handleTap(context, ref, notif, notifier));
+                                unawaited(_handleTap(notif, notifier, supabase));
                               },
                             );
                           },
@@ -212,16 +358,20 @@ class _NotificationCard extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.cardBg,
+            color: notification.isRead
+                ? AppTheme.cardBg.withValues(alpha: 0.6)
+                : AppTheme.cardBg,
             borderRadius:
                 AppTheme.radiusOrganic[index % AppTheme.radiusOrganic.length],
-            border: Border.all(
-              color: notification.isRead
-                  ? AppTheme.border.withValues(alpha: 0.5)
-                  : accent.withValues(alpha: 0.35),
-              width: 1,
+            border: Border(
+              left: BorderSide(color: accent, width: notification.isRead ? 3 : 5),
+              top: BorderSide(color: AppTheme.border.withValues(alpha: notification.isRead ? 0.3 : 0.6)),
+              right: BorderSide(color: AppTheme.border.withValues(alpha: notification.isRead ? 0.3 : 0.6)),
+              bottom: BorderSide(color: AppTheme.border.withValues(alpha: notification.isRead ? 0.3 : 0.6)),
             ),
-            boxShadow: const [AppTheme.shadowSoft],
+            boxShadow: [
+              if (!notification.isRead) AppTheme.shadowSoft,
+            ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,21 +398,40 @@ class _NotificationCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: notification.isRead
-                                  ? AppTheme.textMuted
-                                  : AppTheme.foreground,
-                            ),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  notification.title,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: notification.isRead
+                                        ? AppTheme.textMuted
+                                        : AppTheme.foreground,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (!notification.isRead) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.errorColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         Text(
                           timeAgo,
                           style: const TextStyle(
-                              fontSize: 12, color: AppTheme.textMuted),
+                              fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
                     ),

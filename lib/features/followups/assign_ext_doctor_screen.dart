@@ -12,33 +12,8 @@ import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/dr_visits/agents_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
-
-/// Predefined list of West Bengal districts for the area dropdown.
-const List<String> _westBengalDistricts = [
-  'Alipurduar',
-  'Bankura',
-  'Birbhum',
-  'Cooch Behar',
-  'Dakshin Dinajpur',
-  'Darjeeling',
-  'Hooghly',
-  'Howrah',
-  'Jalpaiguri',
-  'Jhargram',
-  'Kalimpong',
-  'Kolkata',
-  'Malda',
-  'Murshidabad',
-  'Nadia',
-  'North 24 Parganas',
-  'Paschim Bardhaman',
-  'Paschim Medinipur',
-  'Purba Bardhaman',
-  'Purba Medinipur',
-  'Purulia',
-  'South 24 Parganas',
-  'Uttar Dinajpur',
-];
+import 'package:mediflow/features/followups/external_doctor_picker_sheet.dart';
+import 'package:mediflow/features/staff/external_doctors_provider.dart';
 
 class AssignExtDoctorScreen extends ConsumerStatefulWidget {
   final String? prefillExtDoctorName;
@@ -71,7 +46,7 @@ class _AssignExtDoctorScreenState extends ConsumerState<AssignExtDoctorScreen> {
   final _docHospitalCtrl = TextEditingController();
   final _docSpecCtrl = TextEditingController();
   final _docPhoneCtrl = TextEditingController();
-  String? _areaDistrict;
+  ExternalDoctor? _selectedDoctor;
 
   // SECTION 2 — Visit Instructions
   final _instructionsCtrl = TextEditingController();
@@ -96,6 +71,11 @@ class _AssignExtDoctorScreenState extends ConsumerState<AssignExtDoctorScreen> {
     _docPhoneCtrl.text = widget.prefillExtDoctorPhone ?? '';
     _instructionsCtrl.text = widget.prefillVisitInstructions ?? '';
     _notesCtrl.text = widget.prefillNotes ?? '';
+
+    if (widget.prefillExtDoctorName != null &&
+        widget.prefillExtDoctorName!.isNotEmpty) {
+      Future.microtask(_tryMatchDirectoryDoctor);
+    }
   }
 
   @override
@@ -107,6 +87,67 @@ class _AssignExtDoctorScreenState extends ConsumerState<AssignExtDoctorScreen> {
     _instructionsCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  void _showDoctorPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => ExternalDoctorPickerSheet(
+        onSelected: (doctor) {
+          Navigator.of(context).pop();
+          _applyDoctorSelection(doctor);
+        },
+      ),
+    );
+  }
+
+  void _applyDoctorSelection(ExternalDoctor doctor) {
+    setState(() {
+      _selectedDoctor = doctor;
+      _docNameCtrl.text = doctor.name;
+      _docHospitalCtrl.text = doctor.hospital ?? '';
+      _docSpecCtrl.text = doctor.specialization ?? '';
+      _docPhoneCtrl.text = doctor.phone ?? '';
+    });
+  }
+
+  void _clearDoctorSelection() {
+    setState(() {
+      _selectedDoctor = null;
+      _docNameCtrl.clear();
+      _docHospitalCtrl.clear();
+      _docSpecCtrl.clear();
+      _docPhoneCtrl.clear();
+    });
+  }
+
+  void _tryMatchDirectoryDoctor() {
+    if (!mounted) return;
+    final name = _docNameCtrl.text.trim().toLowerCase();
+    if (name.isEmpty) return;
+    final doctors = ref.read(externalDoctorsProvider).valueOrNull;
+    if (doctors == null) return;
+    try {
+      final match = doctors.firstWhere((d) => d.name.toLowerCase() == name);
+      if (mounted) setState(() => _selectedDoctor = match);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _selectedDoctor = ExternalDoctor(
+            id: 'prefilled_${DateTime.now().millisecondsSinceEpoch}',
+            name: widget.prefillExtDoctorName!,
+            hospital: widget.prefillExtDoctorHospital,
+            specialization: widget.prefillExtDoctorSpecialization,
+            phone: widget.prefillExtDoctorPhone,
+          );
+        });
+      }
+    }
   }
 
   // ── Date Pickers ──────────────────────────────────────────────────────────
@@ -146,6 +187,11 @@ class _AssignExtDoctorScreenState extends ConsumerState<AssignExtDoctorScreen> {
 
     if (assignedTo == null || assignedTo.isEmpty) {
       AppSnackbar.showError(context, 'Please select an agent');
+      return;
+    }
+
+    if (_selectedDoctor == null) {
+      AppSnackbar.showError(context, 'Please select an external doctor');
       return;
     }
 
@@ -245,57 +291,69 @@ class _AssignExtDoctorScreenState extends ConsumerState<AssignExtDoctorScreen> {
                 title: 'External Doctor',
                 icon: AppIcons.local_hospital_outlined,
               ),
-              NeuCard(
-                child: Column(
-                  children: [
-                    NeuTextField(
-                      controller: _docNameCtrl,
-                      label: 'Doctor Name *',
-                      hint: 'Dr. Sharma',
-                      textCapitalization: TextCapitalization.words,
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: _docHospitalCtrl,
-                      label: 'Hospital / Clinic *',
-                      hint: 'Apollo Hospital',
-                      textCapitalization: TextCapitalization.words,
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: _docSpecCtrl,
-                      label: 'Specialization',
-                      hint: 'Cardiology',
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: _docPhoneCtrl,
-                      label: 'Doctor Phone',
-                      hint: '+91 ...',
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // District dropdown
-                    DropdownButtonFormField<String>(
-                      initialValue: _areaDistrict,
-                      decoration: const InputDecoration(
-                        labelText: 'District',
-                        hintText: 'Select district in West Bengal',
+              GestureDetector(
+                onTap: _showDoctorPicker,
+                child: NeuCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _selectedDoctor != null
+                            ? AppIcons.check_circle_rounded
+                            : AppIcons.search_rounded,
+                        color: _selectedDoctor != null
+                            ? AppTheme.successColor
+                            : AppTheme.primaryTeal,
+                        size: 18,
                       ),
-                      items: _westBengalDistricts
-                          .map((d) =>
-                              DropdownMenuItem(value: d, child: Text(d)))
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _areaDistrict = v),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _selectedDoctor != null
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedDoctor!.name,
+                                    style: AppTheme.bodyFont(
+                                        size: 14,
+                                        weight: FontWeight.w700),
+                                  ),
+                                  if (_selectedDoctor!.hospital?.isNotEmpty == true ||
+                                      _selectedDoctor!.specialization?.isNotEmpty == true)
+                                    Text(
+                                      [
+                                        if (_selectedDoctor!.hospital?.isNotEmpty == true)
+                                          _selectedDoctor!.hospital!,
+                                        if (_selectedDoctor!.specialization?.isNotEmpty == true)
+                                          _selectedDoctor!.specialization!,
+                                      ].join(' · '),
+                                      style: AppTheme.bodyFont(
+                                          size: 12,
+                                          color: AppTheme.textMuted),
+                                    ),
+                                ],
+                              )
+                            : Text(
+                                'Select from directory',
+                                style: AppTheme.bodyFont(
+                                    size: 14, color: AppTheme.textMuted),
+                              ),
+                      ),
+                      if (_selectedDoctor != null)
+                        IconButton(
+                          icon: const Icon(AppIcons.clear_rounded,
+                              size: 16, color: AppTheme.textMuted),
+                          tooltip: 'Clear selection',
+                          onPressed: _clearDoctorSelection,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        )
+                      else
+                        const Icon(AppIcons.arrow_forward_ios_rounded,
+                            size: 14, color: AppTheme.textMuted),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

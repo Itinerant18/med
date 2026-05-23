@@ -339,10 +339,20 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
   @override
   Widget build(BuildContext context) {
     final externalDoctorsAsync = ref.watch(externalDoctorsProvider);
-    final externalDoctors = externalDoctorsAsync.valueOrNull ?? [];
+    final rawExternalDoctors = externalDoctorsAsync.valueOrNull ?? [];
+
+    // Deduplicate external doctors by name to prevent duplicate item values.
+    final uniqueDoctors = <String, ExternalDoctor>{};
+    for (final doc in rawExternalDoctors) {
+      if (doc.name.isNotEmpty) {
+        uniqueDoctors[doc.name] = doc;
+      }
+    }
+    final externalDoctors = uniqueDoctors.values.toList();
+
     final currentReferralText = _referredByController.text.trim();
     final hasCustomReferral = currentReferralText.isNotEmpty &&
-        !externalDoctors.any((d) => d.name == currentReferralText);
+        !uniqueDoctors.containsKey(currentReferralText);
 
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
@@ -509,6 +519,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                               ),
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
+                                key: ValueKey('Referred By_$currentReferralText'),
                                 initialValue: currentReferralText.isEmpty ? null : currentReferralText,
                                 decoration: const InputDecoration(
                                   labelText: 'Referred By',
@@ -634,6 +645,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     String Function(String value)? labelBuilder,
   }) {
     return DropdownButtonFormField<String>(
+      key: ValueKey('${label}_$value'),
       initialValue: items.contains(value) ? value : null,
       decoration: InputDecoration(labelText: label),
       items: items

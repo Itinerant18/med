@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
 
+import 'package:mediflow/models/user_role.dart';
+
 class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
   @override
   FutureOr<Map<String, dynamic>> build() async {
@@ -93,28 +95,52 @@ final profileStatsProvider =
   final profileData = profileAsync.valueOrNull;
   if (profileAsync.isLoading || profileData == null) return empty;
 
-  final doctorName = (profileData['full_name'] ?? '').toString();
-  if (doctorName.isEmpty) return empty;
+  final role = profileData['role'] != null
+      ? UserRole.fromString(profileData['role'].toString())
+      : UserRole.assistant;
 
   final supabase = ref.watch(supabaseClientProvider);
 
   try {
-    final results = await Future.wait<List<dynamic>>([
-      supabase
-          .from('visits')
-          .select('id')
-          .eq('doctor_id', user.id)
-          .then((value) => value as List<dynamic>)
-          .catchError((_) => <dynamic>[]),
-      supabase
-          .from('patients')
-          .select('id')
-          .eq('last_updated_by', doctorName)
-          .then((value) => value as List<dynamic>)
-          .catchError((_) => <dynamic>[]),
-    ]);
-    final visitsRes = results[0];
-    final patientsRes = results[1];
+    List<dynamic> visitsRes = [];
+    List<dynamic> patientsRes = [];
+
+    if (role == UserRole.doctor || role == UserRole.headDoctor) {
+      final results = await Future.wait<List<dynamic>>([
+        supabase
+            .from('visits')
+            .select('id')
+            .eq('doctor_id', user.id)
+            .then((value) => value as List<dynamic>)
+            .catchError((_) => <dynamic>[]),
+        supabase
+            .from('patients')
+            .select('id')
+            .or('assigned_doctor_id.eq.${user.id},created_by_id.eq.${user.id}')
+            .then((value) => value as List<dynamic>)
+            .catchError((_) => <dynamic>[]),
+      ]);
+      visitsRes = results[0];
+      patientsRes = results[1];
+    } else {
+      // Assistant / Agent
+      final results = await Future.wait<List<dynamic>>([
+        supabase
+            .from('dr_visits')
+            .select('id')
+            .eq('assigned_agent_id', user.id)
+            .then((value) => value as List<dynamic>)
+            .catchError((_) => <dynamic>[]),
+        supabase
+            .from('patients')
+            .select('id')
+            .eq('created_by_id', user.id)
+            .then((value) => value as List<dynamic>)
+            .catchError((_) => <dynamic>[]),
+      ]);
+      visitsRes = results[0];
+      patientsRes = results[1];
+    }
 
     final createdAtRaw = profileData['created_at'];
     final createdAt = createdAtRaw != null

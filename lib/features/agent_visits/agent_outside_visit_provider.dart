@@ -54,6 +54,30 @@ class AgentOutsideVisitsNotifier
 
   @override
   Future<List<AgentOutsideVisit>> build() async {
+    final user = _supabase.auth.currentUser;
+    if (user != null) {
+      final channel = _supabase
+          .channel('agent_outside_visits_live_${user.id}')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'agent_outside_visits',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'agent_id',
+              value: user.id,
+            ),
+            callback: (payload) async {
+              state = await AsyncValue.guard(_fetch);
+            },
+          )
+          .subscribe();
+
+      ref.onDispose(() {
+        channel.unsubscribe();
+      });
+    }
+
     return _fetch();
   }
 
@@ -437,23 +461,53 @@ final agentOutsideVisitForTaskProvider = FutureProvider.autoDispose
 });
 
 // Provider for doctor / head-doctor to view all agent outside visits.
-final allAgentOutsideVisitsProvider =
-    FutureProvider.autoDispose<List<AgentOutsideVisit>>((ref) async {
-  final supabase = ref.read(supabaseClientProvider);
+final allAgentOutsideVisitsProvider = AsyncNotifierProvider.autoDispose<
+    AllAgentOutsideVisitsNotifier, List<AgentOutsideVisit>>(
+  AllAgentOutsideVisitsNotifier.new,
+);
+
+class AllAgentOutsideVisitsNotifier
+    extends AutoDisposeAsyncNotifier<List<AgentOutsideVisit>> {
+  @override
+  Future<List<AgentOutsideVisit>> build() async {
+    final supabase = ref.read(supabaseClientProvider);
+
+    final channel = supabase
+        .channel('all_agent_outside_visits_live')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'agent_outside_visits',
+          callback: (payload) async {
+            state = await AsyncValue.guard(() => _fetch());
+          },
+        )
+        .subscribe();
+
+    ref.onDispose(() {
+      channel.unsubscribe();
+    });
+
+    return _fetch();
+  }
+
+  Future<List<AgentOutsideVisit>> _fetch() async {
+    final supabase = ref.read(supabaseClientProvider);
     try {
       final response = await supabase.retry(() => supabase
           .from('agent_outside_visits')
           .select(AgentOutsideVisitsNotifier._selectColumns)
-        .order('visit_date', ascending: false));
+          .order('visit_date', ascending: false));
 
-    return (response as List)
-        .map((j) =>
-            AgentOutsideVisit.fromJson(Map<String, dynamic>.from(j as Map)))
-        .toList();
-  } catch (e) {
-    throw Exception(AppError.getMessage(e));
+      return (response as List)
+          .map((j) =>
+              AgentOutsideVisit.fromJson(Map<String, dynamic>.from(j as Map)))
+          .toList();
+    } catch (e) {
+      throw Exception(AppError.getMessage(e));
+    }
   }
-});
+}
 
 // Reads the `known_external_doctors` view for the doctor to pick a previously
 // visited external doctor and pre-fill the assignment form.

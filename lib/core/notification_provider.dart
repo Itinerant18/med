@@ -397,22 +397,52 @@ class NotificationNotifier extends StateNotifier<List<AppNotification>> {
     state = [notification, ...state];
   }
 
-  void markOneRead(String id) {
+  Future<void> markOneRead(SupabaseClient supabase, String id) async {
     state = [
       for (final notif in state)
         if (notif.id == id) notif.copyWith(isRead: true) else notif,
     ];
+    try {
+      await supabase.from('notifications').update({
+        'is_read': true,
+      }).eq('id', id);
+    } catch (e) {
+      debugPrint('Failed to mark notification read in database: $e');
+    }
   }
 
-  void markAllRead() {
+  Future<void> markAllRead(SupabaseClient supabase) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
     state = [for (final notif in state) notif.copyWith(isRead: true)];
+    try {
+      await supabase
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('recipient_id', user.id)
+          .eq('is_read', false);
+    } catch (e) {
+      debugPrint('Failed to mark all notifications read in database: $e');
+    }
   }
 
-  void dismiss(String id) {
+  Future<void> dismiss(SupabaseClient supabase, String id) async {
     state = state.where((n) => n.id != id).toList();
+    try {
+      await supabase.from('notifications').delete().eq('id', id);
+    } catch (e) {
+      debugPrint('Failed to delete notification in database: $e');
+    }
   }
 
-  void clearAll() {
+  Future<void> clearAll(SupabaseClient supabase) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
     state = [];
+    try {
+      await supabase.from('notifications').delete().eq('recipient_id', user.id);
+    } catch (e) {
+      debugPrint('Failed to clear all notifications in database: $e');
+    }
   }
 }

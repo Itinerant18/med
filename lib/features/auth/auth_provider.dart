@@ -407,7 +407,7 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
 
   Future<void> signOut() async {
     try {
-      ref.read(notificationProvider.notifier).clearAll();
+      ref.read(notificationProvider.notifier).clearAll(_supabase);
       ref.read(notificationPreferencesControllerProvider.notifier).resetToDefaults();
     } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
     await CacheService.instance.clearAll();

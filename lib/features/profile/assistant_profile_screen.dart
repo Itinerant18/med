@@ -227,7 +227,7 @@ class _AssistantProfileScreenState
                                     height: 36,
                                     width: 1,
                                     color: AppTheme.neutralDivider),
-                                _stat(s['visits'].toString(), 'My Patients'),
+                                _stat(s['visits'].toString(), 'My Visits'),
                                 Container(
                                     height: 36,
                                     width: 1,
