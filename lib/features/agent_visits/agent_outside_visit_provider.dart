@@ -1,11 +1,13 @@
 // lib/features/agent_visits/agent_outside_visit_provider.dart
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/push_notification_service.dart';
 import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/sync_queue.dart';
+import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/staff/external_doctors_provider.dart';
 import 'package:mediflow/models/agent_outside_visit_model.dart';
@@ -20,8 +22,28 @@ class AgentOutsideVisitsNotifier
     extends AutoDisposeAsyncNotifier<List<AgentOutsideVisit>> {
   SupabaseClient get _supabase => ref.read(supabaseClientProvider);
 
+  RealtimeChannel? _channel;
+  bool _disposed = false;
+
   String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Mirrors the RLS rule on followup_tasks for the agent self-insert path:
+  /// only approved assistants may queue a self-reminder. Throws a friendly
+  /// message so unapproved agents don't see the raw Postgres 42501 error.
+  void _assertApprovedForSelfReminder() {
+    final auth = ref.read(authNotifierProvider).value;
+    if (auth == null) {
+      throw Exception('Not authenticated.');
+    }
+    if (auth.approvalStatus != 'approved') {
+      throw Exception(
+        'Your account is still pending approval, so the follow-up reminder '
+        "couldn't be saved. The visit itself was recorded — ask the head "
+        'doctor to approve your account, then add the reminder again.',
+      );
+    }
+  }
 
   static const _selectColumns = '''
     id,
@@ -55,8 +77,13 @@ class AgentOutsideVisitsNotifier
   @override
   Future<List<AgentOutsideVisit>> build() async {
     final user = _supabase.auth.currentUser;
+
+    _channel?.unsubscribe();
+    _channel = null;
+    _disposed = false;
+
     if (user != null) {
-      final channel = _supabase
+      _channel = _supabase
           .channel('agent_outside_visits_live_${user.id}')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
@@ -68,13 +95,22 @@ class AgentOutsideVisitsNotifier
               value: user.id,
             ),
             callback: (payload) async {
-              state = await AsyncValue.guard(_fetch);
+              if (_disposed) return;
+              try {
+                final updated = await _fetch();
+                if (_disposed) return;
+                state = AsyncData(updated);
+              } catch (e) {
+                debugPrint('[agent_outside_visits] realtime refresh failed: $e');
+              }
             },
           )
           .subscribe();
 
       ref.onDispose(() {
-        channel.unsubscribe();
+        _disposed = true;
+        _channel?.unsubscribe();
+        _channel = null;
       });
     }
 
@@ -244,6 +280,11 @@ class AgentOutsideVisitsNotifier
       // Auto-create a self-assigned follow-up task so the agent is reminded
       // to re-visit this external doctor on the chosen date.
       if (nextFollowupDate != null) {
+        // Surface a friendly message instead of the raw RLS 42501 if the
+        // agent isn't approved yet. The visit row above has already been
+        // committed, so we re-throw rather than rollback.
+        _assertApprovedForSelfReminder();
+
         final hospLabel = (extDoctorHospital != null && extDoctorHospital.isNotEmpty)
             ? ' at $extDoctorHospital'
             : '';
@@ -372,6 +413,8 @@ class AgentOutsideVisitsNotifier
           .eq('agent_id', user.id));
 
       if (scheduleNewTask && nextFollowupDate != null) {
+        _assertApprovedForSelfReminder();
+
         final hospLabel = (extDoctorHospital != null && extDoctorHospital.isNotEmpty)
             ? ' at $extDoctorHospital'
             : '';
@@ -468,24 +511,41 @@ final allAgentOutsideVisitsProvider = AsyncNotifierProvider.autoDispose<
 
 class AllAgentOutsideVisitsNotifier
     extends AutoDisposeAsyncNotifier<List<AgentOutsideVisit>> {
+  RealtimeChannel? _channel;
+  bool _disposed = false;
+
   @override
   Future<List<AgentOutsideVisit>> build() async {
     final supabase = ref.read(supabaseClientProvider);
 
-    final channel = supabase
+    _channel?.unsubscribe();
+    _channel = null;
+    _disposed = false;
+
+    _channel = supabase
         .channel('all_agent_outside_visits_live')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'agent_outside_visits',
           callback: (payload) async {
-            state = await AsyncValue.guard(() => _fetch());
+            if (_disposed) return;
+            try {
+              final updated = await _fetch();
+              if (_disposed) return;
+              state = AsyncData(updated);
+            } catch (e) {
+              debugPrint(
+                  '[all_agent_outside_visits] realtime refresh failed: $e');
+            }
           },
         )
         .subscribe();
 
     ref.onDispose(() {
-      channel.unsubscribe();
+      _disposed = true;
+      _channel?.unsubscribe();
+      _channel = null;
     });
 
     return _fetch();

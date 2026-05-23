@@ -3,10 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/agent_visits/agent_outside_visit_provider.dart';
 import 'package:mediflow/features/dashboard/dashboard_provider.dart';
+import 'package:mediflow/features/dr_visits/dr_visit_provider.dart';
+import 'package:mediflow/features/followups/followup_provider.dart';
+import 'package:mediflow/features/patients/patient_provider.dart';
+import 'package:mediflow/features/staff/external_doctors_provider.dart';
+import 'package:mediflow/features/work_log/work_log_provider.dart';
 
 class ConnectivityWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -22,6 +28,7 @@ class _ConnectivityWrapperState extends ConsumerState<ConnectivityWrapper>
     with SingleTickerProviderStateMixin {
   late StreamSubscription<List<ConnectivityResult>> _connectivitySub;
   StreamSubscription<int>? _pendingCountSub;
+  StreamSubscription<SyncPermanentFailure>? _permanentFailureSub;
   bool _isConnected = true;
   bool _showBanner = false;
   int _pendingCount = 0;
@@ -47,9 +54,25 @@ class _ConnectivityWrapperState extends ConsumerState<ConnectivityWrapper>
       if (mounted) setState(() => _pendingCount = n);
     });
 
+    _permanentFailureSub =
+        SyncQueue.instance.permanentFailures.listen(_onPermanentFailure);
+
     _checkInitialConnection();
     _connectivitySub =
         Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+  }
+
+  void _onPermanentFailure(SyncPermanentFailure failure) {
+    if (!mounted) return;
+    final friendly = AppError.getMessage(failure.error);
+    final operation = failure.action.operation.name;
+    final table = failure.action.table.replaceAll('_', ' ');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Couldn't sync $operation on $table: $friendly"),
+        backgroundColor: AppTheme.errorColor,
+      ),
+    );
   }
 
   Future<void> _checkInitialConnection() async {
@@ -77,8 +100,17 @@ class _ConnectivityWrapperState extends ConsumerState<ConnectivityWrapper>
         final hadPending = SyncQueue.instance.currentPendingCount == 0 &&
             _pendingCount > 0;
         if (hadPending) {
-          // Re-fetch providers that may have stale optimistic data.
+          // Re-fetch every provider that could be holding optimistic
+          // rows keyed by offline_<ms> ids. Invalidating an AsyncNotifier or
+          // a FutureProvider.family by its root invalidates all keys, so this
+          // covers patient detail pages too.
+          ref.invalidate(patientProvider);
+          ref.invalidate(patientDetailProvider);
+          ref.invalidate(drVisitsProvider);
+          ref.invalidate(followupTasksProvider);
+          ref.invalidate(workLogProvider);
           ref.invalidate(agentOutsideVisitsProvider);
+          ref.invalidate(externalDoctorsProvider);
           ref.invalidate(dashboardProvider);
         }
       });
@@ -97,6 +129,7 @@ class _ConnectivityWrapperState extends ConsumerState<ConnectivityWrapper>
   void dispose() {
     _connectivitySub.cancel();
     _pendingCountSub?.cancel();
+    _permanentFailureSub?.cancel();
     _animController.dispose();
     super.dispose();
   }

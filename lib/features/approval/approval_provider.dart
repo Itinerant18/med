@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/notification_service.dart';
@@ -129,10 +130,16 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
           schema: 'public',
           table: 'doctors',
           callback: (payload) {
-            final oldStatus = payload.oldRecord['approval_status']?.toString();
-            final newStatus = payload.newRecord['approval_status']?.toString();
-            if (oldStatus == newStatus) return;
-            ref.invalidateSelf();
+            try {
+              final oldStatus =
+                  payload.oldRecord['approval_status']?.toString();
+              final newStatus =
+                  payload.newRecord['approval_status']?.toString();
+              if (oldStatus == newStatus) return;
+              ref.invalidateSelf();
+            } catch (e) {
+              debugPrint('[approval] status realtime callback failed: $e');
+            }
           },
         )
         .subscribe();
@@ -152,14 +159,19 @@ class PendingApprovalsNotifier extends AsyncNotifier<List<PendingDoctor>> {
             value: 'pending',
           ),
           callback: (payload) {
-            final name =
-                payload.newRecord['full_name']?.toString() ?? 'Someone';
-            final role = payload.newRecord['role']?.toString() ?? 'doctor';
-            NotificationService.instance.showNewRegistrationNotification(
-              name: name,
-              role: role,
-            );
-            ref.invalidateSelf();
+            try {
+              final name =
+                  payload.newRecord['full_name']?.toString() ?? 'Someone';
+              final role = payload.newRecord['role']?.toString() ?? 'doctor';
+              NotificationService.instance.showNewRegistrationNotification(
+                name: name,
+                role: role,
+              );
+              ref.invalidateSelf();
+            } catch (e) {
+              debugPrint(
+                  '[approval] new-registration realtime callback failed: $e');
+            }
           },
         )
         .subscribe();

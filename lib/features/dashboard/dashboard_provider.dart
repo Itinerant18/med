@@ -121,7 +121,11 @@ class DashboardNotifier extends AutoDisposeAsyncNotifier<DashboardState> {
       ),
       callback: (_) {
         if (_disposed) return;
-        refresh();
+        try {
+          refresh();
+        } catch (e) {
+          debugPrint('[dashboard] invalidate callback failed: $e');
+        }
       },
     );
 

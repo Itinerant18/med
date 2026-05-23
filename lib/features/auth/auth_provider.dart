@@ -8,6 +8,7 @@ import 'package:mediflow/core/fcm_service.dart';
 import 'package:mediflow/core/notification_provider.dart';
 import 'package:mediflow/core/google_auth_config.dart';
 import 'package:mediflow/core/supabase_client.dart';
+import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -406,11 +407,16 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
   }
 
   Future<void> signOut() async {
+    final previousUserId = _supabase.auth.currentUser?.id;
     try {
       ref.read(notificationProvider.notifier).clearAll(_supabase);
       ref.read(notificationPreferencesControllerProvider.notifier).resetToDefaults();
     } catch (_) {} // best-effort: drop in-app alerts so next user starts clean
+    await SyncQueue.instance.clearAll();
     await CacheService.instance.clearAll();
+    if (previousUserId != null) {
+      await CacheService.instance.invalidate('auth_profile_$previousUserId');
+    }
     await FcmService.instance.clearToken();
     await _googleSignIn.signOut();
 

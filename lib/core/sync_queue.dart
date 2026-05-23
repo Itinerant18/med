@@ -62,6 +62,16 @@ class SyncAction {
       );
 }
 
+/// A queued action that was rejected by the server in a way that cannot
+/// succeed by retrying (e.g. RLS denial, validation failure, missing row).
+/// Listeners can surface a friendly error to the user and roll back optimistic
+/// state.
+class SyncPermanentFailure {
+  final SyncAction action;
+  final Object error;
+  const SyncPermanentFailure(this.action, this.error);
+}
+
 /// Offline mutation queue backed by SharedPreferences.
 ///
 /// Call [init] once in main(). Enqueue writes when offline; call
@@ -77,9 +87,16 @@ class SyncQueue {
   bool _isProcessing = false;
 
   final _countController = StreamController<int>.broadcast();
+  final _permanentFailureController =
+      StreamController<SyncPermanentFailure>.broadcast();
 
   /// Emits the current count of pending actions whenever it changes.
   Stream<int> get pendingCount => _countController.stream;
+
+  /// Emits an event whenever a queued action is permanently dropped because
+  /// the server rejected it with a non-retryable error.
+  Stream<SyncPermanentFailure> get permanentFailures =>
+      _permanentFailureController.stream;
 
   int get currentPendingCount => _loadPending().length;
 
@@ -121,6 +138,16 @@ class SyncQueue {
         '[SyncQueue] Queued: ${action.operation.name} → ${action.table}');
   }
 
+  /// Drops every queued action without replaying them.
+  ///
+  /// Must be called on sign-out so the next user on this device cannot
+  /// inherit the previous user's pending offline mutations.
+  Future<void> clearAll() async {
+    await _prefs?.remove(_queueKey);
+    _notifyCount();
+    debugPrint('[SyncQueue] Cleared all pending actions.');
+  }
+
   /// Replays all pending actions against Supabase.
   /// Actions that fail permanently (>= [_maxRetries]) are dropped.
   /// Safe to call multiple times — ignores concurrent invocations.
@@ -139,6 +166,8 @@ class SyncQueue {
       if (action.retryCount >= _maxRetries) {
         debugPrint(
             '[SyncQueue] Max retries hit, dropping: ${action.id}');
+        _permanentFailureController.add(SyncPermanentFailure(
+            action, StateError('Max retries exceeded')));
         continue;
       }
       try {
@@ -146,8 +175,14 @@ class SyncQueue {
         debugPrint(
             '[SyncQueue] Synced: ${action.operation.name} → ${action.table}');
       } catch (e) {
-        debugPrint('[SyncQueue] Failed ${action.id}: $e');
-        remaining.add(action.withIncrementedRetry());
+        if (_isPermanentError(e)) {
+          debugPrint(
+              '[SyncQueue] Permanent failure, dropping: ${action.id}: $e');
+          _permanentFailureController.add(SyncPermanentFailure(action, e));
+        } else {
+          debugPrint('[SyncQueue] Transient failure, retrying ${action.id}: $e');
+          remaining.add(action.withIncrementedRetry());
+        }
       }
     }
 
@@ -155,6 +190,25 @@ class SyncQueue {
     _isProcessing = false;
     debugPrint(
         '[SyncQueue] Done. ${remaining.length} action(s) still pending.');
+  }
+
+  /// Classifies an error as permanent (drop the action) vs transient (retry).
+  ///
+  /// Permanent: RLS denial, validation, foreign-key violation, missing target,
+  /// and any local programming error (StateError / ArgumentError).
+  /// Transient: timeouts, socket errors, anything else.
+  bool _isPermanentError(Object e) {
+    if (e is StateError || e is ArgumentError) return true;
+    if (e is PostgrestException) {
+      // PostgREST surfaces PG errors via HTTP status as well as PG SQLSTATE.
+      // 403 = RLS / permission, 404 = no rows matched, 409 = conflict,
+      // 422 = validation. SQLSTATE 23xxx are integrity violations.
+      final code = e.code ?? '';
+      if (code.startsWith('23')) return true;
+      const permanentCodes = {'403', '404', '409', '422', '42501'};
+      if (permanentCodes.contains(code)) return true;
+    }
+    return false;
   }
 
   Future<void> _execute(SupabaseClient client, SyncAction action) async {

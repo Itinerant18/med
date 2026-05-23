@@ -100,6 +100,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/staff',
+        redirect: (context, state) {
+          // Head-doctor only. Mirrors the in-screen guard so the route is
+          // unreachable to other roles even via deep links.
+          final container = ProviderScope.containerOf(context);
+          final isHead = container.read(isHeadDoctorProvider);
+          return isHead ? null : '/';
+        },
         builder: (context, state) => const StaffManagementScreen(),
       ),
       GoRoute(

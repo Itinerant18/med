@@ -18,13 +18,21 @@ import 'package:mediflow/features/followups/followup_provider.dart';
 ///   4. Two explicit action buttons:
 ///        • Record Outside Visit  → opens AgentOutsideVisitForm pre-filled
 ///        • Mark Done             → simple completion (no external visit)
-class FollowupTaskWidget extends ConsumerWidget {
+class FollowupTaskWidget extends ConsumerStatefulWidget {
   final FollowupTask task;
 
   const FollowupTaskWidget({super.key, required this.task});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FollowupTaskWidget> createState() =>
+      _FollowupTaskWidgetState();
+}
+
+class _FollowupTaskWidgetState extends ConsumerState<FollowupTaskWidget> {
+  FollowupTask get task => widget.task;
+
+  @override
+  Widget build(BuildContext context) {
     final isOverdue = task.isOverdue;
     final isCompleted = task.status == 'completed';
     final isInProgress = task.status == 'in_progress';
@@ -193,8 +201,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                         icon: AppIcons.local_hospital_outlined,
                         label: 'Record What Happened',
                         background: const Color(0xFF3182CE),
-                        onTap: () =>
-                            _openOutsideVisitForm(context, ref, isInProgress),
+                        onTap: () => _openOutsideVisitForm(isInProgress),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -203,7 +210,7 @@ class FollowupTaskWidget extends ConsumerWidget {
                         icon: AppIcons.check_rounded,
                         label: 'Mark Done',
                         background: AppTheme.successColor,
-                        onTap: () => _openMarkDoneSheet(context, ref),
+                        onTap: _openMarkDoneSheet,
                       ),
                     ),
                   ],
@@ -216,11 +223,7 @@ class FollowupTaskWidget extends ConsumerWidget {
     );
   }
 
-  Future<void> _openOutsideVisitForm(
-    BuildContext context,
-    WidgetRef ref,
-    bool isInProgress,
-  ) async {
+  Future<void> _openOutsideVisitForm(bool isInProgress) async {
     // Best-effort: flag the task as in-progress when the assistant heads off
     // to record the visit. Idempotent and skipped if it's already that.
     if (!isInProgress) {
@@ -242,12 +245,13 @@ class FollowupTaskWidget extends ConsumerWidget {
       },
     );
 
+    if (!mounted) return;
     if (result == true) {
       ref.read(followupTasksProvider.notifier).refresh();
     }
   }
 
-  Future<void> _openMarkDoneSheet(BuildContext context, WidgetRef ref) async {
+  Future<void> _openMarkDoneSheet() async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

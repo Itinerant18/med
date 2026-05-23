@@ -13,6 +13,7 @@
 // -- { "date": "ISO string", "method": "call|visit|whatsapp|other", "notes": "free text", "agent_id": "uuid" }
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/cache_service.dart';
 import 'package:mediflow/core/error_handler.dart';
@@ -37,6 +38,9 @@ final drVisitByIdProvider = Provider.family<DrVisit?, String>((ref, id) {
 });
 
 class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
+  RealtimeChannel? _channel;
+  bool _disposed = false;
+
   @override
   Future<List<DrVisit>> build() async {
     final supabase = ref.read(supabaseClientProvider);
@@ -44,21 +48,38 @@ class DrVisitsNotifier extends AsyncNotifier<List<DrVisit>> {
     final role = ref.watch(currentRoleProvider);
     final userId = userState?.session.user.id ?? '';
 
+    // Tear down any channel left over from a previous build() run before
+    // wiring up a new one — otherwise dependency changes leak subscriptions.
+    _channel?.unsubscribe();
+    _channel = null;
+    _disposed = false;
+
     if (userId.isNotEmpty) {
-      final channel = supabase
+      _channel = supabase
           .channel('dr_visits_live_${role.name}_$userId')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'dr_visits',
             callback: (payload) async {
-              state = await AsyncValue.guard(() => _fetchVisits());
+              if (_disposed) return;
+              // Refresh in-place: never set AsyncLoading, never let a
+              // realtime fetch failure clobber the list the user is viewing.
+              try {
+                final updated = await _fetchVisits();
+                if (_disposed) return;
+                state = AsyncData(updated);
+              } catch (e) {
+                debugPrint('[dr_visits] realtime refresh failed: $e');
+              }
             },
           )
           .subscribe();
 
       ref.onDispose(() {
-        channel.unsubscribe();
+        _disposed = true;
+        _channel?.unsubscribe();
+        _channel = null;
       });
     }
 

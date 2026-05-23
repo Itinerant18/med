@@ -126,7 +126,7 @@ final notificationProvider =
         }
 
         channel?.unsubscribe();
-        channel = supabase
+        final newChannel = supabase
             .channel('notifications:${user.id}')
             .onPostgresChanges(
               event: PostgresChangeEvent.insert,
@@ -139,13 +139,28 @@ final notificationProvider =
               ),
               callback: (payload) {
                 if (disposed) return;
-                final row = payload.newRecord;
-                final notif = AppNotification.fromJson(
-                    Map<String, dynamic>.from(row as Map));
-                notifier.addNotification(notif);
+                // Guard against schema drift / malformed payloads — a parse
+                // failure here would otherwise propagate up into the
+                // Realtime engine and silently kill the subscription.
+                try {
+                  final row = payload.newRecord;
+                  final notif = AppNotification.fromJson(
+                      Map<String, dynamic>.from(row as Map));
+                  notifier.addNotification(notif);
+                } catch (e) {
+                  debugPrint('Notification payload parse failed: $e');
+                }
               },
             )
             .subscribe();
+
+        // Disposal race: the provider could have been torn down while
+        // subscribe() was in flight. If so, drop the channel we just made.
+        if (disposed) {
+          newChannel.unsubscribe();
+        } else {
+          channel = newChannel;
+        }
       } catch (e) {
         debugPrint('Notification realtime setup failed: $e');
       }

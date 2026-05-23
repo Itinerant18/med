@@ -16,6 +16,7 @@ import 'package:mediflow/core/supabase_client.dart';
 import 'package:mediflow/core/audit_service.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/models/patient_model.dart';
+import 'package:mediflow/models/user_role.dart';
 
 final patientProvider =
     AsyncNotifierProvider<PatientNotifier, void>(PatientNotifier.new);
@@ -122,7 +123,12 @@ class PatientNotifier extends AsyncNotifier<void> {
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
       final tempId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
-      finalData['id'] = tempId;
+      // Do NOT bake the temp id into the insert payload — the patients table's
+      // id column is a UUID with a server-side default and would reject the
+      // 'offline_<ms>' string on sync. The temp id is only used to track the
+      // queued action and is not persisted. Connectivity restore invalidates
+      // patientProvider/patientDetailProvider so callers refetch the real row
+      // once the server has assigned a UUID.
       await SyncQueue.instance.enqueue(SyncAction(
         id: tempId,
         table: 'patients',
@@ -175,6 +181,17 @@ class PatientNotifier extends AsyncNotifier<void> {
     Map<String, dynamic> patientData,
   ) async {
     if (id.isEmpty) throw ArgumentError('Patient ID cannot be empty');
+
+    // Only the head doctor may (re)assign a patient to a doctor. UI hides the
+    // sheet for other roles, but a buggy caller or future refactor could still
+    // reach this method with assigned_doctor_id in the payload — reject it
+    // here so the database never sees an unauthorised write.
+    if (patientData.containsKey('assigned_doctor_id')) {
+      final myRole = _userState?.role;
+      if (myRole != UserRole.headDoctor) {
+        throw Exception('Only the head doctor can reassign a patient.');
+      }
+    }
 
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
