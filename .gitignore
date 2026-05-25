@@ -85,6 +85,8 @@ migrate_working_dir/
 .vscode/
 
 # ── 9. AI Tools & Agent CLI Directories ───
+.agent
+.agent*
 .agents/
 .antigravitycli/
 .claude/
