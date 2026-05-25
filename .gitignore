@@ -1,55 +1,117 @@
-# Miscellaneous
+# ==========================================
+# MediFlow Project - Git Ignore Rules
+# ==========================================
+
+# ── 1. OS & System Files ──────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 *.class
 *.log
 *.pyc
 *.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+*.bak
+*.tmp
+*~
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ── 2. Flutter / Dart / Pub ───────────────
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
 /coverage/
+**/doc/api/
 
-# Symbolication related
+# Symbolication & Obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ── 3. Android Platform ───────────────────
+**/android/local.properties
+**/android/key.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/*.keystore
+**/*.jks
 
-# Secrets and sensitive files
-*-firebase-adminsdk-*.json
+# ── 4. iOS & macOS Platforms ──────────────
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/.XCodeKeys
+**/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+**/macOS/Flutter/ephemeral/
+.swiftpm/
+
+# User-specific Xcode settings
+**/*.xcuserdata/
+**/*.xcworkspace/
+!**/Runner.xcworkspace/ # Keep the Runner workspace metadata container, ignore contents below
+
+# ── 5. Desktop Platforms ──────────────────
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+
+# ── 6. Node.js (Web/Cloud Functions) ──────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ── 7. Supabase & Database ────────────────
+supabase/.temp/
+migrate_working_dir/
+
+# ── 8. IDEs & Editors ─────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+.history/
+.vscode/
+
+# ── 9. AI Tools & Agent CLI Directories ───
+.agents/
+.antigravitycli/
+.claude/
+.cursor/
+.gemini/
+.vercel/
+
+# ── 10. Secrets & Sensitive Files ─────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env*
+*-firebase-adminsdk-*.json
+google-services.json # If firebase config needs to be private
+GoogleService-Info.plist # If iOS firebase config needs to be private
+
+# Temporary probe / scratch files
 *.tmp_*
 .tmp_*
 tmp_*
+sac.json
+check_sac.ps1
+apply_3_2.py
 %f%
 google-auth-setup.md
-
+findings.md
+progress.md
+task_plan.md
