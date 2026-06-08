@@ -5,6 +5,17 @@ class AppError {
   static String getMessage(dynamic error) {
     if (error == null) return 'An unknown error occurred.';
 
+    // If it's a custom Exception, extract and return its message directly.
+    final errStr = error.toString();
+    if (error is Exception || errStr.startsWith('Exception:')) {
+      if (errStr.startsWith('Exception: ')) {
+        return errStr.substring(11);
+      } else if (errStr.startsWith('Exception:')) {
+        return errStr.substring(10);
+      }
+      return errStr;
+    }
+
     // Structured PostgREST errors have well-known codes — prefer those over
     // brittle substring matching on toString().
     if (error is PostgrestException) {

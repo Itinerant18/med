@@ -12,6 +12,7 @@ import 'package:mediflow/core/sync_queue.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 
 String normalizePhoneNumber(String input) {
   final trimmed = input.trim();
@@ -165,6 +166,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         throw Exception(AppError.getMessage(e));
       }
     });
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<void> signInWithPhone({
@@ -209,6 +213,16 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
           throw Exception('Enter a valid mobile number.');
         }
 
+        // Verify that the phone number was actually verified via active Firebase OTP session
+        final fbUser = fb_auth.FirebaseAuth.instance.currentUser;
+        if (fbUser == null) {
+          throw Exception('Phone number verification session expired. Please verify again.');
+        }
+        final verifiedPhone = normalizePhoneNumber(fbUser.phoneNumber ?? '');
+        if (verifiedPhone != normalizedPhone) {
+          throw Exception('The verified phone number does not match the input phone number.');
+        }
+
         final response = await _supabase.auth.signUp(
           email: email.trim().toLowerCase(),
           password: password,
@@ -241,12 +255,22 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
           'created_at': DateTime.now().toIso8601String(),
         }, onConflict: 'id'));
 
+        // Clean up Firebase verification session after successful registration
+        try {
+          await fb_auth.FirebaseAuth.instance.signOut();
+        } catch (e) {
+          debugPrint('Firebase signOut after successful signUp failed: $e');
+        }
+
         final session = response.session ?? _supabase.auth.currentSession;
         return _resolveAuthUserState(session);
       } catch (e) {
         throw Exception(AppError.getMessage(e));
       }
     });
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<void> signInWithGoogle({
@@ -281,6 +305,18 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
       if (!requireExistingAccount && !phoneVerified) {
         throw Exception(
             'Verify your mobile number before continuing with Google.');
+      }
+
+      // Verify that the phone number was actually verified via active Firebase OTP session for new accounts
+      if (!requireExistingAccount) {
+        final fbUser = fb_auth.FirebaseAuth.instance.currentUser;
+        if (fbUser == null) {
+          throw Exception('Phone number verification session expired. Please verify again.');
+        }
+        final verifiedPhone = normalizePhoneNumber(fbUser.phoneNumber ?? '');
+        if (verifiedPhone != normalizedPhone) {
+          throw Exception('The verified phone number does not match the input phone number.');
+        }
       }
 
       state = const AsyncLoading();
@@ -345,6 +381,13 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
             'created_at': DateTime.now().toIso8601String(),
           }, onConflict: 'id'));
 
+          // Clean up Firebase verification session
+          try {
+            await fb_auth.FirebaseAuth.instance.signOut();
+          } catch (e) {
+            debugPrint('Firebase signOut after successful Google registration failed: $e');
+          }
+
           final resolved = await _resolveAuthUserState(session);
           if (resolved != null) _syncFcmToken(resolved.role);
           return resolved;
@@ -352,6 +395,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
           throw Exception(AppError.getMessage(e));
         }
       });
+      if (state.hasError) {
+        throw state.error!;
+      }
     } catch (e) {
       state = AsyncError(e, StackTrace.current);
       rethrow;
@@ -404,6 +450,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         throw Exception(AppError.getMessage(e));
       }
     });
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<void> signOut() async {
@@ -419,6 +468,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
     }
     await FcmService.instance.clearToken();
     await _googleSignIn.signOut();
+    try {
+      await fb_auth.FirebaseAuth.instance.signOut();
+    } catch (_) {}
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -429,6 +481,9 @@ class AuthNotifier extends AsyncNotifier<AuthUserState?> {
         throw Exception(AppError.getMessage(e));
       }
     });
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<AuthUserState?> _resolveAuthUserState(Session? session) async {

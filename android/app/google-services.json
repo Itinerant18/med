@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "381834929556-a7os88gcvebhk28qt5mc6gfgr4hri966.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.doctor.mediflow",
+            "certificate_hash": "84140cd2bc41eefc805e9ae14f44e36c9934ff1b"
+          }
+        },
+        {
           "client_id": "381834929556-g033bbsle20b7tl6mf56upqgk1qvt7ob.apps.googleusercontent.com",
           "client_type": 3
         }

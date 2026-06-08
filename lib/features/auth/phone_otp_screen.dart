@@ -213,15 +213,6 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
       return;
     }
 
-    // OTP verified — tear down the Firebase session. This is best-effort:
-    // if signOut fails the Firebase session will expire on its own, and
-    // Supabase remains the authoritative auth provider.
-    try {
-      await FirebaseAuth.instance.signOut();
-    } catch (e) {
-      debugPrint('Firebase signOut after OTP verification failed: $e');
-    }
-
     if (mounted) {
       setState(() => _isVerifying = false);
       AppSnackbar.showSuccess(context, 'Phone number verified!');
@@ -444,11 +435,7 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
       decoration: BoxDecoration(
         color: AppTheme.bgColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Colors.white, offset: Offset(-3, -3), blurRadius: 8),
-          BoxShadow(
-              color: AppTheme.neuShadowDark, offset: Offset(3, 3), blurRadius: 8),
-        ],
+        boxShadow: const [AppTheme.shadowSoft],
       ),
       child: TextField(
         controller: _controllers[index],
@@ -465,6 +452,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
+          filled: false,
+          contentPadding: EdgeInsets.zero,
         ),
         onChanged: (value) => _handleOtpInput(index, value),
       ),

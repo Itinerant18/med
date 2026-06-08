@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/app_snackbar.dart';
 import 'package:mediflow/models/user_role.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -58,6 +59,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _fadeController.dispose();
+    FirebaseAuth.instance.signOut().ignore();
     super.dispose();
   }
 
@@ -110,7 +112,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     try {
       await ref.read(authNotifierProvider.notifier).signUp(
             fullName: _fullNameController.text.trim(),
-            specialization: _specializationController.text.trim(),
+            specialization: _selectedRole == UserRole.doctor
+                ? _specializationController.text.trim()
+                : '',
             email: _emailController.text.trim().toLowerCase(),
             password: _passwordController.text,
             phone: _phoneController.text.trim(),
@@ -140,7 +144,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       AppSnackbar.showWarning(context, 'Enter your full name first.');
       return false;
     }
-    if (_specializationController.text.trim().isEmpty) {
+    if (_selectedRole == UserRole.doctor &&
+        _specializationController.text.trim().isEmpty) {
       AppSnackbar.showWarning(context, 'Enter your specialization first.');
       return false;
     }
@@ -170,7 +175,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             phone: _phoneController.text.trim(),
             requireExistingAccount: false,
             fullName: _fullNameController.text.trim(),
-            specialization: _specializationController.text.trim(),
+            specialization: _selectedRole == UserRole.doctor
+                ? _specializationController.text.trim()
+                : '',
             role: _selectedRole,
             phoneVerified: true,
           );
@@ -247,6 +254,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   _buildLogoHeader(),
                   const SizedBox(height: 24),
 
+                  // ── Role Selection ──
+                  NeuCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionTitle(
+                            title: 'Account Role',
+                            icon: AppIcons.admin_panel_settings_outlined),
+                        const SizedBox(height: 4),
+                        _buildRoleSelector(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // ── Personal Info ──
                   NeuCard(
                     padding: const EdgeInsets.all(20),
@@ -274,23 +297,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                             return null;
                           },
                         ),
-                        const SizedBox(height: 14),
-                        NeuTextField(
-                          controller: _specializationController,
-                          label: 'Specialization',
-                          hint: 'e.g. Cardiology, General Medicine',
-                          textCapitalization: TextCapitalization.words,
-                          prefixIcon: const Icon(
-                              AppIcons.medical_services_outlined,
-                              color: AppTheme.primaryTeal,
-                              size: 18),
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Specialization is required';
-                            }
-                            return null;
-                          },
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: _selectedRole == UserRole.doctor
+                              ? Column(
+                                  children: [
+                                    const SizedBox(height: 14),
+                                    NeuTextField(
+                                      key: const ValueKey('specialization_field'),
+                                      controller: _specializationController,
+                                      label: 'Specialization',
+                                      hint: 'e.g. Cardiology, General Medicine',
+                                      textCapitalization: TextCapitalization.words,
+                                      prefixIcon: const Icon(
+                                          AppIcons.medical_services_outlined,
+                                          color: AppTheme.primaryTeal,
+                                          size: 18),
+                                      textInputAction: TextInputAction.next,
+                                      validator: (value) {
+                                        if (_selectedRole != UserRole.doctor) return null;
+                                        if (value == null || value.trim().isEmpty) {
+                                          return 'Specialization is required';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ],
                     ),
@@ -487,22 +522,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                             return null;
                           },
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Role Selection ──
-                  NeuCard(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionTitle(
-                            title: 'Account Role',
-                            icon: AppIcons.admin_panel_settings_outlined),
-                        const SizedBox(height: 4),
-                        _buildRoleSelector(),
                       ],
                     ),
                   ),
