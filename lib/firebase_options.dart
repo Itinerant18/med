@@ -41,48 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBaph0NtrAdeqgYFdCg4sBdS4wzIv8IfWQ',
-    appId: '1:381834929556:web:a8dfb1d711a7ba427e5b81',
-    messagingSenderId: '381834929556',
-    projectId: 'mediflow-f1b78',
-    authDomain: 'mediflow-f1b78.firebaseapp.com',
-    storageBucket: 'mediflow-f1b78.firebasestorage.app',
-    measurementId: 'G-3JMGTTG7MF',
+    apiKey: 'AIzaSyAA_SA_ZyjnYHz5MMK1S8FbOMLsSs2M6i4',
+    appId: '1:411667724579:web:dde6f204b19a2c8e117496',
+    messagingSenderId: '411667724579',
+    projectId: 'medflow-499706',
+    authDomain: 'medflow-499706.firebaseapp.com',
+    storageBucket: 'medflow-499706.firebasestorage.app',
+    measurementId: 'G-5YZJN9MJ5L',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAz5kO3mpraNzoCg6DAowCTMTeAHN34prw',
-    appId: '1:381834929556:android:7618555b0d4f8c5c7e5b81',
-    messagingSenderId: '381834929556',
-    projectId: 'mediflow-f1b78',
-    storageBucket: 'mediflow-f1b78.firebasestorage.app',
+    apiKey: 'AIzaSyCPuWzVmNQgPGPyv--gcP5Mw6hT4j00NCo',
+    appId: '1:411667724579:android:992ac9e333df14ab117496',
+    messagingSenderId: '411667724579',
+    projectId: 'medflow-499706',
+    storageBucket: 'medflow-499706.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCj4q23OpJGryejYcbYyrUNMp-nxxZ0Fgw',
-    appId: '1:381834929556:ios:94bed3ddc0f71d137e5b81',
-    messagingSenderId: '381834929556',
-    projectId: 'mediflow-f1b78',
-    storageBucket: 'mediflow-f1b78.firebasestorage.app',
+    apiKey: 'AIzaSyADG3Jm4-VhGzaP-0IwYMzuCyFSezR0WR4',
+    appId: '1:411667724579:ios:b36c50d00ba684f5117496',
+    messagingSenderId: '411667724579',
+    projectId: 'medflow-499706',
+    storageBucket: 'medflow-499706.firebasestorage.app',
     iosBundleId: 'com.example.mediflow',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCj4q23OpJGryejYcbYyrUNMp-nxxZ0Fgw',
-    appId: '1:381834929556:ios:94bed3ddc0f71d137e5b81',
-    messagingSenderId: '381834929556',
-    projectId: 'mediflow-f1b78',
-    storageBucket: 'mediflow-f1b78.firebasestorage.app',
+    apiKey: 'AIzaSyADG3Jm4-VhGzaP-0IwYMzuCyFSezR0WR4',
+    appId: '1:411667724579:ios:b36c50d00ba684f5117496',
+    messagingSenderId: '411667724579',
+    projectId: 'medflow-499706',
+    storageBucket: 'medflow-499706.firebasestorage.app',
     iosBundleId: 'com.example.mediflow',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBaph0NtrAdeqgYFdCg4sBdS4wzIv8IfWQ',
-    appId: '1:381834929556:web:a9c7d44c037f7f3d7e5b81',
-    messagingSenderId: '381834929556',
-    projectId: 'mediflow-f1b78',
-    authDomain: 'mediflow-f1b78.firebaseapp.com',
-    storageBucket: 'mediflow-f1b78.firebasestorage.app',
-    measurementId: 'G-BG772BE7BS',
+    apiKey: 'AIzaSyAA_SA_ZyjnYHz5MMK1S8FbOMLsSs2M6i4',
+    appId: '1:411667724579:web:1bc78a197b1e9452117496',
+    messagingSenderId: '411667724579',
+    projectId: 'medflow-499706',
+    authDomain: 'medflow-499706.firebaseapp.com',
+    storageBucket: 'medflow-499706.firebasestorage.app',
+    measurementId: 'G-0RSYGDLVCQ',
   );
 }

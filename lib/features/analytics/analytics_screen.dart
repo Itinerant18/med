@@ -8,6 +8,7 @@ import 'package:mediflow/core/role_provider.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/analytics/analytics_provider.dart';
 import 'package:mediflow/shared/widgets/dashboard_stat_carousel.dart';
+import 'package:mediflow/core/error_handler.dart';
 
 final _staffSortDescendingProvider =
     StateProvider.autoDispose<bool>((ref) => true);
@@ -49,7 +50,7 @@ class AnalyticsScreen extends ConsumerWidget {
                     loading: () =>
                         _AnalyticsLoading(isHeadDoctor: isHeadDoctor),
                     error: (error, _) => _AnalyticsError(
-                      message: error.toString(),
+                      message: AppError.getMessage(error),
                       onRetry: () => _refresh(ref),
                     ),
                     data: (summary) => _AnalyticsBody(
@@ -474,6 +475,7 @@ class _SchemeBreakdown extends StatelessWidget {
       ('insurance', 'Insurance', const Color(0xFF3182CE)),
       ('cash', 'Cash', AppTheme.successColor),
       ('sastho_sathi', 'Sastho Sathi', AppTheme.primaryTeal),
+      ('ayushman_bharat', 'Ayushman Bharat', const Color(0xFF805AD5)),
       ('other', 'Other', Colors.grey),
     ];
 
@@ -562,7 +564,7 @@ class _StaffPerformanceSection extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  error.toString(),
+                  AppError.getMessage(error),
                   textAlign: TextAlign.center,
                   style:
                       const TextStyle(color: AppTheme.textMuted, fontSize: 12),

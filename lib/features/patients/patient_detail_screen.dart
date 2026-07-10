@@ -20,6 +20,7 @@ import 'package:mediflow/features/dr_visits/agents_provider.dart';
 import 'package:mediflow/models/user_role.dart';
 
 import 'package:mediflow/core/app_snackbar.dart';
+import 'package:mediflow/core/error_handler.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
   final String patientId;
@@ -495,7 +496,7 @@ class PatientDetailScreen extends ConsumerWidget {
               const Text('Failed to load patient',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 6),
-              Text(error.toString(),
+              Text(AppError.getMessage(error),
                   style:
                       const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
               const SizedBox(height: 16),
@@ -546,7 +547,7 @@ class PatientDetailScreen extends ConsumerWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          AppSnackbar.showError(context, 'Failed to delete: $e');
+          AppSnackbar.showError(context, 'Failed to delete: ${AppError.getMessage(e)}');
         }
       }
     }
@@ -966,7 +967,7 @@ class _AssignDoctorSheetState extends ConsumerState<_AssignDoctorSheet> {
       }
     } catch (e) {
       if (context.mounted) {
-        AppSnackbar.showError(context, 'Failed to assign: $e');
+        AppSnackbar.showError(context, 'Failed to assign: ${AppError.getMessage(e)}');
       }
     } finally {
       if (mounted) setState(() => _saving = false);

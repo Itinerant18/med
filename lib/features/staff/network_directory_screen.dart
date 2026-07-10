@@ -128,7 +128,7 @@ class _InternalStaffTab extends ConsumerWidget {
                     color: AppTheme.primaryTeal)),
             error: (e, _) => _PlaceholderView(
               icon: AppIcons.warning_rounded,
-              message: e.toString(),
+              message: AppError.getMessage(e),
               iconColor: AppTheme.errorColor,
             ),
             data: (members) {
@@ -541,7 +541,7 @@ class _ExternalDoctorsTab extends ConsumerWidget {
               child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
           error: (e, _) => _PlaceholderView(
             icon: AppIcons.warning_rounded,
-            message: e.toString(),
+            message: AppError.getMessage(e),
             iconColor: AppTheme.errorColor,
           ),
           data: (doctors) {
@@ -770,7 +770,7 @@ class _ExternalDoctorsTab extends ConsumerWidget {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(e.toString()),
+                    content: Text(AppError.getMessage(e)),
                     backgroundColor: AppTheme.errorColor,
                   ));
                 }

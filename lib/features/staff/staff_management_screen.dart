@@ -13,6 +13,7 @@ import 'package:mediflow/features/staff/staff_provider.dart';
 import 'package:mediflow/shared/widgets/empty_state.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:mediflow/shared/widgets/confirm_dialog.dart';
+import 'package:mediflow/core/error_handler.dart';
 
 class StaffManagementScreen extends ConsumerStatefulWidget {
   const StaffManagementScreen({super.key});
@@ -142,7 +143,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                                       ),
                                       const SizedBox(height: 12),
                                       Text(
-                                        error.toString(),
+                                        AppError.getMessage(error),
                                         textAlign: TextAlign.center,
                                         style: const TextStyle(
                                           color: AppTheme.textMuted,
@@ -841,7 +842,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
       context.pop();
     } catch (error) {
       if (!mounted) return;
-      AppSnackbar.showError(context, error.toString());
+      AppSnackbar.showError(context, AppError.getMessage(error));
     } finally {
       if (mounted) {
         setState(() => _busy = false);

@@ -14,6 +14,7 @@ import 'package:mediflow/features/dashboard/dashboard_provider.dart';
 import 'package:mediflow/features/followups/followup_provider.dart';
 import 'package:mediflow/features/followups/followup_task_widget.dart';
 import 'package:mediflow/features/patients/patient_permissions.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/models/user_role.dart';
 import 'package:mediflow/shared/widgets/dashboard_stat_carousel.dart';
 import 'package:mediflow/shared/widgets/service_status_badge.dart';
@@ -792,9 +793,9 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              error.toString().length > 100
-                  ? '${error.toString().substring(0, 100)}...'
-                  : error.toString(),
+              AppError.getMessage(error).length > 100
+                  ? '${AppError.getMessage(error).substring(0, 100)}...'
+                  : AppError.getMessage(error),
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
               textAlign: TextAlign.center,
             ),

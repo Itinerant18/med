@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mediflow/core/app_icons.dart';
 import 'package:mediflow/core/neu_widgets.dart';
+import 'package:mediflow/core/error_handler.dart';
 import 'package:mediflow/core/theme.dart';
 import 'package:mediflow/features/auth/auth_provider.dart';
 import 'package:mediflow/features/work_log/work_log_provider.dart';
@@ -103,8 +104,7 @@ class _WorkLogWidgetState extends ConsumerState<WorkLogWidget> {
   }
 
   String _friendlyError(Object error) {
-    final text = error.toString();
-    return text.startsWith('Exception: ') ? text.substring(11) : text;
+    return AppError.getMessage(error);
   }
 
   @override

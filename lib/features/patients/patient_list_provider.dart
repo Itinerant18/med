@@ -11,7 +11,7 @@ import 'package:mediflow/models/user_role.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 
-enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, other }
+enum HealthSchemeFilter { all, insurance, cash, sasthoSathi, ayushmanBharat, other }
 
 enum PriorityFilter { all, highOnly }
 
@@ -146,6 +146,7 @@ final roleAwarePatientsProvider = FutureProvider.autoDispose
         HealthSchemeFilter.insurance => 'insurance',
         HealthSchemeFilter.cash => 'cash',
         HealthSchemeFilter.sasthoSathi => 'sastho_sathi',
+        HealthSchemeFilter.ayushmanBharat => 'ayushman_bharat',
         HealthSchemeFilter.other => 'other',
         _ => null,
       };

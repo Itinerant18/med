@@ -53,6 +53,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
     'cash',
     'insurance',
     'sastho_sathi',
+    'ayushman_bharat',
     'other',
   ];
 
@@ -507,6 +508,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
                                     setState(() => _healthScheme = value),
                                 labelBuilder: (value) => switch (value) {
                                   'sastho_sathi' => 'Sastho Sathi',
+                                  'ayushman_bharat' => 'Ayushman Bharat',
                                   _ => _titleCase(value),
                                 },
                               ),

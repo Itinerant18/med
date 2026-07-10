@@ -829,6 +829,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                           () => setState(() =>
                               _healthScheme = HealthSchemeFilter.sasthoSathi)),
                       _chip(
+                          'Ayushman Bharat',
+                          _healthScheme == HealthSchemeFilter.ayushmanBharat,
+                          () => setState(() =>
+                              _healthScheme = HealthSchemeFilter.ayushmanBharat)),
+                      _chip(
                           'Other',
                           _healthScheme == HealthSchemeFilter.other,
                           () => setState(

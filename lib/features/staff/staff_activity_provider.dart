@@ -62,7 +62,7 @@ final staffActivityProvider = FutureProvider.autoDispose
         .from('dr_visits')
         .select(
             'id, doctor_id, patient_id, visit_date, status, followup_status, '
-            'patients(full_name)')
+            'patients:patients!dr_visits_patient_id_fkey(full_name)')
         .gte('visit_date', isoStart)
         .lt('visit_date', isoEnd)
         .order('visit_date', ascending: false)

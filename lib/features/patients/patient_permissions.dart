@@ -4,7 +4,7 @@
 // directly from the implementation plan's role matrix:
 //
 //   | Action                     | Head Doctor | Doctor | Agent     |
-//   | Upload New Patient Data    | ❌          | ❌     | ✅        |
+//   | Add New Patient            | ✅          | ✅     | ✅        |
 //   | Edit Patient Record        | ✅          | ✅     | own only  |
 //   | Delete Patient Record      | ✅          | ❌     | ❌        |
 //   | Assign Follow-Up to Agent  | ✅          | ✅     | ❌        |
@@ -21,9 +21,9 @@ import 'package:mediflow/models/user_role.dart';
 class PatientPermissions {
   PatientPermissions._();
 
-  /// Agents are the only role allowed to register new patients.
+  /// All roles (Head Doctor, Doctor, Agent) can register new patients.
   static bool canCreatePatient(AuthUserState? auth) {
-    return auth?.role == UserRole.assistant;
+    return auth != null;
   }
 
   /// Doctors and head doctors can edit any patient. Agents can edit only

@@ -57,6 +57,7 @@ class AnalyticsSummary {
         'insurance': 0,
         'cash': 0,
         'sastho_sathi': 0,
+        'ayushman_bharat': 0,
         'other': 0,
       },
       followupCompletion: 0,
@@ -245,6 +246,7 @@ final analyticsSummaryProvider =
       'insurance': 0,
       'cash': 0,
       'sastho_sathi': 0,
+      'ayushman_bharat': 0,
       'other': 0,
     };
     for (final patient in patients) {
