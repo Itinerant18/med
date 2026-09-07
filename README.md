@@ -1,4 +1,4 @@
-# MediFlow 🏥
+# MediFlow 
 
 **A Skeuomorphic Medical Management Platform**
 
